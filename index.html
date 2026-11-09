@@ -1,0 +1,1504 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Schela · Atelier</title>
+<style>
+:root{
+  --ground:#F1F3F2; --surface:#FBFCFB; --surface-2:#E7ECEA; --surface-3:#F5F7F6;
+  --ink:#14212B; --muted:#5B6B76; --faint:#8496A1;
+  --line:#CBD5D6; --line-soft:#DEE5E4;
+  --blue:#235C82; --blue-soft:#DCE7EE;
+  --ochre:#A9620F; --ochre-soft:#F2E4D2;
+  --green:#2F6B4F; --green-soft:#DFEBE4;
+  --red:#9C3B2E; --red-soft:#F3E0DC;
+  --fd:"Archivo","Segoe UI",system-ui,sans-serif;
+  --fm:"Consolas","IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--fd);font-size:14px;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ochre);outline-offset:1px}
+
+.app{display:grid;grid-template-columns:212px 1fr;height:100vh;overflow:hidden}
+
+/* sidebar */
+.side{background:#14212B;display:flex;flex-direction:column;padding:18px 0;overflow:auto}
+.brand{padding:0 18px 18px;display:flex;align-items:baseline;gap:1px}
+.brand b{font-size:20px;font-weight:800;color:#FBFCFB;letter-spacing:-.03em}
+.brand i{font-style:normal;color:#7FB4D6;font-size:20px;font-weight:800}
+.brand em{font-style:normal;font-size:10px;color:#6E8391;font-family:var(--fm);letter-spacing:.14em;text-transform:uppercase;margin-left:8px;align-self:center}
+.nav{display:flex;flex-direction:column;gap:2px;padding:0 10px}
+.nav button{display:flex;align-items:center;gap:9px;padding:9px 11px;border:none;border-radius:4px;background:transparent;color:#A9BAC6;font-size:13.5px;font-weight:500;cursor:pointer;text-align:left;width:100%}
+.nav button:hover{background:#1B2A36;color:#DEE7ED}
+.nav button.on{background:var(--blue);color:#fff;font-weight:600}
+.nav .n{margin-left:auto;font-family:var(--fm);font-size:10.5px;color:#6E8391}
+.nav button.on .n{color:#CFE2EF}
+.sidefoot{margin-top:auto;padding:14px 18px 0;border-top:1px solid #22313E;margin-left:10px;margin-right:10px}
+.sidefoot p{margin:0;font-size:10.5px;line-height:1.5;color:#6E8391}
+
+/* main */
+.main{display:flex;flex-direction:column;overflow:hidden}
+.top{background:var(--surface);border-bottom:1px solid var(--line-soft);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em}
+.top .sub{font-size:12px;color:var(--muted);flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spacer{margin-left:auto}
+.view{flex:1;overflow:auto;padding:18px 20px 60px}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:4px;background:var(--blue);color:#fff;border:1px solid var(--blue);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#1C4B6B}
+.btn.g{background:var(--surface);color:#3F5563;border-color:var(--line)}
+.btn.g:hover{background:var(--surface-2)}
+.btn.o{background:var(--ochre);border-color:var(--ochre)}
+.btn.o:hover{background:#8E520C}
+.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--line-soft);border-radius:6px;padding:16px 18px;margin-bottom:14px}
+.card h3{font-size:14px;font-weight:700;margin:0 0 12px;letter-spacing:-.01em}
+.lbl{font-family:var(--fm);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:600;display:block;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+input[type=text],input[type=date],input[type=number],select,textarea{width:100%;height:34px;padding:0 10px;border:1px solid var(--line);border-radius:4px;background:#fff}
+textarea{height:auto;padding:8px 10px;resize:vertical}
+select{cursor:pointer}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:14px}
+.stat{background:var(--surface);border:1px solid var(--line-soft);border-radius:6px;padding:13px 15px}
+.stat .v{font-size:24px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat .l{font-size:11.5px;color:var(--muted);margin-top:3px}
+.stat.hot .v{color:var(--ochre)}
+.stat.bad .v{color:var(--red)}
+.stat.ok .v{color:var(--green)}
+
+/* table */
+.tw{background:var(--surface);border:1px solid var(--line-soft);border-radius:6px;overflow:auto;max-height:calc(100vh - 300px)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+th{position:sticky;top:0;background:var(--surface-2);font-family:var(--fm);font-size:9px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);font-weight:600;z-index:2;white-space:nowrap}
+tbody tr:hover{background:var(--surface-3)}
+tbody tr.sel{background:var(--blue-soft)}
+td.fn{font-family:var(--fm);font-size:11.5px;max-width:300px;word-break:break-all}
+td .path{color:var(--faint);font-size:10px;display:block;margin-top:2px}
+td select,td input[type=text],td input[type=date]{height:26px;padding:0 6px;font-size:12px;border-radius:3px}
+td.num{font-family:var(--fm);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted);font-size:11.5px}
+.tag{display:inline-flex;align-items:center;height:19px;padding:0 7px;border-radius:2px;font-size:10.5px;font-weight:600;white-space:nowrap}
+.t-viz{background:var(--green-soft);color:var(--green)}
+.t-dup{background:var(--ochre-soft);color:var(--ochre)}
+.t-none{background:var(--surface-2);color:var(--faint)}
+.chk{width:15px;height:15px;cursor:pointer}
+
+/* filter bar */
+.fbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.fbar input[type=text]{width:220px;height:32px}
+.fbar select{width:auto;min-width:130px;height:32px}
+.count{font-family:var(--fm);font-size:11.5px;color:var(--muted);margin-left:auto}
+
+
+/* dup groups */
+.dg{background:var(--surface);border:1px solid var(--line-soft);border-radius:6px;margin-bottom:11px;overflow:hidden}
+.dg-h{background:var(--ochre-soft);padding:9px 14px;font-size:12.5px;font-weight:600;color:var(--ochre);display:flex;gap:10px;align-items:center}
+.dg-h .c{font-family:var(--fm);font-size:11px;margin-left:auto}
+.dg table{font-size:12px}
+
+.empty{text-align:center;padding:50px 20px;color:var(--muted)}
+.empty h3{font-size:16px;color:var(--ink);margin:0 0 8px}
+.empty p{max-width:44ch;margin:0 auto 16px;line-height:1.55;font-size:13.5px}
+
+.note{background:var(--blue-soft);border-left:3px solid var(--blue);padding:12px 15px;border-radius:0 4px 4px 0;font-size:12.5px;line-height:1.5;margin-bottom:14px}
+.note b{font-weight:700}
+.warn{background:var(--ochre-soft);border-left-color:var(--ochre)}
+
+td .est{display:block;font-size:9.5px;color:var(--ochre);margin-top:2px;font-weight:600;cursor:help}
+td input.isest{color:var(--ochre);border-color:#E3C9A6;background:#FFFBF5}
+
+.busy{position:fixed;inset:0;background:rgba(20,33,43,.45);display:none;align-items:center;justify-content:center;z-index:50}
+.busy.on{display:flex}
+.busy div{background:var(--surface);padding:18px 26px;border-radius:6px;font-size:13.5px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.2)}
+
+.t-new{background:var(--blue-soft);color:var(--blue)}
+.t-late{background:var(--red-soft);color:var(--red)}
+.ct-ch{margin-bottom:12px}
+.ct-cht{font-size:12px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin:4px 0 6px}
+.ct-row{display:grid;grid-template-columns:90px 1fr 70px 170px;gap:12px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line-soft);font-size:13px}
+.bar{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--green)}
+.bar.mut i{background:var(--faint)}
+details.ct-det summary{cursor:pointer;display:flex;gap:8px;align-items:center;font-size:13.5px}
+tr.grp-row td{background:var(--surface-3);font-weight:700;font-size:11.5px;color:var(--muted)}
+@media (max-width:640px){ .ct-row{grid-template-columns:70px 1fr 60px} .ct-row .tag{grid-column:1/-1} }
+/* telefon: meniul devine o bandă orizontală sus */
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .side{flex-direction:row;align-items:center;padding:8px 10px;overflow-x:auto;overflow-y:hidden}
+  .brand{padding:0 12px 0 4px;flex:none}
+  .brand em{display:none}
+  .nav{flex-direction:row;padding:0;gap:4px}
+  .nav button{white-space:nowrap;padding:7px 10px;width:auto}
+  .sidefoot{display:none}
+  .top{padding:10px 12px}
+  .view{padding:14px 12px 60px}
+  .grid2{grid-template-columns:1fr}
+  .tw table{min-width:640px}
+  .fbar input[type=text]{width:100%}
+}
+.nav b.late{color:#fff;background:var(--red);border-radius:8px;padding:0 6px;font-weight:600}
+.grp{border:1px solid var(--line-soft);border-radius:6px;margin-bottom:10px;overflow:hidden}
+.grp-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;background:var(--surface-3);border-bottom:1px solid var(--line-soft)}
+.grp-b{display:flex;flex-direction:column;gap:5px;padding:10px 12px}
+td .items{display:flex;flex-direction:column;gap:2px;margin-top:4px;font-size:11.5px;color:var(--muted)}
+td .items .ok{color:var(--green)}
+.muted{color:var(--muted);font-size:12px}
+tr.off td{opacity:.55}
+tr.done td{background:#F4F8F5}
+label.ck{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer}
+.modal{position:fixed;inset:0;background:rgba(20,33,43,.5);display:none;align-items:center;justify-content:center;z-index:40;padding:16px}
+.modal.on{display:flex}
+.mbox{background:var(--surface);border-radius:8px;width:min(1100px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden}
+.mh{display:flex;align-items:baseline;gap:12px;padding:16px 18px 6px}
+.mh h2{margin:0;font-size:17px;letter-spacing:-.02em}
+.msum{display:flex;flex-wrap:wrap;gap:6px 18px;padding:4px 18px 12px;font-size:12.5px;color:var(--muted)}
+.msum b{color:var(--ink);font-family:var(--fm)}
+.mf{display:flex;gap:10px;align-items:center;padding:14px 18px;border-top:1px solid var(--line-soft);margin-top:12px}
+.mf .muted{margin-right:auto;max-width:60ch;line-height:1.45;font-size:11.5px}
+
+/* print */
+#print{display:none}
+@media print{
+  .app,.busy,.modal{display:none!important}
+  #print{display:block!important;padding:0}
+  body{background:#fff;font-size:10.5pt}
+  @page{size:A4 portrait;margin:16mm 14mm}
+  .opis-h{border-bottom:2px solid #14212B;padding-bottom:10px;margin-bottom:16px}
+  .opis-h h2{font-size:16pt;margin:0 0 4px}
+  .opis-h .m{font-family:var(--fm);font-size:8pt;color:#5B6B76;line-height:1.6}
+  table.opis{width:100%;border-collapse:collapse;font-size:9pt}
+  table.opis th{background:#E7ECEA;font-size:7.5pt;letter-spacing:.1em;padding:6px 8px;border-bottom:1px solid #CBD5D6}
+  table.opis td{padding:5px 8px;border-bottom:1px solid #EDF1F0}
+  table.opis td:nth-child(1),table.opis td:nth-child(4),table.opis td:nth-child(5){white-space:nowrap}
+  table.opis tr.cap td{background:#EAF2F7;font-weight:700;color:#235C82;font-size:8.5pt;letter-spacing:.08em;text-transform:uppercase}
+  table.opis tr.miss td{background:#FDF6EE;color:#A9620F}
+  tr{break-inside:avoid}
+  .bd{break-after:page;font-size:10.5pt;line-height:1.45}
+  .bd:last-child{break-after:auto}
+  .bd-h{border-collapse:collapse;margin-bottom:28px}
+  .bd-h td{padding:2px 14px 2px 0;vertical-align:top}
+  .bd-h td:first-child{font-weight:700;white-space:nowrap}
+  .bd-t{text-align:center;font-weight:700;font-size:12.5pt;margin:10px 0 4px}
+  .bd-c{text-align:center;font-size:9.5pt;color:#5B6B76;margin-bottom:22px}
+  .bd-a{font-weight:700;margin-bottom:10px}
+  .bd-i{margin:3px 0 3px 14px}
+  .bd-s{margin:1px 0 1px 40px;font-size:9.5pt}
+  .bd-miss{color:#9C3B2E;font-weight:700;font-size:8.5pt;margin-left:6px}
+  .adr{font-size:11pt;line-height:1.55}
+  .adr-h{font-size:12pt;border-bottom:1.5px solid #14212B;padding-bottom:8px;margin-bottom:18px;min-height:20px}
+  .adr-nr{margin-bottom:18px}
+  .adr-to{margin-bottom:6px}
+  .adr-ref{margin-bottom:22px}
+  .adr-body{white-space:normal}
+  .pf{margin-top:14px;font-family:var(--fm);font-size:8pt;color:#5B6B76;border-top:1px solid #CBD5D6;padding-top:8px}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand"><b>Schela</b><i>.</i><em>Atelier</em></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sidefoot">
+      <p>Totul rămâne pe calculatorul tău. Nimic nu se trimite nicăieri.</p>
+      <p style="margin-top:8px">Salvează des: <b style="color:#A9BAC6">Proiect → Salvează</b></p>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="top">
+      <h1 id="vtitle">Proiect</h1>
+      <span class="sub" id="vsub"></span>
+      <span class="spacer"></span>
+      <button class="btn g sm" id="btnSave">Salvează proiect</button>
+      <button class="btn g sm" id="btnLoad">Deschide proiect</button>
+      <input type="file" id="fileLoad" accept=".json" hidden>
+    </div>
+    <div class="view" id="view"></div>
+  </div>
+</div>
+
+<div id="print"></div>
+<div class="modal" id="intake" role="dialog" aria-modal="true" aria-label="Verificare la intrare"></div>
+<div class="busy" id="busy" role="status" aria-live="polite"><div id="busyT">Se citesc fișierele…</div></div>
+
+<script>
+"use strict";
+
+/* ---------------- state ---------------- */
+const CAPS = ["Proiectare","Execuție","SSM și SU","Calitate","Contracte","Aprovizionare","Corespondență","As-built","Neclasificat"];
+const HASH_MAX = 200*1048576;   // fișierele mai mari nu primesc amprentă
+const JUNK = /^(thumbs\.db|desktop\.ini|\.ds_store)$|^~\$|^\._/i;
+const KEY = "schela_atelier_v1";
+
+let S = blank();
+
+function blank(){
+  return {
+    meta:{firma:"",proiect:"",beneficiar:"",contract:"",amplasament:"",perioada:"",inceput:new Date().toISOString().slice(0,10),semnatar:"",emitent:""},
+    docs:[],
+    lipsuri:[],
+    cereri:[],
+    ct:null,
+    note:""
+  };
+}
+
+/* ---------------- helpers ---------------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm = s => String(s||"").toLowerCase()
+  .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+  .replace(/ș|ş/g,"s").replace(/ț|ţ/g,"t").replace(/ă|â/g,"a").replace(/î/g,"i");
+
+function fmtSize(b){
+  if(b==null) return "";
+  if(b<1024) return b+" B";
+  if(b<1048576) return (b/1024).toFixed(0)+" KB";
+  return (b/1048576).toFixed(1)+" MB";
+}
+
+/* ---------------- classification ---------------- */
+/* Regulile se verifică în ordine; prima potrivire câștigă.
+   Potrivirea se face pe cuvinte întregi („pv” nu mai prinde „PVC”). */
+const RULES = [
+  // avize și acte de proiectare cu formulare clară — înaintea avizelor de însoțire
+  ["Proiectare", ["certificat de urbanism","aviz de amplasament","aviz amplasament","aviz tehnic","aviz tehnic de racordare","atr","aviz de principiu","aviz isu","aviz de mediu","acord de mediu","aviz favorabil","aviz electrica","aviz distributie","aviz gaze","aviz apa canal","aviz politie","aviz politia rutiera","aviz drumuri","aviz cultura","aviz dsp","autorizatie de construire","autorizatie construire","expertiza","expertiza tehnica","audit energetic"]],
+  ["Aprovizionare", ["aviz de insotire","aviz insotire","avize de insotire","aviz marfa","aviz","avize","nir","bon de consum","bon consum","bonuri de consum","fisa de magazie","livrare","dispozitie de livrare"]],
+  ["Execuție", ["proces verbal","procese verbale","pv","receptie","atasament","atasamente","situatie de lucrari","situatie lucrari","situatii de lucrari","jurnal de santier","jurnal santier","ordin de incepere","trasare","faza determinanta","faze determinante","fd","comanda de lucru","condica"]],
+  ["SSM și SU", ["ssm","instruire","instruiri","securitate si sanatate","plan propriu","coordonare","interventii ulterioare","psi","situatii de urgenta","evaluare riscuri","evaluarea riscurilor","fisa individuala","fise individuale","instructaj","echipament individual"]],
+  ["Calitate", ["buletin","buletine","incercari","incercare","raport de incercare","rapoarte de incercare","certificat","certificate","certificat de calitate","declaratie de conformitate","declaratie conformitate","declaratie de performanta","dop","agrement","agrement tehnic","pram","priza de pamant","prize de pamant","proba","probe","verificare metrologica"]],
+  ["Proiectare", ["proiect tehnic","memoriu","memoriu tehnic","caiet de sarcini","caiete de sarcini","breviar","breviar de calcul","plansa","planse","plan de situatie","referat","verificator","studiu","studiu geotehnic","detalii de executie","dde","dtac","releveu proiectare"]],
+  ["Contracte", ["contract","contracte","act aditional","acte aditionale","oferta","oferte","comanda","comenzi","garantie","garantii","factura","facturi","deviz","devize","antemasuratoare","proces de licitatie","acord cadru","scrisoare de garantie"]],
+  ["Corespondență", ["adresa","adrese","notificare","notificari","dispozitie de santier","dispozitie","solicitare","solicitari","raspuns","raspunsuri","minuta","convocare","email","mail","corespondenta","instiintare"]],
+  ["As-built", ["as built","asbuilt","carte tehnica","cartea tehnica","releveu","plan final","documentatie finala"]]
+];
+
+// text → „ cuvinte separate ” (litere și cifre lipite se despart: pv12 → pv 12)
+function toks(s){
+  return " " + norm(s).replace(/([a-z])(\d)/g,"$1 $2").replace(/(\d)([a-z])/g,"$1 $2")
+    .replace(/[^a-z0-9]+/g," ").trim() + " ";
+}
+const RULES_N = RULES.map(([cap, keys]) => [cap, keys.map(toks)]);
+function matchCap(text){
+  const t = toks(text);
+  for(const [cap, keys] of RULES_N) for(const k of keys) if(t.includes(k)) return cap;
+  return "";
+}
+// întâi denumirea fișierului, abia apoi numele folderelor
+function guessCap(name, path){
+  const base = String(name).replace(/\.[a-z0-9]{1,6}$/i,"");
+  return matchCap(base) || matchCap(path||"") || "Neclasificat";
+}
+function validIso(y,m,d){
+  const dt = new Date(Date.UTC(+y, +m-1, +d));
+  return dt.getUTCFullYear()===+y && dt.getUTCMonth()===+m-1 && dt.getUTCDate()===+d;
+}
+function guessDate(name){
+  const t = String(name);
+  let m = t.match(/(?:^|\D)(20\d{2})[-_.]?(0[1-9]|1[0-2])[-_.]?(0[1-9]|[12]\d|3[01])(?!\d)/);
+  if(m && validIso(m[1],m[2],m[3])) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = t.match(/(?:^|\D)(0?[1-9]|[12]\d|3[01])[-_. ](0?[1-9]|1[0-2])[-_. ](20\d{2})(?!\d)/);
+  if(m && validIso(m[3],m[2],m[1])) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  return "";
+}
+function baseKey(name){
+  const raw = String(name).replace(/\.[a-z0-9]{1,6}$/i,"");
+  const isCopy = /\(\s*\d+\s*\)|copy|copie/i.test(raw);
+  let n = norm(raw).replace(/[^a-z0-9]+/g," ").trim();
+  // dates: 28 08 2026 / 2026 08 28 / 28 08 26
+  n = n.replace(/\b(0?[1-9]|[12]\d|3[01]) (0?[1-9]|1[0-2]) (20\d{2}|\d{2})\b/g," ");
+  n = n.replace(/\b20\d{2} (0[1-9]|1[0-2]) (0[1-9]|[12]\d|3[01])\b/g," ");
+  n = n.replace(/\b20\d{2}\b/g," ");
+  // version markers
+  n = n.replace(/\b(rev|revizia|v|ver|versiunea|varianta|nr) ?\d+\b/g," ");
+  n = n.replace(/\b(final|finala|ultima|ultim|copy|copie|scan|scanat)\b/g," ");
+  if(isCopy) n = n.replace(/\b\d{1,2}\b\s*$/,"");
+  return n.replace(/\s+/g," ").trim();
+}
+function extOf(n){ const m=String(n).match(/\.([a-z0-9]{1,6})$/i); return m?m[1].toLowerCase():""; }
+function isScan(n){ return ["jpg","jpeg","png","tif","tiff","heic","bmp","webp"].includes(extOf(n)); }
+
+// completează câmpurile noi la proiectele salvate cu versiunea veche
+function migrate(){
+  for(const d of S.docs){
+    if(d.hash===undefined) d.hash = "";
+    if(d.dataSrc===undefined){
+      const g = guessDate(d.name);
+      d.dataSrc = !d.data ? "" : (g && g===d.data) ? "nume" : (d.data===d.mtime ? "estimat" : "manual");
+    }
+  }
+  // cronometrul și contoarele au fost scoase — nu le mai păstrăm în proiect
+  delete S.timers; delete S.running; delete S.runningSince; delete S.counters;
+  // cererile au nevoie de un identificator stabil pentru fiecare lipsă
+  S.lipsuri.forEach(l=>{ if(!l.id) l.id = newId("l"); });
+  if(!Array.isArray(S.cereri)) S.cereri = [];
+  if(S.meta.semnatar===undefined) S.meta.semnatar = "";
+  if(S.meta.emitent===undefined) S.meta.emitent = "";
+  if(S.ct===undefined) S.ct = null;
+}
+const pl = (n, one, many) => n + " " + (n===1 ? one : many);
+function newId(p){ return p + Math.random().toString(36).slice(2,10); }
+
+/* ---------------- persistence ---------------- */
+function autosave(){
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
+}
+function autoload(){
+  try{
+    const r = localStorage.getItem(KEY);
+    if(r){ const o = JSON.parse(r); if(o && o.meta) { S = Object.assign(blank(), o); migrate(); } }
+  }catch(e){}
+}
+function download(name, text, type){
+  const b = new Blob([text], {type: type||"application/json;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+}
+
+/* ---------------- views ---------------- */
+let VIEW = "proiect";
+const VIEWS = [
+  {id:"proiect", name:"Proiect", icon:"M4 20V6l7-3 7 3v14"},
+  {id:"inventar", name:"Inventar", icon:"M4 5h16v14H4z"},
+  {id:"duplicate", name:"Duplicate", icon:"M8 8h12v12H8z"},
+  {id:"carte", name:"Carte tehnică", icon:"M6 3h9l4 4v14H6zM9 11h7M9 15h7"},
+  {id:"lipsuri", name:"Lipsuri", icon:"M12 3 2 20h20z"},
+  {id:"cereri", name:"Cereri", icon:"M3 6h18v12H3zM3 6l9 7 9-7"},
+  {id:"rezultate", name:"Rezultate", icon:"M4 19V9m5 10V5m5 14v-7m5 7V7"}
+];
+
+function renderNav(){
+  $("#nav").innerHTML = VIEWS.map(v=>{
+    let n = "";
+    if(v.id==="inventar") n = S.docs.length || "";
+    if(v.id==="duplicate") n = dupGroups().length || "";
+    if(v.id==="lipsuri") n = openLipsuri().length || "";
+    if(v.id==="carte" && S.ct) n = ctMissing(false).length || "✓";
+    if(v.id==="cereri"){ const late = S.cereri.filter(c=>cerStatus(c).late).length; n = late ? `<b class="late">${late}</b>` : (S.cereri.filter(c=>!cerStatus(c).done).length || ""); }
+    return `<button data-v="${v.id}" class="${VIEW===v.id?"on":""}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${v.icon}"/></svg>
+      <span>${v.name}</span><span class="n">${n}</span></button>`;
+  }).join("");
+  $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{ VIEW=b.dataset.v; render(); });
+}
+
+function render(){
+  renderNav();
+  $("#vtitle").textContent = (VIEWS.find(v=>v.id===VIEW)||{}).name;
+  $("#vsub").textContent = S.meta.proiect ? "· " + S.meta.proiect : "";
+  const v = $("#view");
+  if(VIEW==="proiect") v.innerHTML = viewProiect();
+  if(VIEW==="inventar") v.innerHTML = viewInventar();
+  if(VIEW==="duplicate") v.innerHTML = viewDuplicate();
+  if(VIEW==="lipsuri") v.innerHTML = viewLipsuri();
+  if(VIEW==="cereri") v.innerHTML = viewCereri();
+  if(VIEW==="carte") v.innerHTML = viewCarte();
+  if(VIEW==="rezultate") v.innerHTML = viewRezultate();
+  bind();
+  autosave();
+}
+
+/* ---- PROIECT ---- */
+function viewProiect(){
+  const m = S.meta;
+  const f = (k,l,t) => `<div><span class="lbl">${l}</span><input type="${t||"text"}" data-meta="${k}" value="${esc(m[k])}"></div>`;
+  return `
+  <div class="note"><b>Unealtă de lucru pentru dosarele de proiect.</b> Toate datele stau în această pagină, pe calculatorul tău. Nimic nu se încarcă pe internet. Salvează proiectul într-un fișier la finalul fiecărei sesiuni.</div>
+
+  <div class="card">
+    <h3>Datele proiectului</h3>
+    <div class="grid2">
+      ${f("firma","Firma-client")}
+      ${f("proiect","Proiectul")}
+      ${f("beneficiar","Beneficiar")}
+      ${f("contract","Contract")}
+      ${f("amplasament","Amplasament")}
+      ${f("inceput","Data începerii","date")}
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Pentru cererile de documente</h3>
+    <div class="grid2">
+      ${f("emitent","Firma care trimite cererile")}
+      ${f("semnatar","Semnătura (nume, funcție)")}
+    </div>
+    <p style="margin:10px 0 0;font-size:12px;color:var(--muted)">Apar la finalul fiecărei cereri și în antetul adresei tipărite.</p>
+  </div>
+
+  <div class="card">
+    <h3>Observații pe parcurs</h3>
+    <textarea rows="5" data-note placeholder="Ce te-a surprins, ce nu a încăput în niciun capitol, ce ai schimba la structură…">${esc(S.note)}</textarea>
+  </div>
+
+  ${/^https?:$/.test(location.protocol) ? `<div class="card">
+    <h3>Vrei să vezi cum arată?</h3>
+    <p style="margin:0 0 12px;font-size:13px;color:var(--muted)">Deschide un proiect demonstrativ cu date fictive: o lucrare de fibră optică pe LEA 110 kV, cu 89 de documente și cartea tehnică pe dosare. Înlocuiește proiectul curent din pagină.</p>
+    <button class="btn g sm" id="btnDemo">Deschide exemplul</button>
+  </div>` : ""}
+
+  <div class="card" style="border-color:var(--red)">
+    <h3 style="color:var(--red)">Golește tot</h3>
+    <p style="margin:0 0 12px;font-size:13px;color:var(--muted)">Șterge proiectul curent din această pagină. Salvează întâi în fișier dacă vrei să-l păstrezi.</p>
+    <button class="btn g sm" id="btnClear">Golește</button>
+  </div>`;
+}
+
+/* ---- INVENTAR ---- */
+let FILTER = {q:"", cap:"", stare:""};
+
+function viewInventar(){
+  if(!S.docs.length){
+    return `<div class="card"><div class="empty">
+      <h3>Niciun document încă</h3>
+      <p>Alege folderul cu documentele proiectului, exact așa cum ți l-au dat. Fișierele sunt citite local, în pagină, doar ca să li se calculeze amprenta (pentru copii identice) — nu se încarcă nicăieri și nu se modifică.</p>
+      <div style="display:flex;gap:9px;justify-content:center;flex-wrap:wrap">
+        <button class="btn" id="btnPickDir">Alege folderul</button>
+        <button class="btn g" id="btnPickFiles">Alege fișiere</button>
+      </div>
+      <input type="file" id="inDir" webkitdirectory directory multiple hidden>
+      <input type="file" id="inFiles" multiple hidden>
+    </div></div>`;
+  }
+  const rows = filtered();
+  return `
+  <div class="fbar">
+    <button class="btn" id="btnPickDir">Adaugă folder</button>
+    <button class="btn g" id="btnPickFiles">Adaugă fișiere</button>
+    <input type="file" id="inDir" webkitdirectory directory multiple hidden>
+    <input type="file" id="inFiles" multiple hidden>
+    <input type="text" id="fq" placeholder="Caută în denumire…" value="${esc(FILTER.q)}">
+    <select id="fcap"><option value="">Toate capitolele</option>${CAPS.map(c=>`<option ${FILTER.cap===c?"selected":""}>${c}</option>`).join("")}</select>
+    <select id="fstare"><option value="">Toate</option><option value="viz" ${FILTER.stare==="viz"?"selected":""}>În vigoare</option><option value="dup" ${FILTER.stare==="dup"?"selected":""}>În grup de duplicate</option><option value="ncl" ${FILTER.stare==="ncl"?"selected":""}>Neclasificate</option><option value="est" ${FILTER.stare==="est"?"selected":""}>Date estimate</option></select>
+    <span class="count">${rows.length} din ${S.docs.length}</span>
+  </div>
+
+  <div class="fbar" style="margin-bottom:10px">
+    <span class="lbl" style="margin:0">Selecție:</span>
+    <select id="bulkCap"><option value="">Pune în capitolul…</option>${CAPS.map(c=>`<option>${c}</option>`).join("")}</select>
+    <select id="bulkSrc"><option value="">Sursa…</option><option value="propriu">Propriu</option><option value="primit">Primit</option></select>
+    <button class="btn g sm" id="btnSelAll">Selectează tot ce e afișat</button>
+    <button class="btn g sm" id="btnSelNone">Deselectează</button>
+    <button class="btn g sm" id="btnDel">Șterge selecția</button>
+    <button class="btn g sm" id="btnReclass" title="Aplică regulile actualizate doar documentelor încă neclasificate; ce ai încadrat manual nu se schimbă.">Reîncadrează neclasificatele</button>
+  </div>
+
+  <div class="tw"><table>
+    <thead><tr>
+      <th style="width:26px"></th><th>Denumire</th><th style="width:150px">Capitol</th>
+      <th style="width:105px">Data doc.</th><th style="width:96px">Sursă</th>
+      <th style="width:120px">De la cine</th><th style="width:70px">Stare</th><th style="width:66px">Mărime</th>
+    </tr></thead>
+    <tbody>${rows.map(d=>rowDoc(d)).join("")}</tbody>
+  </table></div>`;
+}
+
+function rowDoc(d){
+  const dup = d.viz ? `<span class="tag t-viz">în vigoare</span>`
+    : d.dup ? `<span class="tag t-dup">înlocuit</span>`
+    : d.grp ? `<span class="tag t-dup">de verificat</span>`
+    : `<span class="tag t-none">—</span>`;
+  return `<tr class="${d.sel?"sel":""}" data-id="${d.id}">
+    <td><input type="checkbox" class="chk" data-sel="${d.id}" ${d.sel?"checked":""}></td>
+    <td class="fn">${esc(d.name)}${d.path?`<span class="path">${esc(d.path)}</span>`:""}</td>
+    <td><select data-f="cap" data-id="${d.id}">${CAPS.map(c=>`<option ${d.cap===c?"selected":""}>${c}</option>`).join("")}</select></td>
+    <td><input type="date" data-f="data" data-id="${d.id}" value="${esc(d.data)}" class="${d.dataSrc==="estimat"?"isest":""}">${d.dataSrc==="estimat"?`<span class="est" title="Nu am găsit data în denumire; e data ultimei modificări a fișierului, de obicei data copierii. Corecteaz-o din document.">estimată · de verificat</span>`:""}</td>
+    <td><select data-f="sursa" data-id="${d.id}"><option value="">—</option><option value="propriu" ${d.sursa==="propriu"?"selected":""}>Propriu</option><option value="primit" ${d.sursa==="primit"?"selected":""}>Primit</option></select></td>
+    <td><input type="text" data-f="dela" data-id="${d.id}" value="${esc(d.dela)}" placeholder="…"></td>
+    <td>${dup}</td>
+    <td class="num">${fmtSize(d.size)}</td>
+  </tr>`;
+}
+
+function filtered(){
+  const q = norm(FILTER.q);
+  return S.docs.filter(d=>{
+    if(q && !norm(d.name+" "+d.path).includes(q)) return false;
+    if(FILTER.cap && d.cap!==FILTER.cap) return false;
+    if(FILTER.stare==="viz" && !d.viz) return false;
+    if(FILTER.stare==="dup" && !d.grp) return false;
+    if(FILTER.stare==="ncl" && d.cap!=="Neclasificat") return false;
+    if(FILTER.stare==="est" && d.dataSrc!=="estimat") return false;
+    return true;
+  });
+}
+
+function busy(on, text){
+  const b = $("#busy"); if(!b) return;
+  b.classList.toggle("on", !!on);
+  if(text) $("#busyT").textContent = text;
+}
+// amprenta conținutului (SHA-256), calculată local — găsește fișierele identice cu nume diferite
+async function hashFile(f){
+  if(!(window.crypto && crypto.subtle) || f.size > HASH_MAX) return "";
+  try{
+    const h = await crypto.subtle.digest("SHA-256", await f.arrayBuffer());
+    return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,"0")).join("");
+  }catch(e){ return ""; }
+}
+
+/* ---- VERIFICARE LA INTRARE ----
+   Niciun fișier nu intră direct în inventar. Fiecare e comparat cu ce există deja
+   și cu lista de lipsuri, iar omul aprobă ce se adaugă. */
+const STOP = new Set(["de","si","la","din","pentru","pt","nr","cu","in","pe","al","a","ale","privind","catre","sau","the"]);
+// prescurtări uzuale din denumirile de fișiere
+const ABBR = {pv:"proces verbal", pvr:"proces verbal receptie", cc:"certificat calitate", dc:"declaratie conformitate", dop:"declaratie performanta"};
+// cuvinte semnificative, reduse la primele 5 litere ca să nu conteze terminația (recepție/recepția)
+function words(s){
+  const raw = toks(String(s).replace(/\.[a-z0-9]{1,6}$/i,"")).trim().split(" ");
+  const out = [];
+  for(const w of raw){
+    if(ABBR[w]){ out.push(...ABBR[w].split(" ")); continue; }
+    out.push(w);
+  }
+  return out.filter(w => w && !STOP.has(w) && (w.length>=3 || /\d/.test(w)))
+            .map(w => /\d/.test(w) ? w : w.slice(0,5));
+}
+// cât de bine acoperă denumirea fișierului cuvintele din denumirea lipsei (0…1)
+function lipsaScore(fileName, lipsaDen){
+  const need = [...new Set(words(lipsaDen))]; if(!need.length) return 0;
+  const have = new Set(words(fileName));
+  // numerele (stâlpi, tronsoane, poziții) identifică documentul: dacă unul lipsește, nu e același document
+  if(need.some(w=>/\d/.test(w) && !have.has(w))) return 0;
+  return need.filter(w=>have.has(w)).length / need.length;
+}
+// codul unui document (ex. 26L05.2-19.1) apare în denumire? 19.1 nu se confundă cu 19.10 sau 19.1.1
+const codeNorm = s => String(s||"").replace(/\s+/g,"").replace(/[–—_]/g,"-").toLowerCase();
+function codeIn(fileName, cod){
+  if(!cod) return false;
+  const rx = codeNorm(cod).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  return new RegExp(rx + "(?![0-9]|\\.[0-9])").test(codeNorm(fileName));
+}
+// fișierul poartă un cod din aceeași serie (ex. 26L05.2-…), chiar dacă altul
+function hasSeriesCode(fileName, cod){
+  const pre = codeNorm(cod).replace(/-[^-]*$/,"");
+  return !!pre && codeNorm(fileName).includes(pre + "-");
+}
+const lden = l => (l.cod ? l.cod + " – " : "") + l.den;
+const openLipsuri = () => S.lipsuri.filter(l=>!l.rez || !S.docs.some(d=>d.id===l.rez));
+
+let INTAKE = null;   // {items, junk, again, first}
+
+async function addFiles(list){
+  const seen = new Set(S.docs.map(d=>d.path+"|"+d.name+"|"+d.size));
+  const todo = []; let junk = 0, again = 0;
+  for(const f of list){
+    if(JUNK.test(f.name)){ junk++; continue; }
+    const path = (f.webkitRelativePath||"").split("/").slice(0,-1).join("/");
+    const k = path+"|"+f.name+"|"+f.size;
+    if(seen.has(k)){ again++; continue; }
+    seen.add(k); todo.push({f, path});
+  }
+  const cands = [];
+  for(let i=0; i<todo.length; i++){
+    const {f, path} = todo[i];
+    if(i % 5 === 0){ busy(true, `Se verifică fișierele… ${i} din ${todo.length}`); await new Promise(r=>setTimeout(r,0)); }
+    const fromName = guessDate(f.name);
+    const mtime = f.lastModified ? new Date(f.lastModified).toISOString().slice(0,10) : "";
+    cands.push({
+      id: "d"+Math.random().toString(36).slice(2,10),
+      name: f.name, path, size: f.size, ext: extOf(f.name), mtime,
+      hash: await hashFile(f),
+      cap: guessCap(f.name, path),
+      data: fromName || mtime,
+      dataSrc: fromName ? "nume" : (mtime ? "estimat" : ""),
+      sursa:"", dela:"", viz:false, dup:false, grp:false, sel:false, obs:""
+    });
+  }
+  busy(false);
+  INTAKE = {items: judge(cands), junk, again, first: S.docs.length===0};
+  if(!INTAKE.items.length){
+    INTAKE = null;
+    alert("Nimic nou de verificat." + (again?`\n${again} fișiere erau deja în inventar.`:"") + (junk?`\n${junk} fișiere de sistem ignorate.`:""));
+    return;
+  }
+  renderIntake();
+}
+
+function judge(cands){
+  const first = S.docs.length===0;
+  const byHash = new Map(S.docs.filter(d=>d.hash).map(d=>[d.hash, d]));
+  const byKey = new Map();
+  S.docs.forEach(d=>{ const k=baseKey(d.name); if(k && /[a-z]{3}/.test(k) && !byKey.has(k)) byKey.set(k, d); });
+  const free = openLipsuri();
+  const taken = new Set();
+  // între copii identice din același lot o păstrăm pe cea cu denumirea cea mai descriptivă (nu „scan_0042”)
+  const descr = c => words(c.name).filter(w=>!/\d/.test(w) && !/^(scan|img|image|dsc|copy|copie|docum|file)/.test(w)).length + (guessDate(c.name)?1:0);
+  cands = [...cands].sort((a,b)=> descr(b)-descr(a));
+  return cands.map(c=>{
+    // 1. copie identică a unui document existent sau a altui fișier din același lot
+    if(c.hash && byHash.has(c.hash)){
+      const o = byHash.get(c.hash);
+      return {doc:c, kind:"copie", why: o.id ? `identic cu „${o.name}”` : `identic cu „${o.name}” din același lot`, act:"skip"};
+    }
+    if(c.hash) byHash.set(c.hash, {name:c.name});
+    // 2. completează o lipsă
+    let best = null, bs = 0;
+    for(const l of free){
+      if(taken.has(l)) continue;
+      let s;
+      if(l.cod && codeIn(c.name, l.cod)) s = 2;                 // codul exact câștigă
+      else if(l.cod && hasSeriesCode(c.name, l.cod)) s = 0;      // alt cod din aceeași serie: alt document
+      else s = lipsaScore(c.name, l.den);
+      if(s>bs){ bs=s; best=l; }
+    }
+    if(best && bs >= 0.6){
+      taken.add(best);
+      return {doc:c, kind:"lipsa", lipsa:best, why:`completează lipsa „${lden(best)}”`, act:"add"};
+    }
+    // 3. versiune nouă a unui document existent
+    const k = baseKey(c.name);
+    if(k && byKey.has(k)){
+      const o = byKey.get(k);
+      const newer = (c.data||"") >= (o.data||"");
+      return {doc:c, kind:"versiune", old:o, why:`aceeași denumire ca „${o.name}”`, act: newer ? "replace" : "skip"};
+    }
+    // 4. document nou
+    return {doc:c, kind:"nou", why: first ? "prima încărcare" : "nu era în lista de lipsuri", act: first ? "add" : "skip"};
+  });
+}
+
+function renderIntake(){
+  const it = INTAKE; if(!it) return;
+  const cnt = k => it.items.filter(x=>x.kind===k).length;
+  const willAdd = it.items.filter(x=>x.act!=="skip").length;
+  const TAG = {copie:["t-none","copie identică"], lipsa:["t-viz","completează o lipsă"], versiune:["t-dup","versiune nouă?"], nou:["t-new","document nou"]};
+  const ctl = (x,i) => {
+    if(x.kind==="copie") return `<span class="muted">nu se adaugă</span>`;
+    if(x.kind==="versiune") return `<select data-ia="${i}">
+        <option value="replace" ${x.act==="replace"?"selected":""}>Înlocuiește (devine în vigoare)</option>
+        <option value="add" ${x.act==="add"?"selected":""}>Păstrează ambele</option>
+        <option value="skip" ${x.act==="skip"?"selected":""}>Nu adăuga</option></select>`;
+    return `<label class="ck"><input type="checkbox" class="chk" data-ic="${i}" ${x.act!=="skip"?"checked":""}> adaugă</label>`;
+  };
+  $("#intake").innerHTML = `<div class="mbox">
+    <div class="mh"><h2>Verificare la intrare</h2><span class="muted">${it.items.length} fișiere noi</span></div>
+    <div class="msum">
+      <span><b>${cnt("lipsa")}</b> completează lipsuri</span>
+      <span><b>${cnt("versiune")}</b> posibile versiuni noi</span>
+      <span><b>${cnt("nou")}</b> documente noi</span>
+      <span><b>${cnt("copie")}</b> copii identice, respinse</span>
+      ${it.again?`<span><b>${it.again}</b> deja în inventar</span>`:""}
+      ${it.junk?`<span><b>${it.junk}</b> fișiere de sistem ignorate</span>`:""}
+    </div>
+    ${!it.first && cnt("nou") ? `<div class="note warn" style="margin:0 18px 12px">Documentele noi care nu erau în lista de lipsuri sunt <b>debifate</b>. Bifează-le doar dacă dosarul are nevoie de ele.</div>` : ""}
+    <div class="tw" style="max-height:52vh;margin:0 18px;border-radius:4px"><table>
+      <thead><tr><th>Fișier</th><th style="width:150px">Verdict</th><th>De ce</th><th style="width:230px">Ce fac cu el</th></tr></thead>
+      <tbody>${it.items.map((x,i)=>`<tr class="${x.act==="skip"?"off":""}">
+        <td class="fn">${esc(x.doc.name)}${x.doc.path?`<span class="path">${esc(x.doc.path)}</span>`:""}</td>
+        <td><span class="tag ${TAG[x.kind][0]}">${TAG[x.kind][1]}</span></td>
+        <td style="font-size:12px;color:var(--muted)">${esc(x.why)}</td>
+        <td>${ctl(x,i)}</td></tr>`).join("")}</tbody>
+    </table></div>
+    <div class="mf">
+      <span class="muted">Verificarea compară conținutul exact (amprenta fișierului) și denumirile. Nu citește textul din document, deci două scanări diferite ale aceleiași hârtii nu sunt recunoscute ca identice.</span>
+      <button class="btn g" id="inCancel">Renunță</button>
+      <button class="btn" id="inOk" ${willAdd?"":"disabled"}>Adaugă ${willAdd} ${willAdd===1?"document":"documente"}</button>
+    </div>
+  </div>`;
+  $("#intake").classList.add("on");
+  $("#intake").querySelectorAll("[data-ic]").forEach(el=>el.onchange=()=>{ it.items[+el.dataset.ic].act = el.checked?"add":"skip"; renderIntake(); });
+  $("#intake").querySelectorAll("[data-ia]").forEach(el=>el.onchange=()=>{ it.items[+el.dataset.ia].act = el.value; renderIntake(); });
+  $("#inCancel").onclick = closeIntake;
+  $("#inOk").onclick = commitIntake;
+}
+function closeIntake(){ INTAKE=null; $("#intake").classList.remove("on"); $("#intake").innerHTML=""; }
+
+function commitIntake(){
+  const it = INTAKE; if(!it) return;
+  const openBefore = new Set(S.cereri.filter(c=>!cerStatus(c).done).map(c=>c.id));
+  let n = 0, rez = 0, rep = 0;
+  for(const x of it.items){
+    if(x.act==="skip") continue;
+    S.docs.push(x.doc); n++;
+    if(x.kind==="lipsa"){ x.lipsa.rez = x.doc.id; if(x.lipsa.cap && x.doc.cap==="Neclasificat") x.doc.cap = x.lipsa.cap; rez++; }
+    if(x.kind==="versiune" && x.act==="replace"){ markDups(); const g = dupGroups().find(g=>g.docs.includes(x.doc)); if(g) g.docs.forEach(d=>d.viz=false); x.doc.viz = true; rep++; }
+  }
+  closeIntake();
+  markDups(); render();
+  let msg = `${pl(n,"document adăugat","documente adăugate")}. Total: ${S.docs.length}.`;
+  if(rez) msg += `\n${pl(rez,"lipsă rezolvată","lipsuri rezolvate")}.`;
+  const doneNow = S.cereri.filter(c=>openBefore.has(c.id) && cerStatus(c).done);
+  if(doneNow.length) msg += `\nCereri complete: ${doneNow.map(c=>c.catre).join(", ")}.`;
+  if(rep) msg += `\n${pl(rep,"document înlocuit","documente înlocuite")} cu o versiune nouă.`;
+  alert(msg);
+}
+
+/* ---- DUPLICATE ---- */
+// grupuri = documente legate fie prin denumire asemănătoare, fie prin conținut identic
+function dupGroups(){
+  const parent = new Map();
+  const find = x => { while(parent.get(x)!==x){ parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+  const join = (a,b) => { a=find(a); b=find(b); if(a!==b) parent.set(a,b); };
+  S.docs.forEach(d=>parent.set(d.id, d.id));
+  const byHash = new Map(), byName = new Map();
+  for(const d of S.docs){
+    if(d.hash){ if(byHash.has(d.hash)) join(d.id, byHash.get(d.hash)); else byHash.set(d.hash, d.id); }
+    const k = baseKey(d.name);
+    if(k){ if(byName.has(k)) join(d.id, byName.get(k)); else byName.set(k, d.id); }
+  }
+  const g = new Map();
+  for(const d of S.docs){ const r = find(d.id); if(!g.has(r)) g.set(r, []); g.get(r).push(d); }
+  return [...g.entries()].filter(([,v])=>v.length>1).map(([r,v])=>{
+    const hc = new Map(); v.forEach(d=>{ if(d.hash) hc.set(d.hash, (hc.get(d.hash)||0)+1); });
+    return {
+      key: r,
+      // eticheta: cea mai descriptivă denumire din grup (nu „scan_0042”)
+      label: v.map(d=>baseKey(d.name)).filter(k=>/[a-z]{3}/.test(k)).sort((a,b)=>b.length-a.length)[0] || v[0].name,
+      exact: v.every(d=>d.hash && hc.get(d.hash)===v.length),
+      twins: new Set(v.filter(d=>d.hash && hc.get(d.hash)>1).map(d=>d.id)),
+      docs: v
+    };
+  });
+}
+function markDups(){
+  const groups = dupGroups();
+  const inGroup = new Set(), superseded = new Set();
+  for(const g of groups){
+    const hasWinner = g.docs.some(d=>d.viz);
+    for(const d of g.docs){
+      inGroup.add(d.id);
+      if(hasWinner && !d.viz) superseded.add(d.id);
+    }
+  }
+  for(const d of S.docs){
+    d.grp = inGroup.has(d.id);
+    d.dup = superseded.has(d.id);
+    if(!d.grp) d.viz = false;   // grupul nu mai există → nici marcajul „în vigoare”
+  }
+}
+
+function viewDuplicate(){
+  const gs = dupGroups();
+  if(!gs.length) return `<div class="card"><div class="empty"><h3>Niciun duplicat găsit</h3><p>Când adaugi documente, cele care par a fi versiuni ale aceluiași act apar aici grupate, ca să alegi care e cea în vigoare.</p></div></div>`;
+  return `<div class="note warn"><b>Alege versiunea în vigoare</b> pentru fiecare grup. Celelalte rămân în inventar ca istoric, marcate ca duplicate. Grupurile sunt propuneri — dacă un grup e greșit, ignoră-l. Eticheta <span class="tag t-viz">conținut identic</span> înseamnă că fișierul e copia exactă a altuia din grup, chiar dacă are alt nume.</div>
+  ${gs.map(g=>`
+    <div class="dg">
+      <div class="dg-h"><span>${esc(g.label||"(fără denumire)")}</span>${g.exact?`<span class="tag t-viz">toate identice</span>`:""}<span class="c">${g.docs.length} fișiere</span></div>
+      <table><tbody>
+        ${g.docs.map(d=>`<tr>
+          <td style="width:110px"><button class="btn ${d.viz?"":"g"} sm" data-viz="${d.id}">${d.viz?"✓ în vigoare":"marchează"}</button></td>
+          <td class="fn">${esc(d.name)}${!g.exact&&g.twins.has(d.id)?` <span class="tag t-viz">conținut identic</span>`:""}${d.path?`<span class="path">${esc(d.path)}</span>`:""}</td>
+          <td class="num" style="width:90px">${esc(d.data||d.mtime||"")}</td>
+          <td class="num" style="width:70px">${fmtSize(d.size)}</td>
+        </tr>`).join("")}
+      </tbody></table>
+    </div>`).join("")}`;
+}
+
+/* ---- LIPSURI ---- */
+function lipsaTag(l){
+  const c = lipsaCerere(l);
+  if(!c) return `<span class="tag t-dup">lipsă</span> <span class="muted">necerut</span>`;
+  const st = cerStatus(c);
+  return st.late ? `<span class="tag t-late">cerut ${roDate(c.trimis)} · întârziat</span>`
+                 : `<span class="tag t-new">cerut ${roDate(c.trimis)}</span> <span class="muted">termen ${roDate(c.termen)}</span>`;
+}
+function viewLipsuri(){
+  return `<div class="note"><b>Ce lipsește din dosar.</b> Adaugă fiecare document care ar trebui să existe și nu există. Când încarci ulterior un fișier a cărui denumire corespunde unei lipse, verificarea la intrare îl propune și bifează lipsa ca rezolvată. Lista asta e raportul pe care firma îl citește prima dată — și argumentul butonului „Dosar de control".</div>
+  <div class="card">
+    <h3>Adaugă un lipsă</h3>
+    <div class="grid2">
+      <div><span class="lbl">Denumirea documentului</span><input type="text" id="lDen" placeholder="Proces-verbal de recepție calitativă — tronson D"></div>
+      <div><span class="lbl">Capitol</span><select id="lCap">${CAPS.filter(c=>c!=="Neclasificat").map(c=>`<option>${c}</option>`).join("")}</select></div>
+      <div><span class="lbl">De la cine se recuperează</span><input type="text" id="lDela" placeholder="Antreprenor / laborator / proiectant"></div>
+      <div style="display:flex;align-items:flex-end"><button class="btn" id="btnAddL">Adaugă în listă</button></div>
+    </div>
+  </div>
+  ${S.lipsuri.length ? `<div class="tw"><table>
+    <thead><tr><th style="width:34px">#</th><th>Document lipsă</th><th style="width:150px">Capitol</th><th style="width:170px">Se recuperează de la</th><th style="width:230px">Stare</th><th style="width:40px"></th></tr></thead>
+    <tbody>${S.lipsuri.map((l,i)=>{
+      const d = l.rez && S.docs.find(x=>x.id===l.rez);
+      return `<tr class="${d?"done":""}">
+      <td class="num">${String(i+1).padStart(2,"0")}</td>
+      <td>${esc(lden(l))}</td><td>${esc(l.cap)}</td><td>${esc(l.dela)}</td>
+      <td>${d ? `<span class="tag t-viz">rezolvat</span> <span class="fn" style="font-size:11px">${esc(d.name)}</span> <button class="btn g sm" data-unrez="${i}" title="Lipsa redevine deschisă; documentul rămâne în inventar.">anulează</button>` : lipsaTag(l)}</td>
+      <td><button class="btn g sm" data-dell="${i}">×</button></td></tr>`;}).join("")}</tbody>
+  </table></div>` : `<div class="card"><div class="empty"><h3>Nimic în listă încă</h3><p>Pe măsură ce verifici completitudinea dosarului, adaugă aici fiecare document care ar trebui să existe și nu există.</p></div></div>`}`;
+}
+
+/* ---- CERERI ----
+   Lipsurile se grupează pe „de la cine se recuperează”. Pentru fiecare expeditor se
+   generează o cerere cu termen; cererea se închide singură când documentele intră în inventar. */
+function todayIso(){ const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+function addDays(iso,n){ const d=new Date(iso+"T12:00:00"); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function daysBetween(a,b){ return Math.round((new Date(b+"T12:00:00")-new Date(a+"T12:00:00"))/86400000); }
+const lipsaById = id => S.lipsuri.find(l=>l.id===id);
+const isRez = l => !!(l && l.rez && S.docs.some(d=>d.id===l.rez));
+const senderKey = s => norm(s).replace(/\s+/g," ").trim();
+
+function cerStatus(c){
+  const items = c.items.map(lipsaById).filter(Boolean);
+  const got = items.filter(isRez).length;
+  const done = !!c.inchisa || (items.length>0 && got===items.length);
+  const over = !done && c.termen ? daysBetween(c.termen, todayIso()) : 0;
+  return {items, got, total:items.length, done, late: over>0, over};
+}
+// cererea activă în care e inclusă o lipsă
+function lipsaCerere(l){ return S.cereri.find(c=>!cerStatus(c).done && c.items.includes(l.id)); }
+function pendingGroups(){
+  const g = new Map();
+  for(const l of openLipsuri()){
+    if(lipsaCerere(l)) continue;
+    const k = senderKey(l.dela);
+    if(!g.has(k)) g.set(k, {name:(l.dela||"").trim(), items:[]});
+    g.get(k).items.push(l);
+  }
+  return [...g.values()].sort((a,b)=> (a.name?0:1)-(b.name?0:1) || a.name.localeCompare(b.name));
+}
+
+function cerereText(c, reminder){
+  const m = S.meta, st = cerStatus(c);
+  const items = reminder ? st.items.filter(l=>!isRez(l)) : st.items;
+  const list = items.map((l,i)=>`${i+1}. ${lden(l)}`).join("\n");
+  const lucr = m.proiect ? `lucrării „${m.proiect}”${m.beneficiar?` (beneficiar: ${m.beneficiar})`:""}` : "lucrării";
+  const head = reminder
+    ? `Bună ziua,\n\nRevenim la solicitarea din data de ${roDate(c.trimis)} privind documentele ${lucr}. Următoarele documente nu au fost încă primite:`
+    : `Bună ziua,\n\nPentru completarea documentației ${lucr}, vă rugăm să ne transmiteți următoarele documente:`;
+  const term = c.termen ? `\n\n${reminder?"Vă rugăm să le transmiteți până la data de":"Termen solicitat:"} ${roDate(c.termen)}.` : "";
+  const sig = [S.meta.semnatar, S.meta.emitent].filter(Boolean).join("\n");
+  return `${head}\n\n${list}${term}\n\nVă mulțumim,${sig ? "\n"+sig : ""}`;
+}
+
+function viewCereri(){
+  const groups = pendingGroups();
+  const today = todayIso();
+  const sorted = [...S.cereri].sort((a,b)=>{
+    const sa=cerStatus(a), sb=cerStatus(b);
+    return (sa.done-sb.done) || (sb.over-sa.over) || (a.termen||"").localeCompare(b.termen||"");
+  });
+  const stTag = (c,st) => st.done ? (c.inchisa && st.got<st.total ? `<span class="tag t-none">închisă</span>` : `<span class="tag t-viz">completă</span>`)
+    : st.late ? `<span class="tag t-late">întârziată ${st.over} ${st.over===1?"zi":"zile"}</span>`
+    : `<span class="tag t-new">în termen</span>`;
+  return `
+  <div class="note"><b>Cereri de documente.</b> Lipsurile sunt grupate pe „de la cine se recuperează”. Generezi câte o cerere pentru fiecare executant sau furnizor, iar când documentele intră în inventar prin verificarea la intrare, cererea se bifează singură.</div>
+
+  <div class="card">
+    <h3>De cerut ${groups.length?`<span class="muted">· ${pl(groups.reduce((a,g)=>a+g.items.length,0),"document","documente")}</span>`:""}</h3>
+    ${!S.lipsuri.length ? `<p class="muted" style="margin:0">Adaugă întâi documentele lipsă, la <b>Lipsuri</b>, cu „de la cine se recuperează”.</p>`
+      : !groups.length ? `<p class="muted" style="margin:0">Toate lipsurile deschise sunt deja cerute.</p>`
+      : groups.map((g,gi)=>`<div class="grp" data-grp="${gi}">
+        <div class="grp-h">
+          ${g.name ? `<b>${esc(g.name)}</b>` : `<span class="tag t-late">fără expeditor</span> <input type="text" placeholder="De la cine se recuperează?" data-setdela="${g.items.map(l=>l.id).join(",")}" style="width:240px;height:28px">`}
+          <span class="muted">${g.items.length} ${g.items.length===1?"document":"documente"}</span>
+          <span style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <span class="lbl" style="margin:0">Termen</span>
+            <input type="date" data-term value="${addDays(today,7)}" style="width:150px;height:28px">
+            <button class="btn sm" data-prep="${gi}" ${g.name?"":"disabled"}>Pregătește cererea</button>
+          </span>
+        </div>
+        <div class="grp-b">${g.items.map(l=>`<label class="ck"><input type="checkbox" class="chk" data-lid="${l.id}" checked> ${esc(lden(l))} <span class="muted">· ${esc(l.cap)}</span></label>`).join("")}</div>
+      </div>`).join("")}
+  </div>
+
+  <div class="card">
+    <h3>Urmărire</h3>
+    ${!S.cereri.length ? `<p class="muted" style="margin:0">Nicio cerere trimisă încă.</p>` : `<div class="tw" style="max-height:none"><table>
+      <thead><tr><th>Către · documente</th><th style="width:96px">Trimisă</th><th style="width:96px">Termen</th><th style="width:74px">Primite</th><th style="width:140px">Stare</th><th style="width:250px"></th></tr></thead>
+      <tbody>${sorted.map(c=>{ const st=cerStatus(c); return `<tr class="${st.done?"done":""}">
+        <td><b>${esc(c.catre)}</b>${c.email?` <span class="muted">${esc(c.email)}</span>`:""}
+          <div class="items">${st.items.map(l=>`<span class="${isRez(l)?"ok":""}">${isRez(l)?"✓":"○"} ${esc(lden(l))}</span>`).join("")}</div>
+          ${c.reamintiri&&c.reamintiri.length?`<div class="muted" style="font-size:11px;margin-top:3px">Reamintiri: ${c.reamintiri.map(roDate).join(", ")}</div>`:""}</td>
+        <td class="num">${roDate(c.trimis)}</td>
+        <td class="num">${roDate(c.termen)}</td>
+        <td class="num">${st.got} / ${st.total}</td>
+        <td>${stTag(c,st)}</td>
+        <td style="white-space:nowrap">
+          <button class="btn g sm" data-cview="${c.id}">Text</button>
+          ${st.done ? "" : `<button class="btn ${st.late?"o":"g"} sm" data-crem="${c.id}">Reamintire</button>`}
+          ${c.inchisa ? `<button class="btn g sm" data-cclose="${c.id}">Redeschide</button>` : st.done ? "" : `<button class="btn g sm" data-cclose="${c.id}" title="Închide cererea fără să mai aștepți documentele rămase.">Închide</button>`}
+          <button class="btn g sm" data-cdel="${c.id}" title="Șterge cererea; lipsurile rămân.">×</button>
+        </td></tr>`;}).join("")}</tbody>
+    </table></div>`}
+  </div>`;
+}
+
+/* fereastra de compunere: cerere nouă, reamintire sau doar textul */
+let CMOD = null;   // {mode:"new"|"rem"|"view", c}
+function openComposer(mode, orig, initTerm){
+  // lucrăm pe o copie; cererea reală se modifică doar la „Marchează ca trimisă”
+  const c = JSON.parse(JSON.stringify(orig));
+  if(initTerm) c.termen = initTerm;
+  CMOD = {mode, c};
+  const st = cerStatus(c);
+  const title = mode==="new" ? `Cerere către ${c.catre}` : mode==="rem" ? `Reamintire către ${c.catre}` : `Cererea către ${c.catre}`;
+  const text = cerereText(c, mode==="rem");
+  $("#intake").innerHTML = `<div class="mbox" style="width:min(760px,100%)">
+    <div class="mh"><h2>${esc(title)}</h2><span class="muted">${mode==="rem"? (st.total-st.got)+" documente neprimite" : st.total+" documente"}</span></div>
+    <div style="padding:6px 18px 0" class="grid2">
+      <div><span class="lbl">Către</span><input type="text" id="cmCatre" value="${esc(c.catre)}"></div>
+      <div><span class="lbl">Email (opțional)</span><input type="text" id="cmEmail" value="${esc(c.email||"")}" placeholder="pentru butonul „Deschide în email”"></div>
+      ${mode==="view" ? "" : `<div><span class="lbl">${mode==="rem"?"Termen nou":"Termen"}</span><input type="date" id="cmTerm" value="${esc(c.termen||"")}"></div>`}
+    </div>
+    <div style="padding:12px 18px 0">
+      <span class="lbl">Textul cererii — îl poți modifica înainte de copiere</span>
+      <textarea id="cmText" rows="13" style="font-size:13px;line-height:1.5">${esc(text)}</textarea>
+      ${!S.meta.semnatar ? `<p class="muted" style="margin:6px 0 0">Semnătura se completează o dată, la <b>Proiect → Pentru cererile de documente</b>.</p>` : ""}
+    </div>
+    <div class="mf">
+      <span class="muted"></span>
+      <button class="btn g" id="cmCopy">Copiază textul</button>
+      <button class="btn g" id="cmMail">Deschide în email</button>
+      <button class="btn g" id="cmPrint">Tipărește adresa</button>
+      <button class="btn g" id="cmCancel">${mode==="view"?"Închide":"Renunță"}</button>
+      ${mode==="view" ? "" : `<button class="btn" id="cmSave">${mode==="rem"?"Marchează reamintirea ca trimisă":"Marchează ca trimisă"}</button>`}
+    </div>
+  </div>`;
+  $("#intake").classList.add("on");
+  const regen = () => {
+    c.catre = $("#cmCatre").value.trim() || c.catre;
+    if($("#cmTerm")) c.termen = $("#cmTerm").value;
+    $("#cmText").value = cerereText(c, mode==="rem");
+  };
+  if($("#cmTerm")) $("#cmTerm").onchange = regen;
+  $("#cmCopy").onclick = async () => {
+    const t = $("#cmText").value;
+    try{ await navigator.clipboard.writeText(t); $("#cmCopy").textContent = "Copiat ✓"; }
+    catch(e){ $("#cmText").select(); document.execCommand("copy"); $("#cmCopy").textContent = "Copiat ✓"; }
+  };
+  $("#cmMail").onclick = () => {
+    const subj = (mode==="rem"?"Reamintire: ":"") + "Solicitare documente" + (S.meta.proiect?" – "+S.meta.proiect:"");
+    location.href = "mailto:" + encodeURIComponent($("#cmEmail").value.trim()) + "?subject=" + encodeURIComponent(subj) + "&body=" + encodeURIComponent($("#cmText").value);
+  };
+  $("#cmPrint").onclick = () => { $("#print").innerHTML = buildAdresa($("#cmCatre").value.trim()||c.catre, $("#cmText").value, mode==="rem"); setTimeout(()=>window.print(), 60); };
+  $("#cmCancel").onclick = closeComposer;
+  if($("#cmSave")) $("#cmSave").onclick = () => {
+    c.catre = $("#cmCatre").value.trim() || c.catre;
+    c.email = $("#cmEmail").value.trim();
+    if(mode==="new"){ c.termen = $("#cmTerm").value; c.trimis = todayIso(); S.cereri.push(c); }
+    else {
+      orig.catre = c.catre; orig.email = c.email;
+      orig.termen = $("#cmTerm").value || orig.termen;
+      (orig.reamintiri = orig.reamintiri||[]).push(todayIso());
+    }
+    closeComposer(); render();
+  };
+  if(mode==="view"){ $("#cmEmail").onchange = () => { orig.email = $("#cmEmail").value.trim(); autosave(); }; }
+}
+function closeComposer(){ CMOD=null; $("#intake").classList.remove("on"); $("#intake").innerHTML=""; }
+
+function buildAdresa(catre, text, reminder){
+  const m = S.meta;
+  const body = esc(text).replace(/\n/g,"<br>");
+  return `<div class="adr">
+    <div class="adr-h"><b>${esc(m.emitent||"")}</b></div>
+    <div class="adr-nr">Nr. ________ / ${roDate(todayIso())}</div>
+    <div class="adr-to">Către: <b>${esc(catre)}</b></div>
+    <div class="adr-ref">Ref.: ${reminder?"Reamintire – ":""}Solicitare documente${m.proiect?" – "+esc(m.proiect):""}${m.contract?" · Contract "+esc(m.contract):""}</div>
+    <div class="adr-body">${body}</div>
+  </div>`;
+}
+
+/* ---- CARTE TEHNICĂ ----
+   Listă-tip construită după structura cărții tehnice a unei lucrări de fibră optică pe LEA 110 kV.
+   PV-urile se generează din parametri: tronsoane, balize, stâlpi cu priză de pământ. */
+const CT_CH = {
+  A:"Capitolul A – Documentația privind proiectarea",
+  B:"Capitolul B – Documentația privind execuția",
+  C:"Capitolul C – Documentația privind recepția",
+  D:"Capitolul D – Documentația privind urmărirea comportării în exploatare"
+};
+function parseTronsoane(s){
+  return String(s||"").split(/[\n;]+/).map(x=>x.trim()).filter(Boolean)
+    .map(x=>x.replace(/^st\.?\s*/i,"").replace(/\s*[-–—]\s*/,"–").replace("–"," – "));
+}
+function parseList(s){ return String(s||"").split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean); }
+function parseBalize(s){
+  return String(s||"").split(/[\n;]+/).map(x=>x.trim()).filter(Boolean).map(x=>{
+    const m = x.match(/^(.*?)\s*[:x×]\s*(\d+)\s*(buc\.?)?$/i);
+    const st = (m?m[1]:x).replace(/^st\.?\s*/i,"").replace(/\s*[-–—]\s*/," – ");
+    return {st, buc: m ? +m[2] : 1};
+  });
+}
+const CT_TPL = {
+  "lea-fo": {
+    name: "LEA – fibră optică (OPGW / ADSS)",
+    dosare(p){
+      const T = parseTronsoane(p.tronsoane), B = parseBalize(p.balize), P = parseList(p.prize);
+      const pre = (p.cod||"").trim(), cond = (p.cond||"OPGW").trim();
+      const code = x => pre ? `${pre}-${x}` : "";
+      const gP = T.length + B.length + 1;           // grupa PV-urilor de priză (în model: 19)
+      const E = (den, extra) => Object.assign({den, cap:"Execuție", dela:"Executant"}, extra||{});
+      const pv = [];
+      T.forEach((t,i)=>{ const n=i+1;
+        pv.push(E(`PV demontare conductor protecție – st. ${t}`, {cod:code(`${n}.1`)}));
+        pv.push(E(`PV montare ${cond} – st. ${t}`, {cod:code(`${n}.2`)}));
+        pv.push(E(`PV montare legături de susținere / întindere definitive – st. ${t}`, {cod:code(`${n}.3`)}));
+      });
+      B.forEach((b,j)=> pv.push(E(`PV montare balize sferice – st. ${b.st} – ${b.buc} buc.`, {cod:code(`${T.length+j+1}`)})));
+      P.forEach((st,k)=> pv.push(E(`PV montare priză de pământ – st. ${st}`, {cod:code(`${gP}.${k+1}`)})));
+      const bul = P.map((st,k)=>({cod:code(`${gP}.${k+1}.1`), den:`Buletin de verificare priză de pământ – st. ${st}`, cap:"Calitate", dela:"Executant (laborator)"}));
+      return [
+        {id:"A1", ch:"A", items:[{den:"Aviz CTE", kw:"aviz cte", cap:"Proiectare", dela:"Beneficiar"}]},
+        {id:"A2", ch:"A", items:[{den:"Proiect tehnic de execuție (PTE) – parte scrisă și desenată", kw:"pte", cap:"Proiectare", dela:"Proiectant"}]},
+        {id:"B1", ch:"B", items:[
+          {den:"Acord-cadru de execuție lucrări", kw:"acord cadru", cap:"Contracte", dela:"Beneficiar"},
+          {den:"Contract subsecvent pentru execuția de lucrări", kw:"contract subsecvent", cap:"Contracte", dela:"Beneficiar"},
+          {den:"Ordin de începere execuție lucrări", kw:"ordin incepere", cap:"Execuție", dela:"Beneficiar"},
+          {den:"Convenție de lucrări", kw:"conventie", cap:"Contracte", dela:"Beneficiar"},
+          {den:"Programe de lucrări", kw:"program lucrari", cap:"Execuție", dela:"Executant"},
+          {den:"Referat proiectant", kw:"referat proiectant", cap:"Proiectare", dela:"Proiectant"},
+          {den:"Referat RTE", kw:"referat rte", cap:"Execuție", dela:"RTE"},
+          {den:"Referat diriginte de șantier", kw:"referat diriginte", cap:"Execuție", dela:"Diriginte de șantier"},
+          {den:"Atestate ANRE ale executantului", kw:"atestat anre", cap:"Contracte", dela:"Executant"},
+          {den:"Plan propriu SSM", kw:"plan propriu ssm", cap:"SSM și SU", dela:"Executant"}
+        ]},
+        {id:"B2", ch:"B", items:[
+          {den:"Planul de control calitate, verificări și încercări (PCCVI)", kw:"pccvi", cap:"Calitate", dela:"Executant"},
+          {den:"Ordin de începere lucrări", kw:"ordin incepere", cap:"Execuție", dela:"Beneficiar"},
+          {group:"Procese-verbale de execuție a lucrărilor"},
+          ...pv
+        ]},
+        {id:"B3", ch:"B", items:[
+          {group:"Buletine de măsurători prize de pământ"},
+          ...bul,
+          {den:"Rapoarte de încercare fibră optică", kw:"raport incercare fibra", cap:"Calitate", dela:"Executant"},
+          {den:"Certificate de verificare metrologică ale aparatelor de măsură", kw:"metrolog", cap:"Calitate", dela:"Executant"}
+        ]},
+        {id:"B4", ch:"B", items:[
+          {den:"Declarația executantului", kw:"declaratia executantului", cap:"Calitate", dela:"Executant"},
+          {den:"Certificat de garanție din partea executantului", kw:"certificat garantie", cap:"Calitate", dela:"Executant"},
+          {den:"Declarație de conformitate din partea executantului", kw:"declaratie conformitate executant", cap:"Calitate", dela:"Executant"},
+          {den:"Certificate de calitate și garanție pentru materialele principale", kw:"certificat calitate", cap:"Calitate", dela:"Furnizori"},
+          {den:"Declarații de conformitate pentru materialele principale", kw:"declaratie conformitate material", cap:"Calitate", dela:"Furnizori"}
+        ]},
+        {id:"C1", ch:"C", later:"la recepție", items:[
+          {den:"Dispoziția de numire a comisiei de recepție", kw:"comisie receptie", cap:"Execuție", dela:"Beneficiar"},
+          {den:"PV de recepție la terminarea lucrărilor, cu anexe", kw:"receptie terminare", cap:"Execuție", dela:"Beneficiar"},
+          {den:"Lista lucrărilor de remediat și PV de remediere", kw:"remedi", cap:"Execuție", dela:"Executant"},
+          {den:"PV de recepție finală", kw:"receptie finala", cap:"Execuție", dela:"Beneficiar"}
+        ]},
+        {id:"D1", ch:"D", later:"în exploatare", items:[
+          {den:"Instrucțiuni de exploatare și întreținere", kw:"instructiuni exploatare", cap:"Proiectare", dela:"Proiectant"},
+          {den:"Programul de urmărire a comportării în exploatare", kw:"urmarire comportare", cap:"Proiectare", dela:"Proiectant"},
+          {den:"Jurnalul evenimentelor", kw:"jurnal evenimente", cap:"As-built", dela:"Beneficiar"},
+          {den:"Procese-verbale de intervenții / reparații", kw:"interventi", cap:"As-built", dela:"Beneficiar"}
+        ]}
+      ];
+    }
+  }
+};
+
+// fișierul stă într-un folder cu numele dosarului (ex. „B1”, „Dosar B1”)?
+const inDos = (doc, id) => new RegExp("(^|[^a-z0-9])(dosar\\s*)?" + id + "([^0-9]|$)", "i").test(doc.path||"") ? 1 : 0;
+
+// potrivește fiecare document așteptat cu un fișier din inventar
+function ctMatch(){
+  const ct = S.ct; if(!ct || !CT_TPL[ct.tpl]) return null;
+  const dos = CT_TPL[ct.tpl].dosare(ct.p);
+  const live = S.docs.filter(d=>!d.dup);
+  const used = new Set();
+  const all = dos.flatMap(d=>d.items.filter(i=>!i.group).map(i=>({i, d})));
+  // 1. după cod exact
+  for(const x of all){ if(!x.i.cod) continue; const f = live.find(d=>!used.has(d.id) && codeIn(d.name, x.i.cod)); if(f){ x.doc=f; used.add(f.id); } }
+  // 2. după cuvinte cheie / denumire (un document general poate acoperi o singură poziție)
+  for(const x of all){
+    if(x.doc) continue;
+    const cands = live.filter(d=>!used.has(d.id) && !(x.i.cod && hasSeriesCode(d.name, x.i.cod)));
+    let f = null;
+    if(x.i.kw){
+      // dintre fișierele care conțin toate cuvintele cheie îl alegem pe cel cu denumirea cea mai scurtă
+      // („Declarația executantului” nu trebuie să ia locul „Declarației de conformitate a executantului”)
+      const need = words(x.i.kw);
+      f = cands.filter(d=>{ const h = new Set(words(d.name+" "+d.path)); return need.every(w=>h.has(w)); })
+               .sort((a,b)=> inDos(b,x.d.id) - inDos(a,x.d.id) || words(a.name).length - words(b.name).length)[0] || null;
+    }
+    if(!f) f = cands.find(d=>lipsaScore(d.name, x.i.den) >= 0.75);
+    if(f){ x.doc=f; used.add(f.id); }
+  }
+  for(const d of dos){
+    const xs = all.filter(x=>x.d===d);
+    d.total = xs.length; d.got = xs.filter(x=>x.doc).length;
+    d.items.forEach(i=>{ const x = xs.find(x=>x.i===i); if(x) i.doc = x.doc; });
+  }
+  return dos;
+}
+function ctMissing(includeLater){
+  const dos = ctMatch(); if(!dos) return [];
+  return dos.filter(d=>includeLater || !d.later).flatMap(d=>d.items.filter(i=>!i.group && !i.doc));
+}
+
+function viewCarte(){
+  if(!S.ct) S.ct = {tpl:"lea-fo", p:{nr:"", cod:"", cond:"OPGW", tronsoane:"", balize:"", prize:""}};
+  const p = S.ct.p;
+  const dos = ctMatch();
+  const inLips = new Set(S.lipsuri.map(l=>norm(lden(l))));
+  const miss = ctMissing(false).filter(i=>!inLips.has(norm(lden(i))));
+  const tot = dos.filter(d=>!d.later).reduce((a,d)=>a+d.total,0), got = dos.filter(d=>!d.later).reduce((a,d)=>a+d.got,0);
+  const nPV = dos.find(d=>d.id==="B2").items.filter(i=>i.cod).length;
+  const bar = (g,t,muted) => `<div class="bar ${muted?"mut":""}"><i style="width:${t?Math.round(g/t*100):0}%"></i></div>`;
+  return `
+  <div class="note"><b>Cartea tehnică.</b> Lista-tip urmează structura cărții tehnice pentru o lucrare de fibră optică pe LEA 110 kV. Completezi parametrii lucrării, iar aplicația generează toate documentele așteptate, le caută în inventar și îți arată situația pe fiecare dosar.</div>
+
+  <div class="card">
+    <h3>Parametrii lucrării <span class="muted">· ${esc(CT_TPL[S.ct.tpl].name)}</span></h3>
+    <div class="grid2">
+      <div><span class="lbl">Lucrare nr.</span><input type="text" data-ctp="nr" value="${esc(p.nr)}" placeholder="5.2/2026"></div>
+      <div><span class="lbl">Cod pentru numerotarea PV-urilor</span><input type="text" data-ctp="cod" value="${esc(p.cod)}" placeholder="26L05.2"></div>
+      <div><span class="lbl">Conductor</span><select data-ctp="cond">${["OPGW","ADSS"].map(c=>`<option ${p.cond===c?"selected":""}>${c}</option>`).join("")}</select></div>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <div><span class="lbl">Tronsoane — câte unul pe rând, în ordinea PV-urilor</span><textarea rows="6" data-ctp="tronsoane" placeholder="1-8&#10;8-15&#10;15-24">${esc(p.tronsoane)}</textarea></div>
+      <div><span class="lbl">Balize — deschidere : bucăți, câte una pe rând</span><textarea rows="6" data-ctp="balize" placeholder="12-13 : 2&#10;44-45 : 4">${esc(p.balize)}</textarea></div>
+      <div><span class="lbl">Stâlpi cu priză de pământ</span><textarea rows="6" data-ctp="prize" placeholder="8, 15, 24, 31">${esc(p.prize)}</textarea></div>
+    </div>
+    <p class="muted" style="margin:10px 0 0">Din parametri rezultă <b>${nPV}</b> procese-verbale de execuție și <b>${parseList(p.prize).length}</b> buletine de priză, numerotate ca în model.</p>
+  </div>
+
+  <div class="card">
+    <h3>Situația <span class="muted">· capitolele A și B: ${got} din ${tot} documente găsite în inventar</span></h3>
+    ${["A","B","C","D"].map(ch=>{
+      const ds = dos.filter(d=>d.ch===ch);
+      return `<div class="ct-ch"><div class="ct-cht">${CT_CH[ch]}</div>
+        ${ds.map(d=>`<div class="ct-row">
+          <b>Dosar ${d.id}</b>
+          ${bar(d.got,d.total,d.later)}
+          <span class="num">${d.got} / ${d.total}</span>
+          ${d.later && d.got<d.total ? `<span class="tag t-none">de completat ${d.later}</span>` : d.got===d.total ? `<span class="tag t-viz">complet</span>` : `<span class="tag t-late">${d.total-d.got} lipsă</span>`}
+        </div>`).join("")}</div>`;
+    }).join("")}
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px">
+      <button class="btn" id="ctToLips" ${miss.length?"":"disabled"}>Trimite ${miss.length} ${miss.length===1?"lipsă":"lipsuri"} la Lipsuri</button>
+      <button class="btn o" id="ctPrint">Tipărește borderourile</button>
+    </div>
+    <p class="muted" style="margin:8px 0 0">Lipsurile din capitolele A și B ajung la <b>Lipsuri</b>, cu „de la cine” completat, ca să le poți cere la <b>Cereri</b>. Capitolele C și D nu se trimit: se completează la recepție și în exploatare.</p>
+  </div>
+
+  ${dos.map(d=>`<details class="card ct-det" ${d.got<d.total && !d.later ? "open":""}>
+    <summary><b>Dosar ${d.id}</b> <span class="muted">· ${CT_CH[d.ch].split(" – ")[1]}</span> <span class="num" style="margin-left:auto">${d.got} / ${d.total}</span></summary>
+    <div class="tw" style="max-height:none;margin-top:10px"><table>
+      <thead><tr><th style="width:150px">Cod</th><th>Document</th><th style="width:130px">Stare</th><th style="width:34%">Fișier din inventar</th></tr></thead>
+      <tbody>${d.items.map(i=> i.group ? `<tr class="grp-row"><td colspan="4">${esc(i.group)}</td></tr>` : `<tr>
+        <td class="num">${esc(i.cod||"")}</td><td>${esc(i.den)}</td>
+        <td>${i.doc ? `<span class="tag t-viz">găsit</span>` : d.later ? `<span class="tag t-none">de completat</span>` : `<span class="tag t-late">lipsă</span>`}</td>
+        <td class="fn">${i.doc ? esc(i.doc.name) : ""}</td></tr>`).join("")}</tbody>
+    </table></div>
+  </details>`).join("")}`;
+}
+
+function buildBorderouri(){
+  const dos = ctMatch(); const m = S.meta, p = S.ct.p;
+  return dos.map(d=>{
+    let n = 0;
+    const rows = d.items.map(i=>{
+      if(i.group){ n++; return `<div class="bd-i">${String(n).padStart(2,"0")}. ${esc(i.group)}</div>`; }
+      if(i.cod) return `<div class="bd-s">${esc(i.cod)} – ${esc(i.den.replace(/^PV /,"PV "))}${i.doc?"":` <span class="bd-miss">${d.later?"de completat":"LIPSĂ"}</span>`}</div>`;
+      n++; return `<div class="bd-i">${String(n).padStart(2,"0")}. ${esc(i.den)}${i.doc?"":` <span class="bd-miss">${d.later?"de completat":"LIPSĂ"}</span>`}</div>`;
+    }).join("");
+    return `<div class="bd">
+      <table class="bd-h"><tbody>
+        ${p.nr?`<tr><td>Lucrare nr.:</td><td>${esc(p.nr)}</td></tr>`:""}
+        <tr><td>Faza:</td><td>Carte tehnică</td></tr>
+        <tr><td>Lucrare:</td><td>${esc(m.proiect||"")}</td></tr>
+        ${m.emitent?`<tr><td>Executant:</td><td>${esc(m.emitent)}</td></tr>`:""}
+        <tr><td>Beneficiar:</td><td>${esc(m.beneficiar||"")}</td></tr>
+      </tbody></table>
+      <div class="bd-t">BORDEROU PIESE ÎNDOSARIATE<br>DOSAR ${d.id}</div>
+      <div class="bd-c">${esc(CT_CH[d.ch])}</div>
+      <div class="bd-a">A. PIESE SCRISE</div>
+      ${rows}
+    </div>`;
+  }).join("");
+}
+
+/* ---- REZULTATE ---- */
+function metrics(){
+  const d = S.docs;
+  const tot = d.length;
+  const dupCount = dupGroups().reduce((a,g)=>a+g.docs.length,0);
+  const superseded = d.filter(x=>x.dup).length;
+  const ncl = d.filter(x=>x.cap==="Neclasificat").length;
+  const scans = d.filter(x=>isScan(x.name)).length;
+  const est = d.filter(x=>x.dataSrc==="estimat").length;
+  const byCap = {};
+  for(const c of CAPS) byCap[c] = d.filter(x=>x.cap===c).length;
+  const cer = S.cereri.map(cerStatus);
+  return {tot, dupCount, superseded, ncl, scans, est, byCap, lipsuri:openLipsuri().length,
+    cerDeschise: cer.filter(x=>!x.done).length, cerIntarziate: cer.filter(x=>x.late).length,
+    necerute: openLipsuri().filter(l=>!lipsaCerere(l)).length};
+}
+
+function viewRezultate(){
+  const m = metrics();
+  const pct = n => m.tot ? Math.round(n/m.tot*100) : 0;
+  return `
+  <div class="stats">
+    <div class="stat"><div class="v">${m.tot}</div><div class="l">documente inventariate</div></div>
+    <div class="stat"><div class="v">${m.dupCount}</div><div class="l">în grupuri de duplicate</div></div>
+    <div class="stat bad"><div class="v">${m.lipsuri}</div><div class="l">documente lipsă</div></div>
+    <div class="stat ${m.necerute?"hot":""}"><div class="v">${m.necerute}</div><div class="l">lipsuri încă necerute</div></div>
+    <div class="stat ${m.cerIntarziate?"bad":""}"><div class="v">${m.cerIntarziate} / ${m.cerDeschise}</div><div class="l">cereri întârziate / deschise</div></div>
+    <div class="stat"><div class="v">${m.ncl}</div><div class="l">neîncadrate în capitole</div></div>
+    <div class="stat ${m.est?"hot":""}"><div class="v">${m.est}</div><div class="l">date estimate, de verificat</div></div>
+    <div class="stat"><div class="v">${pct(m.scans)}%</div><div class="l">scanuri și poze</div></div>
+  </div>
+
+  <div class="card">
+    <h3>Distribuția pe capitole</h3>
+    <div class="tw" style="max-height:none"><table>
+      <thead><tr><th>Capitol</th><th style="width:80px">Documente</th><th style="width:70px">Pondere</th></tr></thead>
+      <tbody>${CAPS.map(c=>`<tr><td>${c}</td><td class="num">${m.byCap[c]}</td><td class="num">${pct(m.byCap[c])}%</td></tr>`).join("")}</tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h3>Livrabile</h3>
+    <div style="display:flex;gap:9px;flex-wrap:wrap">
+      <button class="btn o" id="btnOpis">Generează opisul (tipărire / PDF)</button>
+      <button class="btn g" id="btnCsv">Export inventar (CSV)</button>
+      <button class="btn g" id="btnRaport">Export statistici (CSV)</button>
+    </div>
+    <p style="margin:12px 0 0;font-size:12.5px;color:var(--muted);line-height:1.5">Opisul se deschide în fereastra de tipărire a browserului. Alege „Salvare ca PDF" ca destinație. Fișierele CSV se deschid direct în Excel.</p>
+  </div>`;
+}
+
+/* ---------------- opis ---------------- */
+function buildOpis(){
+  const m = S.meta;
+  const order = CAPS.filter(c=>c!=="Neclasificat").concat(["Neclasificat"]);
+  const roman = ["I","II","III","IV","V","VI","VII","VIII","IX","X"];
+  let n = 0, rows = "";
+  order.forEach((cap, i)=>{
+    const ds = S.docs.filter(d=>d.cap===cap && !d.dup);
+    const ls = openLipsuri().filter(l=>l.cap===cap);
+    if(!ds.length && !ls.length) return;
+    rows += `<tr class="cap"><td colspan="5">${roman[i]||""}. ${esc(cap)}</td></tr>`;
+    ds.sort((a,b)=>(a.data||"").localeCompare(b.data||"")||a.name.localeCompare(b.name));
+    for(const d of ds){
+      n++;
+      rows += `<tr><td>${String(n).padStart(3,"0")}</td><td>${esc(d.name)}</td><td>${esc(d.sursa==="primit"?("primit · "+(d.dela||"—")):(d.sursa==="propriu"?"propriu":"—"))}</td><td>${esc(d.dataSrc==="estimat"?"":roDate(d.data))}</td><td>atașat</td></tr>`;
+    }
+    for(const l of ls){
+      n++;
+      rows += `<tr class="miss"><td>${String(n).padStart(3,"0")}</td><td>${esc(lden(l))}</td><td>${esc(l.dela||"—")}</td><td>—</td><td>LIPSĂ</td></tr>`;
+    }
+  });
+  const now = new Date();
+  const dt = now.toLocaleDateString("ro-RO")+", ora "+now.toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"});
+  return `
+  <div class="opis-h">
+    <h2>OPIS — ${esc(m.proiect||"Proiect")}</h2>
+    <div class="m">
+      Firma: ${esc(m.firma||"—")} · Beneficiar: ${esc(m.beneficiar||"—")} · Contract: ${esc(m.contract||"—")}<br>
+      Amplasament: ${esc(m.amplasament||"—")} · Emis ${dt} · ${n} poziții, din care ${openLipsuri().length} lipsă
+    </div>
+  </div>
+  <table class="opis">
+    <thead><tr><th style="width:38px">Poz.</th><th>Denumire document</th><th style="width:150px">Sursă</th><th style="width:74px">Data</th><th style="width:60px">Stare</th></tr></thead>
+    <tbody>${rows||`<tr><td colspan="5">Niciun document.</td></tr>`}</tbody>
+  </table>
+  <div class="pf">Opis generat cu Schela · Atelier. Documentele marcate LIPSĂ nu se regăsesc în dosarul predat și se recuperează de la sursele indicate.</div>`;
+}
+
+function roDate(iso){
+  if(!iso) return "";
+  const m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : iso;
+}
+function csvEsc(v){ const s=String(v??""); return /[",;\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+
+function exportCsv(){
+  const src = {nume:"din denumire", estimat:"estimata (data fisierului)", manual:"introdusa manual"};
+  const head = ["Denumire","Cale","Capitol","Data document","Sursa datei","Sursa","De la cine","In vigoare","Inlocuit","In grup de duplicate","Extensie","Marime (bytes)","SHA-256"];
+  const lines = [head.join(";")].concat(S.docs.map(d=>[
+    d.name, d.path, d.cap, d.data, src[d.dataSrc]||"", d.sursa, d.dela, d.viz?"da":"", d.dup?"da":"", d.grp?"da":"", d.ext, d.size, d.hash||""
+  ].map(csvEsc).join(";")));
+  download((S.meta.proiect||"inventar").replace(/[^\w\-]+/g,"_")+"_inventar.csv", "﻿"+lines.join("\r\n"), "text/csv;charset=utf-8");
+}
+
+function exportRaport(){
+  const m = metrics();
+  const rows = [
+    ["Firma", S.meta.firma],
+    ["Proiect", S.meta.proiect],
+    ["Documente inventariate", m.tot],
+    ["Documente in grupuri de duplicate", m.dupCount],
+    ["Documente lipsa", m.lipsuri],
+    ["Lipsuri necerute", m.necerute],
+    ["Cereri deschise", m.cerDeschise],
+    ["Cereri intarziate", m.cerIntarziate],
+    ["Documente neincadrate", m.ncl],
+    ["Scanuri si poze", m.scans],
+    ["Date estimate (nemodificate)", m.est],
+    ["Procent scanuri", (m.tot?Math.round(m.scans/m.tot*100):0)+"%"],
+    ...CAPS.map(c=>["Documente — "+c, m.byCap[c]])
+  ];
+  download((S.meta.proiect||"statistici").replace(/[^\w\-]+/g,"_")+"_statistici.csv",
+    "﻿"+[["Indicator","Valoare"].join(";")].concat(rows.map(r=>r.map(csvEsc).join(";"))).join("\r\n"),
+    "text/csv;charset=utf-8");
+}
+
+/* ---------------- binding ---------------- */
+function bind(){
+  const v = $("#view");
+
+  v.querySelectorAll("[data-meta]").forEach(el=>{
+    el.oninput = () => { S.meta[el.dataset.meta] = el.value; autosave(); $("#vsub").textContent = S.meta.proiect?"· "+S.meta.proiect:""; };
+  });
+  const nt = v.querySelector("[data-note]");
+  if(nt) nt.oninput = () => { S.note = nt.value; autosave(); };
+
+
+  const bdemo=$("#btnDemo"); if(bdemo) bdemo.onclick=async()=>{
+    if((S.docs.length || S.lipsuri.length) && !confirm("Exemplul înlocuiește proiectul curent din pagină. Ai salvat proiectul?")) return;
+    try{
+      const r = await fetch("exemple/Demo_LEA_Nord-Sud_schela.json", {cache:"no-store"});
+      const o = await r.json(); if(!o || !o.meta) throw new Error("format");
+      S = Object.assign(blank(), o); migrate(); markDups(); VIEW = "carte"; render();
+    }catch(e){ alert("Exemplul nu a putut fi încărcat."); }
+  };
+  const bc=$("#btnClear");
+  if(bc) bc.onclick=()=>{ if(confirm("Ștergi tot proiectul curent din pagină?")){ S=blank(); render(); } };
+
+  // file inputs
+  const bd=$("#btnPickDir"), bf=$("#btnPickFiles"), ind=$("#inDir"), inf=$("#inFiles");
+  if(bd&&ind){ bd.onclick=()=>ind.click(); ind.onchange=()=>{ if(ind.files.length) addFiles([...ind.files]); ind.value=""; }; }
+  if(bf&&inf){ bf.onclick=()=>inf.click(); inf.onchange=()=>{ if(inf.files.length) addFiles([...inf.files]); inf.value=""; }; }
+
+  // filters
+  const fq=$("#fq"); if(fq) fq.oninput=()=>{ FILTER.q=fq.value; const p=fq.selectionStart; render(); const n=$("#fq"); if(n){n.focus(); n.setSelectionRange(p,p);} };
+  const fc=$("#fcap"); if(fc) fc.onchange=()=>{ FILTER.cap=fc.value; render(); };
+  const fs=$("#fstare"); if(fs) fs.onchange=()=>{ FILTER.stare=fs.value; render(); };
+
+  // row edits
+  v.querySelectorAll("[data-f]").forEach(el=>{
+    const h=()=>{
+      const d=S.docs.find(x=>x.id===el.dataset.id); if(!d) return;
+      d[el.dataset.f]=el.value;
+      if(el.dataset.f==="data"){ d.dataSrc = el.value ? "manual" : ""; el.classList.remove("isest"); const s=el.nextElementSibling; if(s) s.remove(); }
+      autosave();
+    };
+    el.onchange=h;
+    if(el.tagName==="INPUT"&&el.type==="text") el.oninput=h;
+  });
+  v.querySelectorAll("[data-sel]").forEach(el=>{
+    el.onchange=()=>{ const d=S.docs.find(x=>x.id===el.dataset.sel); if(d){ d.sel=el.checked; el.closest("tr").classList.toggle("sel",el.checked);} autosave(); };
+  });
+
+  // bulk
+  const ba=$("#btnSelAll"); if(ba) ba.onclick=()=>{ const ids=new Set(filtered().map(d=>d.id)); S.docs.forEach(d=>{ if(ids.has(d.id)) d.sel=true; }); render(); };
+  const bn=$("#btnSelNone"); if(bn) bn.onclick=()=>{ S.docs.forEach(d=>d.sel=false); render(); };
+  const bcap=$("#bulkCap"); if(bcap) bcap.onchange=()=>{ if(!bcap.value) return; let n=0; S.docs.forEach(d=>{ if(d.sel){ d.cap=bcap.value; n++; } }); markDups(); render(); if(!n) alert("Nu ai selectat niciun document."); };
+  const bsrc=$("#bulkSrc"); if(bsrc) bsrc.onchange=()=>{ if(!bsrc.value) return; S.docs.forEach(d=>{ if(d.sel) d.sursa=bsrc.value; }); render(); };
+  const bdel=$("#btnDel"); if(bdel) bdel.onclick=()=>{ const n=S.docs.filter(d=>d.sel).length; if(!n) return alert("Nu ai selectat nimic."); if(!confirm("Scoți "+n+" documente din inventar?")) return; S.docs=S.docs.filter(d=>!d.sel); markDups(); render(); };
+
+  const brc=$("#btnReclass"); if(brc) brc.onclick=()=>{
+    let n=0;
+    S.docs.forEach(d=>{ if(d.cap==="Neclasificat"){ const c=guessCap(d.name,d.path); if(c!=="Neclasificat"){ d.cap=c; n++; } } });
+    render(); alert(n ? n+" documente încadrate. Verifică-le cu filtrul pe capitol." : "Niciun document neclasificat nu se potrivește cu regulile.");
+  };
+
+  // duplicate
+  v.querySelectorAll("[data-viz]").forEach(b=>b.onclick=()=>{
+    const d=S.docs.find(x=>x.id===b.dataset.viz); if(!d) return;
+    const g=dupGroups().find(g=>g.docs.includes(d));
+    if(g) g.docs.forEach(x=>x.viz=false);
+    d.viz=true; markDups(); render();
+  });
+
+  // lipsuri
+  const bal=$("#btnAddL");
+  if(bal) bal.onclick=()=>{
+    const den=$("#lDen").value.trim();
+    if(!den) return alert("Scrie denumirea documentului.");
+    S.lipsuri.push({id:newId("l"), den, cap:$("#lCap").value, dela:$("#lDela").value.trim()});
+    $("#lDen").value=""; $("#lDela").value=""; render();
+  };
+  v.querySelectorAll("[data-dell]").forEach(b=>b.onclick=()=>{
+    const [l] = S.lipsuri.splice(+b.dataset.dell,1);
+    if(l) S.cereri.forEach(c=>{ c.items = c.items.filter(id=>id!==l.id); });
+    S.cereri = S.cereri.filter(c=>c.items.length);
+    render();
+  });
+  v.querySelectorAll("[data-unrez]").forEach(b=>b.onclick=()=>{ delete S.lipsuri[+b.dataset.unrez].rez; render(); });
+
+  // carte tehnică
+  v.querySelectorAll("[data-ctp]").forEach(el=>el.onchange=()=>{ S.ct.p[el.dataset.ctp] = el.value; render(); });
+  const ctl=$("#ctToLips"); if(ctl) ctl.onclick=()=>{
+    const have = new Set(S.lipsuri.map(l=>norm(lden(l))));
+    let n = 0;
+    for(const i of ctMissing(false)){
+      if(have.has(norm(lden(i)))) continue;
+      S.lipsuri.push({id:newId("l"), cod:i.cod||"", den:i.den, cap:i.cap, dela:i.dela||""}); n++;
+    }
+    render(); alert(n ? `${pl(n,"document adăugat","documente adăugate")} la Lipsuri, cu „de la cine” completat.` : "Toate lipsurile sunt deja în listă.");
+  };
+  const ctp=$("#ctPrint"); if(ctp) ctp.onclick=()=>{ $("#print").innerHTML = buildBorderouri(); setTimeout(()=>window.print(), 60); };
+
+  // cereri
+  v.querySelectorAll("[data-setdela]").forEach(el=>el.onchange=()=>{
+    const who = el.value.trim(); if(!who) return;
+    el.dataset.setdela.split(",").forEach(id=>{ const l=lipsaById(id); if(l) l.dela = who; });
+    render();
+  });
+  v.querySelectorAll("[data-prep]").forEach(b=>b.onclick=()=>{
+    const card = b.closest(".grp");
+    const ids = [...card.querySelectorAll("[data-lid]:checked")].map(x=>x.dataset.lid);
+    if(!ids.length) return alert("Bifează cel puțin un document.");
+    const g = pendingGroups()[+b.dataset.prep];
+    openComposer("new", {id:newId("c"), catre:g.name, email:"", items:ids, termen:card.querySelector("[data-term]").value, trimis:"", reamintiri:[], inchisa:false});
+  });
+  const cById = id => S.cereri.find(c=>c.id===id);
+  v.querySelectorAll("[data-cview]").forEach(b=>b.onclick=()=>openComposer("view", cById(b.dataset.cview)));
+  v.querySelectorAll("[data-crem]").forEach(b=>b.onclick=()=>{
+    const c = cById(b.dataset.crem); if(!c) return;
+    const base = c.termen && c.termen > todayIso() ? c.termen : todayIso();
+    openComposer("rem", c, addDays(base, 3));
+  });
+  v.querySelectorAll("[data-cclose]").forEach(b=>b.onclick=()=>{ const c=cById(b.dataset.cclose); if(c){ c.inchisa=!c.inchisa; render(); } });
+  v.querySelectorAll("[data-cdel]").forEach(b=>b.onclick=()=>{
+    const c=cById(b.dataset.cdel); if(!c) return;
+    if(!confirm(`Ștergi cererea către ${c.catre}? Documentele lipsă rămân în listă și pot fi cerute din nou.`)) return;
+    S.cereri = S.cereri.filter(x=>x!==c); render();
+  });
+
+  // rezultate
+  const bo=$("#btnOpis"); if(bo) bo.onclick=()=>{ $("#print").innerHTML=buildOpis(); setTimeout(()=>window.print(),60); };
+  const bcsv=$("#btnCsv"); if(bcsv) bcsv.onclick=exportCsv;
+  const brap=$("#btnRaport"); if(brap) brap.onclick=exportRaport;
+}
+
+/* top bar */
+$("#btnSave").onclick=()=>{
+  const name=(S.meta.proiect||"proiect").replace(/[^\w\-]+/g,"_")+"_schela.json";
+  download(name, JSON.stringify(S,null,2));
+};
+$("#btnLoad").onclick=()=>$("#fileLoad").click();
+$("#fileLoad").onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const o=JSON.parse(r.result);
+      if(!o||!o.meta) throw new Error("format");
+      S=Object.assign(blank(),o);
+      migrate(); markDups(); render(); alert("Proiect încărcat: "+(S.meta.proiect||"fără nume")+" — "+S.docs.length+" documente.");
+    }catch(err){ alert("Fișierul nu pare a fi un proiect Schela."); }
+  };
+  r.readAsText(f); e.target.value="";
+};
+
+
+window.addEventListener("beforeunload", autosave);
+
+autoload();
+markDups();
+render();
+</script>
+</body>
+</html>
