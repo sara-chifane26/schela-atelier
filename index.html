@@ -65,6 +65,8 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 input[type=text],input[type=date],input[type=number],select,textarea{width:100%;height:34px;padding:0 10px;border:1px solid var(--line);border-radius:4px;background:#fff}
 textarea{height:auto;padding:8px 10px;resize:vertical}
+textarea.grow{resize:none;overflow:hidden;min-height:34px;line-height:1.35;padding:7px 10px}
+.grid2 > .wide{grid-column:1/-1}
 select{cursor:pointer}
 
 /* stats */
@@ -416,15 +418,18 @@ function render(){
 /* ---- PROIECT ---- */
 function viewProiect(){
   const m = S.meta;
-  const f = (k,l,t) => `<div><span class="lbl">${l}</span><input type="${t||"text"}" data-meta="${k}" value="${esc(m[k])}"></div>`;
+  // câmpurile de text cresc pe mai multe rânduri, ca numele lungi să se vadă complet
+  const f = (k,l,t,wide) => t==="date"
+    ? `<div><span class="lbl">${l}</span><input type="date" data-meta="${k}" value="${esc(m[k])}"></div>`
+    : `<div${wide?' class="wide"':""}><span class="lbl">${l}</span><textarea rows="1" class="grow" data-meta="${k}">${esc(m[k])}</textarea></div>`;
   return `
   <div class="note"><b>Unealtă de lucru pentru dosarele de proiect.</b> Toate datele stau în această pagină, pe calculatorul tău. Nimic nu se încarcă pe internet. Salvează proiectul într-un fișier la finalul fiecărei sesiuni.</div>
 
   <div class="card">
     <h3>Datele proiectului</h3>
     <div class="grid2">
+      ${f("proiect","Proiectul",null,true)}
       ${f("firma","Firma-client")}
-      ${f("proiect","Proiectul")}
       ${f("beneficiar","Beneficiar")}
       ${f("contract","Contract")}
       ${f("amplasament","Amplasament")}
@@ -1347,8 +1352,16 @@ function exportRaport(){
 function bind(){
   const v = $("#view");
 
+  const fit = el => { el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; };
   v.querySelectorAll("[data-meta]").forEach(el=>{
-    el.oninput = () => { S.meta[el.dataset.meta] = el.value; autosave(); $("#vsub").textContent = S.meta.proiect?"· "+S.meta.proiect:""; };
+    el.oninput = () => {
+      if(el.classList.contains("grow")){ el.value = el.value.replace(/\n/g," "); fit(el); }
+      S.meta[el.dataset.meta] = el.value; autosave(); $("#vsub").textContent = S.meta.proiect?"· "+S.meta.proiect:"";
+    };
+    if(el.classList.contains("grow")){
+      el.onkeydown = e => { if(e.key==="Enter") e.preventDefault(); };   // un singur paragraf, fără rânduri noi
+      fit(el);
+    }
   });
   const nt = v.querySelector("[data-note]");
   if(nt) nt.oninput = () => { S.note = nt.value; autosave(); };
@@ -1495,6 +1508,8 @@ $("#fileLoad").onchange=e=>{
 
 
 window.addEventListener("beforeunload", autosave);
+// la redimensionarea ferestrei, câmpurile care cresc își recalculează înălțimea
+window.addEventListener("resize", ()=>document.querySelectorAll("textarea.grow").forEach(el=>{ el.style.height="auto"; el.style.height=el.scrollHeight+2+"px"; }));
 
 autoload();
 markDups();
