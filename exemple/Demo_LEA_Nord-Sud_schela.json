@@ -12,7 +12,45 @@
  },
  "docs": [
   {
-   "id": "dkpl2y38a",
+   "id": "dyh7yf77g",
+   "name": "PV faza determinanta montare OPGW.pdf",
+   "path": "LEA Nord-Sud/B2",
+   "size": 45,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "8dbef5fdb75d317073b38f629d68ee5f70af191c75b56dc695bd41bffd782f5d",
+   "cap": "Execuție",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "du6hhcg55",
+   "name": "Fisa date sintetice LEA Nord-Sud.pdf",
+   "path": "LEA Nord-Sud/A1",
+   "size": 44,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "9bafffa27006b95c43ebd599ee47c039232d54a115f02657ccfb2b1071a5f0f3",
+   "cap": "Neclasificat",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "dvrr3wvip",
    "name": "26L05.2-2.1 PV demontare conductor protectie st 8-15.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 64,
@@ -31,7 +69,26 @@
    "obs": ""
   },
   {
-   "id": "d6552oc2r",
+   "id": "dsipi5r5f",
+   "name": "Program control calitate faze determinante.pdf",
+   "path": "LEA Nord-Sud/B2",
+   "size": 54,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "0964cc64cdf5652defbf7bccf3f1e278c117e6260c94861afbf1ea639a8c27e4",
+   "cap": "Execuție",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "d4tbwpgj4",
    "name": "26L05.2-6.1 PV demontare conductor protectie st 40-47.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 65,
@@ -50,7 +107,7 @@
    "obs": ""
   },
   {
-   "id": "d43u6pcmi",
+   "id": "ddv1danlk",
    "name": "26L05.2-19.8 PV montare priza de pamant st 63.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 57,
@@ -69,7 +126,7 @@
    "obs": ""
   },
   {
-   "id": "du2k4723z",
+   "id": "d10grk2ix",
    "name": "26L05.2-1.3 PV montare legaturi definitive st 1-8.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 61,
@@ -88,7 +145,7 @@
    "obs": ""
   },
   {
-   "id": "dt1rqu9pn",
+   "id": "dggry5s4z",
    "name": "26L05.2-8.3 PV montare legaturi definitive st 55-63.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 63,
@@ -107,7 +164,7 @@
    "obs": ""
   },
   {
-   "id": "dudqv632p",
+   "id": "dz6zzkghs",
    "name": "26L05.2-19.12 PV montare priza de pamant st 94.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 58,
@@ -126,7 +183,7 @@
    "obs": ""
   },
   {
-   "id": "depctwx07",
+   "id": "dwbnxizx4",
    "name": "26L05.2-12.3 PV montare legaturi definitive st 86-94.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 64,
@@ -145,7 +202,7 @@
    "obs": ""
   },
   {
-   "id": "d4pk72yv3",
+   "id": "d34m9zs4a",
    "name": "26L05.2-19.2 PV montare priza de pamant st 15.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 57,
@@ -164,7 +221,7 @@
    "obs": ""
   },
   {
-   "id": "d1dnsp21p",
+   "id": "ddugxvp9b",
    "name": "26L05.2-6.3 PV montare legaturi definitive st 40-47.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 63,
@@ -183,7 +240,7 @@
    "obs": ""
   },
   {
-   "id": "dmkrjxnok",
+   "id": "d1djo6d1o",
    "name": "26L05.2-19.5 PV montare priza de pamant st 40.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 57,
@@ -202,7 +259,7 @@
    "obs": ""
   },
   {
-   "id": "d258rwyn0",
+   "id": "dwr2j9bzo",
    "name": "26L05.2-11.3 PV montare legaturi definitive st 78-86.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 64,
@@ -221,7 +278,7 @@
    "obs": ""
   },
   {
-   "id": "dulcvq3yq",
+   "id": "dxb1etsak",
    "name": "26L05.2-16 PV montare balize st 44-45 4 buc.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 55,
@@ -240,7 +297,7 @@
    "obs": ""
   },
   {
-   "id": "dtke7qy3l",
+   "id": "dwe6bb2vv",
    "name": "26L05.2-5.3 PV montare legaturi definitive st 31-40.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 63,
@@ -259,7 +316,7 @@
    "obs": ""
   },
   {
-   "id": "do16z1dxv",
+   "id": "d0m5zw2h6",
    "name": "26L05.2-5.1 PV demontare conductor protectie st 31-40.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 65,
@@ -278,7 +335,7 @@
    "obs": ""
   },
   {
-   "id": "d89h52w3p",
+   "id": "d10inncpc",
    "name": "26L05.2-19.7 PV montare priza de pamant st 55.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 57,
@@ -297,7 +354,7 @@
    "obs": ""
   },
   {
-   "id": "dtfmwkz85",
+   "id": "dciudqeom",
    "name": "26L05.2-11.1 PV demontare conductor protectie st 78-86.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 66,
@@ -316,7 +373,7 @@
    "obs": ""
   },
   {
-   "id": "dy38mo5k1",
+   "id": "dtzth2g7s",
    "name": "26L05.2-10.1 PV demontare conductor protectie st 70-78.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 66,
@@ -335,7 +392,7 @@
    "obs": ""
   },
   {
-   "id": "d7km1l7qk",
+   "id": "dejy6jrrt",
    "name": "26L05.2-2.3 PV montare legaturi definitive st 8-15.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 62,
@@ -354,7 +411,7 @@
    "obs": ""
   },
   {
-   "id": "d6a0abor6",
+   "id": "dfcxnyshx",
    "name": "26L05.2-19.9 PV montare priza de pamant st 70.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 57,
@@ -373,7 +430,7 @@
    "obs": ""
   },
   {
-   "id": "dgcg3u5mh",
+   "id": "dli4jvdua",
    "name": "26L05.2-19.10 PV montare priza de pamant st 78.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 58,
@@ -392,7 +449,7 @@
    "obs": ""
   },
   {
-   "id": "d6ugsk9v7",
+   "id": "dxhqr8jtb",
    "name": "26L05.2-15 PV montare balize st 27-28 2 buc.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 55,
@@ -411,7 +468,7 @@
    "obs": ""
   },
   {
-   "id": "dut46liib",
+   "id": "d0cqdbty3",
    "name": "26L05.2-8.1 PV demontare conductor protectie st 55-63.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 65,
@@ -430,7 +487,7 @@
    "obs": ""
   },
   {
-   "id": "dnb485fu2",
+   "id": "dspuhj01j",
    "name": "26L05.2-3.1 PV demontare conductor protectie st 15-24.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 65,
@@ -449,7 +506,7 @@
    "obs": ""
   },
   {
-   "id": "dyjvfkuzt",
+   "id": "d0vqyafgx",
    "name": "26L05.2-7.1 PV demontare conductor protectie st 47-55.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 65,
@@ -468,7 +525,7 @@
    "obs": ""
   },
   {
-   "id": "d9aotatgp",
+   "id": "dln9153gz",
    "name": "26L05.2-14 PV montare balize st 12-13 2 buc.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 55,
@@ -487,7 +544,7 @@
    "obs": ""
   },
   {
-   "id": "dfcjhkg8k",
+   "id": "dz9tlmpdv",
    "name": "26L05.2-12.1 PV demontare conductor protectie st 86-94.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 66,
@@ -506,7 +563,7 @@
    "obs": ""
   },
   {
-   "id": "dt8m5aytg",
+   "id": "dtjl4qquk",
    "name": "26L05.2-1.1 PV demontare conductor protectie st 1-8.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 63,
@@ -525,7 +582,7 @@
    "obs": ""
   },
   {
-   "id": "dve8imudv",
+   "id": "dci9u6kjn",
    "name": "26L05.2-10.3 PV montare legaturi definitive st 70-78.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 64,
@@ -544,7 +601,7 @@
    "obs": ""
   },
   {
-   "id": "d82dlqao2",
+   "id": "dqqpsbcyw",
    "name": "26L05.2-19.6 PV montare priza de pamant st 47.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 57,
@@ -563,7 +620,7 @@
    "obs": ""
   },
   {
-   "id": "d5l7xyq36",
+   "id": "dd7mw2v2z",
    "name": "26L05.2-19.3 PV montare priza de pamant st 24.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 57,
@@ -582,7 +639,7 @@
    "obs": ""
   },
   {
-   "id": "djoqfsqbn",
+   "id": "d6fwvjcxp",
    "name": "26L05.2-9.1 PV demontare conductor protectie st 63-70.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 65,
@@ -601,7 +658,7 @@
    "obs": ""
   },
   {
-   "id": "dzzju58vo",
+   "id": "d0xjdcrpg",
    "name": "26L05.2-17 PV montare balize st 66-67 3 buc.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 55,
@@ -620,7 +677,7 @@
    "obs": ""
   },
   {
-   "id": "dcgozj0iz",
+   "id": "d2cqobw54",
    "name": "26L05.2-4.1 PV demontare conductor protectie st 24-31.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 65,
@@ -639,7 +696,7 @@
    "obs": ""
   },
   {
-   "id": "dbq91e2el",
+   "id": "d9a1clurf",
    "name": "26L05.2-19.1 PV montare priza de pamant st 8.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 56,
@@ -658,7 +715,7 @@
    "obs": ""
   },
   {
-   "id": "dwalr6ebp",
+   "id": "dp8i0f634",
    "name": "26L05.2-9.3 PV montare legaturi definitive st 63-70.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 63,
@@ -677,7 +734,7 @@
    "obs": ""
   },
   {
-   "id": "dxzh5no9e",
+   "id": "dhjgpfdtv",
    "name": "26L05.2-13.3 PV montare legaturi definitive st 94-102.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 65,
@@ -696,7 +753,7 @@
    "obs": ""
   },
   {
-   "id": "dni8bznw0",
+   "id": "dhh90n60k",
    "name": "26L05.2-18 PV montare balize st 90-91 2 buc.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 55,
@@ -715,7 +772,7 @@
    "obs": ""
   },
   {
-   "id": "dfb0mkm6z",
+   "id": "dwmd62rw7",
    "name": "26L05.2-19.4 PV montare priza de pamant st 31.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 57,
@@ -734,7 +791,7 @@
    "obs": ""
   },
   {
-   "id": "dlc208t3v",
+   "id": "duwlcx6on",
    "name": "26L05.2-7.3 PV montare legaturi definitive st 47-55.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 63,
@@ -753,7 +810,7 @@
    "obs": ""
   },
   {
-   "id": "dqoiy3m0t",
+   "id": "deaq4tuju",
    "name": "26L05.2-4.3 PV montare legaturi definitive st 24-31.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 63,
@@ -772,7 +829,7 @@
    "obs": ""
   },
   {
-   "id": "df734v76g",
+   "id": "diih56jfr",
    "name": "26L05.2-13.1 PV demontare conductor protectie st 94-102.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 67,
@@ -791,7 +848,7 @@
    "obs": ""
   },
   {
-   "id": "duk2q17nj",
+   "id": "d9fsb86au",
    "name": "26L05.2-3.3 PV montare legaturi definitive st 15-24.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 63,
@@ -810,7 +867,7 @@
    "obs": ""
   },
   {
-   "id": "dso847ret",
+   "id": "ded3ynf8m",
    "name": "26L05.2-19.11 PV montare priza de pamant st 86.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 58,
@@ -829,7 +886,26 @@
    "obs": ""
   },
   {
-   "id": "d12ql8ozj",
+   "id": "dxs3g4nh1",
+   "name": "PV predare primire amplasament.pdf",
+   "path": "LEA Nord-Sud/B1",
+   "size": 42,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "513fa03696849adf890cce0b70b66b6bef7ad66bab8463d6284f429c8b8b0ac6",
+   "cap": "Execuție",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "d65uk2vzw",
    "name": "26L05.2-9.2 PV montare OPGW st 63-70.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 48,
@@ -848,7 +924,7 @@
    "obs": ""
   },
   {
-   "id": "d6dywam6g",
+   "id": "d6c0xw4wy",
    "name": "26L05.2-2.2 PV montare OPGW st 8-15.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 47,
@@ -867,7 +943,7 @@
    "obs": ""
   },
   {
-   "id": "d2jkrlaog",
+   "id": "du29ihbc1",
    "name": "26L05.2-5.2 PV montare OPGW st 31-40.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 48,
@@ -886,7 +962,7 @@
    "obs": ""
   },
   {
-   "id": "dc707qgm3",
+   "id": "dhmoedanr",
    "name": "26L05.2-7.2 PV montare OPGW st 47-55.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 48,
@@ -905,7 +981,7 @@
    "obs": ""
   },
   {
-   "id": "dbz24cghy",
+   "id": "dnuljj7eq",
    "name": "26L05.2-11.2 PV montare OPGW st 78-86.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 49,
@@ -924,7 +1000,7 @@
    "obs": ""
   },
   {
-   "id": "dtfdagq1m",
+   "id": "dnfzy5b08",
    "name": "26L05.2-13.2 PV montare OPGW st 94-102.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 50,
@@ -943,7 +1019,7 @@
    "obs": ""
   },
   {
-   "id": "dtww2mdro",
+   "id": "d3uhmme0t",
    "name": "26L05.2-4.2 PV montare OPGW st 24-31.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 48,
@@ -962,7 +1038,7 @@
    "obs": ""
   },
   {
-   "id": "d59m54rur",
+   "id": "d6ak6w1mc",
    "name": "26L05.2-6.2 PV montare OPGW st 40-47.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 48,
@@ -981,7 +1057,7 @@
    "obs": ""
   },
   {
-   "id": "degqcdog9",
+   "id": "ddqfzlzha",
    "name": "PCCVI LEA Nord-Sud.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 30,
@@ -1000,7 +1076,7 @@
    "obs": ""
   },
   {
-   "id": "dij37ygte",
+   "id": "djpj0bndz",
    "name": "26L05.2-1.2 PV montare OPGW st 1-8.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 46,
@@ -1019,7 +1095,7 @@
    "obs": ""
   },
   {
-   "id": "do0ham15e",
+   "id": "dzb6p24ii",
    "name": "26L05.2-12.2 PV montare OPGW st 86-94.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 49,
@@ -1038,7 +1114,7 @@
    "obs": ""
   },
   {
-   "id": "dde6a7eb3",
+   "id": "dupb6tf35",
    "name": "26L05.2-10.2 PV montare OPGW st 70-78.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 49,
@@ -1057,7 +1133,7 @@
    "obs": ""
   },
   {
-   "id": "dt6w4q1yw",
+   "id": "dm9t0bx8o",
    "name": "26L05.2-8.2 PV montare OPGW st 55-63.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 48,
@@ -1076,7 +1152,7 @@
    "obs": ""
   },
   {
-   "id": "dt20tqy8h",
+   "id": "dq23nrmpu",
    "name": "26L05.2-3.2 PV montare OPGW st 15-24.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 48,
@@ -1095,7 +1171,7 @@
    "obs": ""
   },
   {
-   "id": "d60a8ary8",
+   "id": "d2wdfbveu",
    "name": "Certificate metrologice aparate masura.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 50,
@@ -1114,7 +1190,7 @@
    "obs": ""
   },
   {
-   "id": "dkdnpw2zu",
+   "id": "die2roine",
    "name": "Raport incercare fibra optica.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 41,
@@ -1133,7 +1209,7 @@
    "obs": ""
   },
   {
-   "id": "dnjzjxjzz",
+   "id": "da1t9kou9",
    "name": "26L05.2_PTE_LEA Nord-Sud.pdf",
    "path": "LEA Nord-Sud/A2",
    "size": 36,
@@ -1152,7 +1228,7 @@
    "obs": ""
   },
   {
-   "id": "dm60f75ht",
+   "id": "d0s3a5lnt",
    "name": "Ordin de incepere executie lucrari.pdf",
    "path": "LEA Nord-Sud/B1",
    "size": 46,
@@ -1171,7 +1247,26 @@
    "obs": ""
   },
   {
-   "id": "drkh9zrhq",
+   "id": "d7ddqhwbg",
+   "name": "Decizie numire diriginte si RTE.pdf",
+   "path": "LEA Nord-Sud/B1",
+   "size": 43,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "f67cc94102867a434f933e0cb2acd95b72b7a8e0691281f03ef9f1e37c0f1bc7",
+   "cap": "Neclasificat",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "d6tb6exn0",
    "name": "Ordin de incepere lucrari.pdf",
    "path": "LEA Nord-Sud/B2",
    "size": 37,
@@ -1190,14 +1285,14 @@
    "obs": ""
   },
   {
-   "id": "dt1xjupfv",
+   "id": "de7o2ljqg",
    "name": "Aviz CTE nr 14 din 20.02.2026.pdf",
    "path": "LEA Nord-Sud/A1",
    "size": 41,
    "ext": "pdf",
    "mtime": "2026-11-09",
    "hash": "b1fa029fc41e2286ab4e589f3f5480dd41650f6220ad7c11c9b83acc6da73188",
-   "cap": "Aprovizionare",
+   "cap": "Proiectare",
    "data": "2026-02-20",
    "dataSrc": "nume",
    "sursa": "",
@@ -1209,7 +1304,7 @@
    "obs": ""
   },
   {
-   "id": "do8bu1j25",
+   "id": "dbh1s1zqj",
    "name": "26L05.2-19.4.1 Buletin verificare priza st 31.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 57,
@@ -1228,7 +1323,7 @@
    "obs": ""
   },
   {
-   "id": "dsai55fvh",
+   "id": "dvczwtk1k",
    "name": "26L05.2-19.9.1 Buletin verificare priza st 70.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 57,
@@ -1247,7 +1342,7 @@
    "obs": ""
   },
   {
-   "id": "dj6rpg8cd",
+   "id": "d3tdj1fl8",
    "name": "26L05.2-19.3.1 Buletin verificare priza st 24.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 57,
@@ -1266,7 +1361,7 @@
    "obs": ""
   },
   {
-   "id": "dvdof94pe",
+   "id": "d1100l19s",
    "name": "26L05.2-19.10.1 Buletin verificare priza st 78.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 58,
@@ -1285,7 +1380,7 @@
    "obs": ""
   },
   {
-   "id": "dx8glbn2a",
+   "id": "dmfptd1or",
    "name": "26L05.2-19.12.1 Buletin verificare priza st 94.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 58,
@@ -1304,7 +1399,7 @@
    "obs": ""
   },
   {
-   "id": "dblujxmlx",
+   "id": "d3cemtcmq",
    "name": "26L05.2-19.5.1 Buletin verificare priza st 40.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 57,
@@ -1323,7 +1418,7 @@
    "obs": ""
   },
   {
-   "id": "dihk6ning",
+   "id": "dyrhn4cpx",
    "name": "26L05.2-19.8.1 Buletin verificare priza st 63.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 57,
@@ -1342,7 +1437,7 @@
    "obs": ""
   },
   {
-   "id": "d7d4k7p0y",
+   "id": "dqpqcg6c4",
    "name": "26L05.2-19.1.1 Buletin verificare priza st 8.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 56,
@@ -1361,7 +1456,7 @@
    "obs": ""
   },
   {
-   "id": "dqgwmau5w",
+   "id": "dox4pkoqu",
    "name": "26L05.2-19.6.1 Buletin verificare priza st 47.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 57,
@@ -1380,7 +1475,7 @@
    "obs": ""
   },
   {
-   "id": "dp1uqcrdz",
+   "id": "d0vs0lsrp",
    "name": "26L05.2-19.11.1 Buletin verificare priza st 86.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 58,
@@ -1399,7 +1494,7 @@
    "obs": ""
   },
   {
-   "id": "dx4xufrs4",
+   "id": "de9mtrr7u",
    "name": "26L05.2-19.2.1 Buletin verificare priza st 15.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 57,
@@ -1418,7 +1513,7 @@
    "obs": ""
   },
   {
-   "id": "do3muuxtr",
+   "id": "dm1onb7tz",
    "name": "26L05.2-19.7.1 Buletin verificare priza st 55.pdf",
    "path": "LEA Nord-Sud/B3",
    "size": 57,
@@ -1437,7 +1532,64 @@
    "obs": ""
   },
   {
-   "id": "d7endjdwn",
+   "id": "dn8dd3r1b",
+   "name": "Referate verificare proiect.pdf",
+   "path": "LEA Nord-Sud/A2",
+   "size": 39,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "5f394df38b0eb4df19384b87ecb0b3b1f27fb34c24b012f18c9a61ba255b3cd2",
+   "cap": "Neclasificat",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "doqpvjdxd",
+   "name": "Breviar de calcul OPGW.pdf",
+   "path": "LEA Nord-Sud/A2",
+   "size": 34,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "250ba3f3a947b9582c02f5b39fe4b6fbb14c109859c71bce082a58f3600aeece",
+   "cap": "Proiectare",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "dz0jnhi53",
+   "name": "F14 comunicare incepere lucrari.pdf",
+   "path": "LEA Nord-Sud/B1",
+   "size": 43,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "8f6ef0ee474a062c9b333960e2b50688fc19a0b8dd821e567566a81b211db5b8",
+   "cap": "Neclasificat",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "d4ygp7wlh",
    "name": "Acord cadru 118 din 10.01.2026.pdf",
    "path": "LEA Nord-Sud/B1",
    "size": 42,
@@ -1456,7 +1608,7 @@
    "obs": ""
   },
   {
-   "id": "dwn36gy5w",
+   "id": "dlcnnghad",
    "name": "Contract subsecvent 07 din 12.03.2026.pdf",
    "path": "LEA Nord-Sud/B1",
    "size": 49,
@@ -1475,7 +1627,7 @@
    "obs": ""
   },
   {
-   "id": "dnx4r3ix1",
+   "id": "d8xh3bbjw",
    "name": "Atestate ANRE executant.pdf",
    "path": "LEA Nord-Sud/B1",
    "size": 35,
@@ -1494,7 +1646,7 @@
    "obs": ""
   },
   {
-   "id": "dxrivj2xp",
+   "id": "djn13sq6l",
    "name": "Plan propriu SSM.pdf",
    "path": "LEA Nord-Sud/B1",
    "size": 28,
@@ -1513,7 +1665,7 @@
    "obs": ""
   },
   {
-   "id": "dmlzh81zu",
+   "id": "dirim6i1d",
    "name": "Referat diriginte de santier.pdf",
    "path": "LEA Nord-Sud/B1",
    "size": 40,
@@ -1532,7 +1684,7 @@
    "obs": ""
   },
   {
-   "id": "dfp9zc6mh",
+   "id": "dtw3i2xk6",
    "name": "Certificat de garantie executant.pdf",
    "path": "LEA Nord-Sud/B4",
    "size": 44,
@@ -1551,7 +1703,7 @@
    "obs": ""
   },
   {
-   "id": "d8ts4mww4",
+   "id": "d5x4pbqpm",
    "name": "Declaratie de conformitate executant.pdf",
    "path": "LEA Nord-Sud/B4",
    "size": 48,
@@ -1570,7 +1722,7 @@
    "obs": ""
   },
   {
-   "id": "d0xafzrka",
+   "id": "do9tbkkwl",
    "name": "Certificate de calitate materiale.pdf",
    "path": "LEA Nord-Sud/B4",
    "size": 45,
@@ -1589,7 +1741,7 @@
    "obs": ""
   },
   {
-   "id": "d4qga14hs",
+   "id": "dg0dtmya5",
    "name": "Declaratii de conformitate materiale.pdf",
    "path": "LEA Nord-Sud/B4",
    "size": 48,
@@ -1608,7 +1760,121 @@
    "obs": ""
   },
   {
-   "id": "d6avsbk8f",
+   "id": "dv7uhftvv",
+   "name": "Situatii de lucrari.pdf",
+   "path": "LEA Nord-Sud/B2",
+   "size": 31,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "ec979fa28751f252104862bbbf021f796011741a859f3fc59c698b451a07cd4e",
+   "cap": "Execuție",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "dne0epri0",
+   "name": "Jurnal de santier.pdf",
+   "path": "LEA Nord-Sud/B2",
+   "size": 29,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "5bcc10f631635120a350dea90d9588452d0569033e2524336d5bc2cf6a8e0398",
+   "cap": "Execuție",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "dvk7l9o0j",
+   "name": "Aviz de mediu 31 din 2025.pdf",
+   "path": "LEA Nord-Sud/A1",
+   "size": 37,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "a8fb269262a3caedce6ac0f98015ff688e113094d42e7797dbf613dfb8490e6a",
+   "cap": "Proiectare",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "dn7s7cs19",
+   "name": "Certificat de urbanism 112 din 2025.pdf",
+   "path": "LEA Nord-Sud/A1",
+   "size": 47,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "3732ed5d720478e98913c3a7964bc33b05b629fb44cf85c010e97dcaaeb663d4",
+   "cap": "Proiectare",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "dtsing93i",
+   "name": "Autorizatie de construire 45 din 2026.pdf",
+   "path": "LEA Nord-Sud/A1",
+   "size": 49,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "191b692d0de15b5c8820ba6c6cf649ea374e7e82563f451df6249ac6f31ffe8d",
+   "cap": "Proiectare",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "dnnhf0wgn",
+   "name": "Caiet de sarcini.pdf",
+   "path": "LEA Nord-Sud/A2",
+   "size": 28,
+   "ext": "pdf",
+   "mtime": "2026-11-09",
+   "hash": "28915bd574beefb79547da02ed9f7f07b9a9dc8ebe451817e945891825212ac8",
+   "cap": "Proiectare",
+   "data": "2026-11-09",
+   "dataSrc": "estimat",
+   "sursa": "",
+   "dela": "",
+   "viz": false,
+   "dup": false,
+   "grp": false,
+   "sel": false,
+   "obs": ""
+  },
+  {
+   "id": "dkzr0kdvd",
    "name": "Programe de lucrari.pdf",
    "path": "LEA Nord-Sud/B1",
    "size": 31,
@@ -1627,7 +1893,7 @@
    "obs": ""
   },
   {
-   "id": "d455fp0ll",
+   "id": "ddf25re71",
    "name": "Conventie de lucrari.pdf",
    "path": "LEA Nord-Sud/B1",
    "size": 32,
@@ -1646,7 +1912,7 @@
    "obs": ""
   },
   {
-   "id": "ddliws4q3",
+   "id": "d4nbv002d",
    "name": "Referat RTE.pdf",
    "path": "LEA Nord-Sud/B1",
    "size": 23,
@@ -1665,7 +1931,7 @@
    "obs": ""
   },
   {
-   "id": "drms0ery8",
+   "id": "dsme1yhj3",
    "name": "Referat proiectant.pdf",
    "path": "LEA Nord-Sud/B1",
    "size": 30,
@@ -1684,7 +1950,7 @@
    "obs": ""
   },
   {
-   "id": "ds1ppmvie",
+   "id": "dpq1l9an4",
    "name": "Declaratia executantului.pdf",
    "path": "LEA Nord-Sud/B4",
    "size": 36,
@@ -1715,6 +1981,13 @@
    "balize": "12-13 : 2\n27-28 : 2\n44-45 : 4\n66-67 : 3\n90-91 : 2",
    "prize": "8, 15, 24, 31, 40, 47, 55, 63, 70, 78, 86, 94"
   }
+ },
+ "conf": {
+  "faza": "executie",
+  "ac": "da",
+  "isc": "da",
+  "cladire": "nu",
+  "marks": {}
  },
  "note": "Proiect demonstrativ cu date fictive. Structura urmează o carte tehnică de fibră optică pe LEA 110 kV; fișierele propriu-zise nu sunt incluse, doar denumirile lor."
 }
