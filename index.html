@@ -126,6 +126,16 @@ td input.isest{color:var(--ochre);border-color:#E3C9A6;background:#FFFBF5}
 .t-new{background:var(--blue-soft);color:var(--blue)}
 .t-late{background:var(--red-soft);color:var(--red)}
 .ct-ch{margin-bottom:12px}
+.cf-row{display:flex;gap:14px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line-soft)}
+.cf-row:last-child{border-bottom:none}
+.cf-main{flex:1;min-width:0}
+.cf-t{font-weight:600;font-size:14px;display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.cf-why{font-size:13px;color:var(--ink);margin-top:4px;line-height:1.45}
+.cf-law{font-size:12px;color:var(--muted);margin-top:3px}
+.cf-doc{font-size:12px;color:var(--green);margin-top:3px}
+.cf-act{display:flex;flex-direction:column;gap:6px;flex:none}
+.cf-row.later,.cf-row.na{opacity:.6}
+@media (max-width:760px){ .cf-row{flex-direction:column} .cf-act{flex-direction:row;flex-wrap:wrap} }
 .ct-cht{font-size:13px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin:4px 0 6px}
 .ct-row{display:grid;grid-template-columns:90px 1fr 70px 170px;gap:12px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line-soft);font-size:14px}
 .bar{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}
@@ -255,6 +265,7 @@ function blank(){
     lipsuri:[],
     cereri:[],
     ct:null,
+    conf:null,
     note:""
   };
 }
@@ -278,7 +289,7 @@ function fmtSize(b){
    Potrivirea se face pe cuvinte întregi („pv” nu mai prinde „PVC”). */
 const RULES = [
   // avize și acte de proiectare cu formulare clară — înaintea avizelor de însoțire
-  ["Proiectare", ["certificat de urbanism","aviz de amplasament","aviz amplasament","aviz tehnic","aviz tehnic de racordare","atr","aviz de principiu","aviz isu","aviz de mediu","acord de mediu","aviz favorabil","aviz electrica","aviz distributie","aviz gaze","aviz apa canal","aviz politie","aviz politia rutiera","aviz drumuri","aviz cultura","aviz dsp","autorizatie de construire","autorizatie construire","expertiza","expertiza tehnica","audit energetic"]],
+  ["Proiectare", ["certificat de urbanism","aviz cte","aviz ctes","aviz de amplasament","aviz amplasament","aviz tehnic","aviz tehnic de racordare","atr","aviz de principiu","aviz isu","aviz de mediu","acord de mediu","aviz favorabil","aviz electrica","aviz distributie","aviz gaze","aviz apa canal","aviz politie","aviz politia rutiera","aviz drumuri","aviz cultura","aviz dsp","autorizatie de construire","autorizatie construire","expertiza","expertiza tehnica","audit energetic"]],
   ["Aprovizionare", ["aviz de insotire","aviz insotire","avize de insotire","aviz marfa","aviz","avize","nir","bon de consum","bon consum","bonuri de consum","fisa de magazie","livrare","dispozitie de livrare"]],
   ["Execuție", ["proces verbal","procese verbale","pv","receptie","atasament","atasamente","situatie de lucrari","situatie lucrari","situatii de lucrari","jurnal de santier","jurnal santier","ordin de incepere","trasare","faza determinanta","faze determinante","fd","comanda de lucru","condica"]],
   ["SSM și SU", ["ssm","instruire","instruiri","securitate si sanatate","plan propriu","coordonare","interventii ulterioare","psi","situatii de urgenta","evaluare riscuri","evaluarea riscurilor","fisa individuala","fise individuale","instructaj","echipament individual"]],
@@ -351,6 +362,7 @@ function migrate(){
   if(S.meta.semnatar===undefined) S.meta.semnatar = "";
   if(S.meta.emitent===undefined) S.meta.emitent = "";
   if(S.ct===undefined) S.ct = null;
+  if(S.conf===undefined) S.conf = null;
 }
 const pl = (n, one, many) => n + " " + (n===1 ? one : many);
 function newId(p){ return p + Math.random().toString(36).slice(2,10); }
@@ -380,6 +392,7 @@ const VIEWS = [
   {id:"inventar", name:"Inventar", icon:"M4 5h16v14H4z"},
   {id:"duplicate", name:"Duplicate", icon:"M8 8h12v12H8z"},
   {id:"carte", name:"Carte tehnică", icon:"M6 3h9l4 4v14H6zM9 11h7M9 15h7"},
+  {id:"conformitate", name:"Conformitate", icon:"M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM8.5 12l2.5 2.5 4.5-5"},
   {id:"lipsuri", name:"Lipsuri", icon:"M12 3 2 20h20z"},
   {id:"cereri", name:"Cereri", icon:"M3 6h18v12H3zM3 6l9 7 9-7"},
   {id:"rezultate", name:"Rezultate", icon:"M4 19V9m5 10V5m5 14v-7m5 7V7"}
@@ -392,6 +405,7 @@ function renderNav(){
     if(v.id==="duplicate") n = dupGroups().length || "";
     if(v.id==="lipsuri") n = openLipsuri().length || "";
     if(v.id==="carte" && S.ct && S.docs.length) n = ctMissing(false).length || "✓";
+    if(v.id==="conformitate" && S.docs.length){ const b = cfEval().filter(x=>x.st==="miss" && x.r.grav!=="recom").length; n = b ? `<b class="late">${b}</b>` : "✓"; }
     if(v.id==="cereri"){ const late = S.cereri.filter(c=>cerStatus(c).late).length; n = late ? `<b class="late">${late}</b>` : (S.cereri.filter(c=>!cerStatus(c).done).length || ""); }
     return `<button data-v="${v.id}" class="${VIEW===v.id?"on":""}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${v.icon}"/></svg>
@@ -411,6 +425,7 @@ function render(){
   if(VIEW==="lipsuri") v.innerHTML = viewLipsuri();
   if(VIEW==="cereri") v.innerHTML = viewCereri();
   if(VIEW==="carte") v.innerHTML = viewCarte();
+  if(VIEW==="conformitate") v.innerHTML = viewConformitate();
   if(VIEW==="rezultate") v.innerHTML = viewRezultate();
   bind();
   autosave();
@@ -1222,6 +1237,215 @@ function buildBorderouri(){
   }).join("");
 }
 
+/* ---- CONFORMITATE ----
+   Verificare orientativă a dosarului față de actele normative. Detectarea se face după
+   denumirea fișierelor; utilizatorul poate confirma manual („am documentul”) sau marca „nu se aplică”.
+   Surse verificate în noiembrie 2026: HG 343/2017 (Regulamentul de recepție, art. 15, 27, 37, Anexa 6),
+   Legea 10/1995 art. 23, Ordinul MDRAP 1370/2014 (control ISC pe faze determinante), HG 668/2017. */
+const CF_FAZE = [
+  {id:"inainte",  name:"Înainte de începerea lucrărilor"},
+  {id:"executie", name:"În timpul execuției"},
+  {id:"receptie", name:"La recepția la terminarea lucrărilor"},
+  {id:"finala",   name:"La recepția finală"}
+];
+const CF_GRAV = {
+  isc:      {tag:"t-late", txt:"control ISC"},
+  receptie: {tag:"t-late", txt:"blochează recepția"},
+  recom:    {tag:"t-dup",  txt:"recomandat"}
+};
+const CF_RULES = [
+  {id:"ac", faza:"inainte", grav:"receptie", cond:c=>c.ac!=="nu",
+   titlu:"Autorizația de construire", kws:["autorizatie construire","autorizatia de construire"], cap:"Proiectare", dela:"Beneficiar",
+   temei:"Legea 10/1995, art. 23 lit. b); HG 343/2017, art. 15 alin. (3) lit. a)",
+   deCe:"Lucrările se pot începe doar pe baza autorizației, iar comisia de recepție o examinează. Lipsa ei e motiv de suspendare a lucrărilor la control."},
+  {id:"avize", faza:"inainte", grav:"receptie", cond:c=>c.ac!=="nu",
+   titlu:"Avizele și acordurile cerute prin certificatul de urbanism", kws:["aviz","certificat urbanism","acord mediu","acord unic","acord de mediu"], notKws:["aviz insotire","aviz marfa","insotire","livrare","nir"], cap:"Proiectare", dela:"Beneficiar",
+   temei:"HG 343/2017, art. 15 alin. (3) lit. a)",
+   deCe:"Comisia examinează autorizația împreună cu avizele și acordurile care au stat la baza ei. ISC semnalează frecvent avize lipsă din certificatul de urbanism."},
+  {id:"verif", faza:"inainte", grav:"isc",
+   titlu:"Proiect verificat de verificatori atestați (referate de verificare)", kws:["referat verificator","referat verificare proiect","verificator atestat","referat verificare"], cap:"Proiectare", dela:"Proiectant",
+   temei:"Legea 10/1995, art. 23 lit. b)",
+   deCe:"Executantul poate lucra doar pe proiecte verificate de specialiști atestați. Referatele verificatorilor sunt primul lucru cerut la control."},
+  {id:"f14", faza:"inainte", grav:"isc", cond:c=>c.ac!=="nu",
+   titlu:"Comunicarea privind începerea lucrărilor", kws:["comunicare incepere","anunt incepere","incepere lucrari comunicare"], rx:/\bf\s?-?14\b/, cap:"Corespondență", dela:"Beneficiar",
+   temei:"Legea 50/1991; deficiență frecventă constatată de ISC",
+   deCe:"Începerea lucrărilor se comunică în termenul de valabilitate al autorizației. ISC constată des comunicări lipsă sau depuse după expirarea autorizației."},
+  {id:"numiri", faza:"inainte", grav:"isc",
+   titlu:"Numirea dirigintelui de șantier și a RTE (autorizați)", kws:["decizie numire","contract diriginte","autorizatie diriginte","autorizatie rte","numire rte","numire diriginte"], cap:"Contracte", dela:"Beneficiar / executant",
+   temei:"Legea 10/1995; HG 343/2017, art. 11 alin. (3); deficiență frecventă constatată de ISC",
+   deCe:"Lipsa deciziilor de numire a persoanelor implicate în execuție e una dintre deficiențele cel mai des găsite de ISC. Dirigintele autorizat este și secretarul comisiei de recepție."},
+  {id:"program", faza:"inainte", grav:"isc",
+   titlu:"Programul de control al calității pe faze determinante (pe fiecare specialitate)", kws:["program control","faze determinante","program faze"], cap:"Calitate", dela:"Proiectant",
+   temei:"Ordinul MDRAP 1370/2014, art. 9 alin. (2); Legea 10/1995, art. 23 lit. d)",
+   deCe:"Proiectantul stabilește fazele determinante, beneficiarul și verificatorul le acceptă, iar ISC aprobă programul. Lipsa programului pentru una sau toate specialitățile e o deficiență frecventă."},
+  {id:"pccvi", faza:"inainte", grav:"recom",
+   titlu:"Planul calității / PCCVI al executantului", kws:["pccvi","plan calitate","planul calitatii","plan control calitate"], cap:"Calitate", dela:"Executant",
+   temei:"Legea 10/1995, art. 23 lit. c); verificat de RTE",
+   deCe:"Executantul asigură calitatea prin propriul sistem; RTE verifică planul de control, verificări și încercări."},
+  {id:"predare", faza:"executie", grav:"recom",
+   titlu:"PV de predare-primire a amplasamentului și a reperului de nivelment", kws:["predare amplasament","predare primire amplasament","predare primire teren","trasare"], cap:"Execuție", dela:"Beneficiar",
+   temei:"HG 343/2017, Anexa 6, Norme pct. 8 lit. a) (cartea tehnică, cap. B)",
+   deCe:"E primul document din capitolul B al cărții tehnice."},
+  {id:"convocari", faza:"executie", grav:"isc", cond:c=>c.isc!=="nu",
+   titlu:"Convocările ISC la fazele determinante", kws:["convocare"], cap:"Corespondență", dela:"Executant",
+   temei:"Ordinul MDRAP 1370/2014, art. 15 și Anexa 1",
+   deCe:"Executantul anunță ISC cu cel puțin 3 zile lucrătoare înainte de fiecare fază determinantă."},
+  {id:"pvisc", faza:"executie", grav:"isc", cond:c=>c.isc!=="nu",
+   titlu:"PV de control în faze de execuție determinante", kws:["faza determinanta","faze determinante proces verbal","pv faza determinanta"], cap:"Execuție", dela:"Executant / ISC",
+   temei:"Ordinul MDRAP 1370/2014, art. 18 și Anexa 3; HG 343/2017, Anexa 6, pct. 8 lit. c)",
+   deCe:"Fără acceptul scris la faza determinantă lucrarea nu poate continua. PV-urile intră în capitolul B al cărții tehnice."},
+  {id:"ascunse", faza:"executie", grav:"isc",
+   titlu:"Procese-verbale de lucrări ascunse", kws:["lucrari ascunse","pvla","plla"], cap:"Execuție", dela:"Executant",
+   temei:"HG 343/2017, Anexa 6, pct. 8 lit. b); semnate de RTE și diriginte",
+   deCe:"Lucrările care se acoperă nu mai pot fi verificate ulterior; PV-ul de lucrări ascunse este singura dovadă a calității lor."},
+  {id:"produse", faza:"executie", grav:"isc",
+   titlu:"Documente de calitate pentru produse (declarații de performanță / conformitate, certificate)", kws:["declaratie performanta","declaratie conformitate","certificat calitate","certificat conformitate","agrement"], cap:"Calitate", dela:"Furnizori",
+   temei:"Legea 10/1995, art. 23 lit. f); HG 343/2017, Anexa 6, pct. 8 lit. b); HG 668/2017",
+   deCe:"Se folosesc doar produse certificate sau cu agrement tehnic. ISC găsește des documente de calitate lipsă sau care nu corespund materialelor puse în operă."},
+  {id:"incercari", faza:"executie", grav:"isc",
+   titlu:"Buletine de încercări și determinări", kws:["buletin","raport incercare","rapoarte incercare","incercari"], cap:"Calitate", dela:"Executant (laborator)",
+   temei:"HG 343/2017, Anexa 6, pct. 8 lit. b)",
+   deCe:"Rezultatele încercărilor fac parte din documentele permanente de calitate ale cărții tehnice."},
+  {id:"dispozitii", faza:"executie", grav:"isc",
+   titlu:"Registrul de dispoziții de șantier (cu desene)", kws:["dispozitie santier","dispozitii santier","registru dispozitii"], cap:"Corespondență", dela:"Proiectant",
+   temei:"HG 343/2017, Anexa 6, pct. 8 lit. b); Ordinul MDLPL 839/2009, art. 67",
+   deCe:"Orice modificare față de proiect se face prin dispoziție de șantier a proiectantului. ISC constată des dispoziții lipsă, incomplete sau fără desene."},
+  {id:"jurnal", faza:"executie", grav:"recom",
+   titlu:"Jurnalul de șantier și caietele de atașamente", kws:["jurnal santier","jurnal de santier","atasament","atasamente"], cap:"Execuție", dela:"Executant",
+   temei:"HG 343/2017, Anexa 6, pct. 8 lit. f)",
+   deCe:"Fac parte din capitolul B al cărții tehnice."},
+  {id:"asbuilt", faza:"receptie", grav:"receptie",
+   titlu:"Proiectul „as built”", kws:["as built","asbuilt"], cap:"As-built", dela:"Proiectant",
+   temei:"HG 343/2017, art. 15 alin. (3); Anexa 6, pct. 7 lit. c)",
+   deCe:"Comisia examinează documentele cărții tehnice, inclusiv proiectul as built. Lipsa lui e o cauză frecventă de suspendare a recepției."},
+  {id:"carte", faza:"receptie", grav:"receptie", auto:"carte",
+   titlu:"Cartea tehnică: capitolele A și B complete, opisate și numerotate", cap:"As-built", dela:"Diriginte de șantier",
+   temei:"HG 343/2017, art. 37 și Anexa 6; Legea 10/1995, art. 23 lit. i)",
+   deCe:"Executantul predă documentele pentru cartea tehnică înainte de recepție, iar dirigintele o constituie. ISC găsește des cărți tehnice incomplete, nelegate sau neinventariate."},
+  {id:"adeverinta", faza:"receptie", grav:"receptie", cond:c=>c.ac!=="nu",
+   titlu:"Adeverința ISC privind plata cotei", kws:["adeverinta isc","adeverinta plata","cota isc"], cap:"Contracte", dela:"Beneficiar",
+   temei:"HG 343/2017, art. 15 alin. (3)",
+   deCe:"Face parte din documentele examinate de comisie; lipsa ei e o deficiență frecventă la recepție."},
+  {id:"f16", faza:"receptie", grav:"receptie", cond:c=>c.ac!=="nu",
+   titlu:"Comunicarea încheierii lucrărilor și invitația ISC la recepție", kws:["comunicare incheiere","incheiere lucrari","invitatie receptie","convocare receptie"], rx:/\bf\s?-?16\b/, cap:"Corespondență", dela:"Beneficiar",
+   temei:"HG 343/2017, art. 9–10; deficiență frecventă constatată de ISC",
+   deCe:"Executantul anunță terminarea lucrărilor, iar investitorul convoacă comisia; ISC constată des că nu i-au fost trimise comunicarea și invitația."},
+  {id:"energie", faza:"receptie", grav:"receptie", cond:c=>c.cladire==="da",
+   titlu:"Certificatul de performanță energetică", kws:["performanta energetica","certificat energetic"], cap:"Proiectare", dela:"Beneficiar",
+   temei:"HG 343/2017, art. 15 alin. (3), unde este cazul",
+   deCe:"Se cere pentru clădiri, acolo unde legea prevede."},
+  {id:"urmarire", faza:"receptie", grav:"receptie",
+   titlu:"Instrucțiuni de exploatare și urmărirea comportării în timp", kws:["urmarire comportare","instructiuni exploatare","instructiuni de exploatare"], cap:"Proiectare", dela:"Proiectant",
+   temei:"HG 343/2017, Anexa 6, pct. 10 lit. a)",
+   deCe:"Proiectantul prevede urmărirea comportării și instrucțiunile de exploatare; lipsa lor e semnalată de ISC la recepție și în garanție."},
+  {id:"pvrtl", faza:"receptie", grav:"receptie",
+   titlu:"PV de recepție la terminarea lucrărilor", kws:["receptie terminare","receptie la terminarea","pvrtl"], cap:"Execuție", dela:"Beneficiar",
+   temei:"HG 343/2017, Anexa 2; Anexa 6, pct. 9 lit. a)",
+   deCe:"Se încheie de comisie și intră în capitolul C al cărții tehnice."},
+  {id:"raportgar", faza:"finala", grav:"receptie",
+   titlu:"Raportul proprietarului privind comportarea în perioada de garanție", kws:["raport comportare","perioada garantie","perioada de garantie"], cap:"As-built", dela:"Beneficiar",
+   temei:"HG 343/2017, art. 27 alin. (1) lit. b)",
+   deCe:"Comisia de recepție finală verifică acest raport împreună cu cartea tehnică completată."},
+  {id:"evenimente", faza:"finala", grav:"recom",
+   titlu:"Jurnalul evenimentelor", kws:["jurnal evenimente","jurnalul evenimentelor"], cap:"As-built", dela:"Beneficiar",
+   temei:"HG 343/2017, Anexa 6, pct. 10 lit. h)",
+   deCe:"Face parte din capitolul D al cărții tehnice și se ține de proprietar."},
+  {id:"pvfinal", faza:"finala", grav:"receptie",
+   titlu:"PV de recepție finală", kws:["receptie finala","pvrf"], cap:"Execuție", dela:"Beneficiar",
+   temei:"HG 343/2017, Anexa 4",
+   deCe:"Încheie procesul de recepție; se face în cel mult 10 zile de la expirarea perioadei de garanție (art. 24)."}
+];
+
+function cfState(){
+  if(!S.conf) S.conf = {faza:"executie", ac:"da", isc:"da", cladire:"nu", marks:{}};
+  if(!S.conf.marks) S.conf.marks = {};
+  return S.conf;
+}
+function cfDetect(r){
+  if(r.auto==="carte"){
+    if(!S.ct) return {state:"nu", info:"Completează parametrii la Carte tehnică"};
+    const miss = ctMissing(false).length;
+    return miss ? {state:"nu", info:`${miss} documente lipsă în capitolele A și B`} : {state:"da", info:"capitolele A și B complete"};
+  }
+  const live = S.docs.filter(d=>!d.dup);
+  for(const d of live){
+    const h = new Set(words(d.name+" "+d.path));
+    if((r.notKws||[]).some(k=>words(k).every(w=>h.has(w)))) continue;   // ex.: avizele de însoțire nu sunt avize de proiectare
+    if((r.kws||[]).some(k=>words(k).every(w=>h.has(w))) || (r.rx && r.rx.test(norm(d.name)))) return {state:"da", doc:d};
+  }
+  return {state:"nu"};
+}
+function cfEval(){
+  const c = cfState();
+  const cur = CF_FAZE.findIndex(f=>f.id===c.faza);
+  return CF_RULES.map(r=>{
+    const fi = CF_FAZE.findIndex(f=>f.id===r.faza);
+    const mark = c.marks[r.id];
+    if(r.cond && !r.cond(c)) return {r, st:"na", why:"nu se aplică acestei lucrări"};
+    if(mark==="na") return {r, st:"na", why:"marcat „nu se aplică”"};
+    const det = cfDetect(r);
+    if(det.state==="da") return {r, st:"ok", det};
+    if(mark==="ok") return {r, st:"ok", det:{info:"confirmat manual"}};
+    return {r, st: fi>cur ? "later" : "miss", det};
+  });
+}
+
+function viewConformitate(){
+  const c = cfState();
+  const ev = cfEval();
+  const miss = ev.filter(x=>x.st==="miss");
+  const blocante = miss.filter(x=>x.r.grav!=="recom");
+  const opt = (k, vals) => vals.map(([v,t])=>`<option value="${v}" ${c[k]===v?"selected":""}>${t}</option>`).join("");
+  const stTag = x => x.st==="ok" ? `<span class="tag t-viz">găsit</span>`
+    : x.st==="na" ? `<span class="tag t-none">nu se aplică</span>`
+    : x.st==="later" ? `<span class="tag t-none">fază ulterioară</span>`
+    : `<span class="tag ${CF_GRAV[x.r.grav].tag}">lipsă · ${CF_GRAV[x.r.grav].txt}</span>`;
+  const inLips = new Set(S.lipsuri.map(l=>norm(lden(l))));
+  return `
+  <div class="note"><b>Verificare conform normelor.</b> Aplicația caută în inventar documentele cerute de legislație la fiecare fază și semnalează ce lipsește, cu temeiul legal. Verificarea se face după denumirea fișierelor: dacă ai un document pe care nu l-a recunoscut, apasă „Am documentul”.</div>
+
+  <div class="card">
+    <h3>Lucrarea</h3>
+    <div class="grid2">
+      <div><span class="lbl">Faza în care se află lucrarea</span><select data-cf="faza">${opt("faza",[["inainte","Înainte de începere"],["executie","În execuție"],["receptie","La recepția la terminare"],["finala","La recepția finală"]])}</select></div>
+      <div><span class="lbl">Are autorizație de construire</span><select data-cf="ac">${opt("ac",[["da","Da"],["nu","Nu"],["nustiu","Nu știu"]])}</select></div>
+      <div><span class="lbl">ISC participă la fazele determinante</span><select data-cf="isc">${opt("isc",[["da","Da"],["nu","Nu"],["nustiu","Nu știu"]])}</select></div>
+      <div><span class="lbl">Este o clădire</span><select data-cf="cladire">${opt("cladire",[["nu","Nu (rețea, instalație etc.)"],["da","Da"]])}</select></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat ${blocante.length?"bad":"ok"}"><div class="v">${blocante.length}</div><div class="l">lipsuri care blochează controlul sau recepția</div></div>
+    <div class="stat ${miss.length-blocante.length?"hot":""}"><div class="v">${miss.length-blocante.length}</div><div class="l">lipsuri recomandate</div></div>
+    <div class="stat ok"><div class="v">${ev.filter(x=>x.st==="ok").length}</div><div class="l">cerințe îndeplinite</div></div>
+    <div class="stat"><div class="v">${ev.filter(x=>x.st==="later").length}</div><div class="l">pentru fazele următoare</div></div>
+  </div>
+
+  ${miss.length ? `<div style="margin:-2px 0 14px"><button class="btn" id="cfToLips">Trimite lipsurile la Lipsuri</button></div>` : ""}
+
+  ${CF_FAZE.map(f=>{
+    const xs = ev.filter(x=>x.r.faza===f.id);
+    return `<div class="card">
+      <h3>${f.name}</h3>
+      ${xs.map(x=>`<div class="cf-row ${x.st}">
+        <div class="cf-main">
+          <div class="cf-t">${esc(x.r.titlu)} ${stTag(x)} ${x.st==="miss" && inLips.has(norm(x.r.titlu)) ? `<span class="muted">· în Lipsuri</span>` : ""}</div>
+          <div class="cf-why">${esc(x.r.deCe)}</div>
+          <div class="cf-law">Temei: ${esc(x.r.temei)}</div>
+          ${x.det && x.det.doc ? `<div class="cf-doc">Găsit: <span class="fn">${esc(x.det.doc.name)}</span></div>` : x.det && x.det.info ? `<div class="cf-doc">${esc(x.det.info)}</div>` : ""}
+        </div>
+        <div class="cf-act">
+          ${x.r.auto ? `<button class="btn g sm" data-v-go="carte">Vezi cartea tehnică</button>` :
+            x.st==="miss" || x.st==="later" ? `<button class="btn g sm" data-cfm="${x.r.id}:ok">Am documentul</button><button class="btn g sm" data-cfm="${x.r.id}:na">Nu se aplică</button>` :
+            c.marks[x.r.id] ? `<button class="btn g sm" data-cfm="${x.r.id}:">Anulează marcajul</button>` : ""}
+        </div>
+      </div>`).join("")}
+    </div>`;
+  }).join("")}
+
+  <p class="muted" style="line-height:1.5">Verificarea e orientativă și nu înlocuiește verificarea dirigintelui de șantier sau a comisiei de recepție. Surse (verificate în noiembrie 2026): HG 343/2017 – Regulamentul privind recepția construcțiilor (art. 9–10, 15, 24, 27, 37, Anexele 2, 4, 6); Legea 10/1995, art. 23; Ordinul MDRAP 1370/2014 – procedura de control ISC în faze determinante; HG 668/2017; deficiențele frecvente prezentate de ISC. Cerințele specifice beneficiarului (de exemplu, ale operatorului de rețea) se adaugă în lista-tip de la Carte tehnică.</p>`;
+}
+
 /* ---- REZULTATE ---- */
 function metrics(){
   const d = S.docs;
@@ -1440,6 +1664,24 @@ function bind(){
     render();
   });
   v.querySelectorAll("[data-unrez]").forEach(b=>b.onclick=()=>{ delete S.lipsuri[+b.dataset.unrez].rez; render(); });
+
+  // conformitate
+  v.querySelectorAll("[data-cf]").forEach(el=>el.onchange=()=>{ cfState()[el.dataset.cf] = el.value; render(); });
+  v.querySelectorAll("[data-cfm]").forEach(b=>b.onclick=()=>{
+    const [id, val] = b.dataset.cfm.split(":"); const c = cfState();
+    if(val) c.marks[id] = val; else delete c.marks[id];
+    render();
+  });
+  v.querySelectorAll("[data-v-go]").forEach(b=>b.onclick=()=>{ VIEW=b.dataset.vGo; render(); });
+  const cfl=$("#cfToLips"); if(cfl) cfl.onclick=()=>{
+    const have = new Set(S.lipsuri.map(l=>norm(lden(l))));
+    let n = 0;
+    for(const x of cfEval().filter(x=>x.st==="miss" && !x.r.auto)){
+      if(have.has(norm(x.r.titlu))) continue;
+      S.lipsuri.push({id:newId("l"), cod:"", den:x.r.titlu, cap:x.r.cap, dela:x.r.dela||""}); n++;
+    }
+    render(); alert(n ? `${pl(n,"cerință adăugată","cerințe adăugate")} la Lipsuri, cu „de la cine” completat.` : "Toate lipsurile sunt deja în listă.");
+  };
 
   // carte tehnică
   v.querySelectorAll("[data-ctp]").forEach(el=>el.onchange=()=>{ S.ct.p[el.dataset.ctp] = el.value; render(); });
