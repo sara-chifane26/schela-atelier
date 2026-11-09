@@ -20,3 +20,5 @@ Aplicația rulează **doar în browserul tău**. Fișierele pe care le alegi sun
 4. **Conformitate** — verifică dosarul față de legislație (HG 343/2017, Legea 10/1995, Ordinul MDRAP 1370/2014 pentru controlul ISC) și semnalează, pe faze, documentele lipsă cu temeiul legal.
 5. **Lipsuri** și **Cereri** — ce lipsește, de la cine, cu termene și reamintiri.
 6. **Rezultate** — statistici, opis (tipărire / PDF), exporturi CSV.
+
+**Boloboc** — butonul din colțul din dreapta jos: răspunde la întrebări despre dosar („ce lipsește?”, „cine întârzie?”, „ce fac acum?”), despre folosirea aplicației și despre noțiunile de specialitate (faze determinante, lucrări ascunse, as built, recepție), cu temeiul legal. Funcționează fără AI și fără internet: nimic nu pleacă din pagină.

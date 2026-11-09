@@ -126,6 +126,30 @@ td input.isest{color:var(--ochre);border-color:#E3C9A6;background:#FFFBF5}
 .t-new{background:var(--blue-soft);color:var(--blue)}
 .t-late{background:var(--red-soft);color:var(--red)}
 .ct-ch{margin-bottom:12px}
+.bb-fab{position:fixed;right:20px;bottom:20px;z-index:30;display:flex;align-items:center;gap:8px;height:46px;padding:0 18px 0 13px;border-radius:23px;background:var(--blue);color:#fff;border:none;box-shadow:0 6px 18px rgba(20,33,43,.25);font-weight:600;font-size:15px;cursor:pointer}
+.bb-fab:hover{background:#1C4B6B}
+.bb{position:fixed;right:20px;bottom:78px;z-index:31;display:none;width:min(410px,calc(100vw - 24px))}
+.bb.on{display:block}
+.bb-panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 40px rgba(20,33,43,.25);display:flex;flex-direction:column;max-height:min(620px,calc(100vh - 110px))}
+.bb-h{display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line-soft)}
+.bb-logo{width:34px;height:34px;border-radius:50%;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;flex:none}
+.bb-h b{display:block;font-size:15px}
+.bb-h span{font-size:12px;color:var(--muted)}
+.bb-x{margin-left:auto;background:none;border:none;font-size:24px;line-height:1;cursor:pointer;color:var(--muted);padding:4px 6px}
+.bb-log{flex:1;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-height:120px}
+.bb-msg{font-size:14px;line-height:1.5;padding:9px 12px;border-radius:8px;max-width:94%}
+.bb-msg.bot{background:var(--surface-2);align-self:flex-start}
+.bb-msg.me{background:var(--blue);color:#fff;align-self:flex-end}
+.bb-msg ul{margin:6px 0;padding-left:18px}
+.bb-msg .btn{margin:8px 6px 0 0}
+.bb-law{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+.bb-sug{display:flex;flex-wrap:wrap;gap:6px;padding:8px 14px;border-top:1px solid var(--line-soft)}
+.bb-sug button{font-size:13px;border:1px solid var(--line);background:var(--surface-3);border-radius:14px;padding:4px 11px;cursor:pointer;color:var(--ink)}
+.bb-sug button:hover{background:var(--surface-2)}
+.bb-in{display:flex;gap:8px;padding:10px 14px 12px;border-top:1px solid var(--line-soft)}
+.bb-in input{flex:1;height:34px}
+.view{padding-bottom:96px}
+@media (max-width:760px){ .bb-fab{right:12px;bottom:12px} .bb{right:12px;bottom:68px} }
 .cf-row{display:flex;gap:14px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line-soft)}
 .cf-row:last-child{border-bottom:none}
 .cf-main{flex:1;min-width:0}
@@ -154,7 +178,7 @@ tr.grp-row td{background:var(--surface-3);font-weight:700;font-size:13px;color:v
   .nav button{white-space:nowrap;padding:7px 10px;width:auto}
   .sidefoot{display:none}
   .top{padding:10px 12px}
-  .view{padding:14px 12px 60px}
+  .view{padding:14px 12px 96px}
   .grid2{grid-template-columns:1fr}
   .tw table{min-width:640px}
   .fbar input[type=text]{width:100%}
@@ -182,7 +206,7 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 /* print */
 #print{display:none}
 @media print{
-  .app,.busy,.modal{display:none!important}
+  .app,.busy,.modal,.bb-fab,.bb{display:none!important}
   #print{display:block!important;padding:0}
   body{background:#fff;font-size:10.5pt}
   #print{font-family:var(--fd)}
@@ -242,6 +266,9 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
     <div class="view" id="view"></div>
   </div>
 </div>
+
+<button class="bb-fab" id="bbFab" aria-label="Întreabă-l pe Boloboc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="8" width="20" height="8" rx="2"/><rect x="8.5" y="10" width="7" height="4" rx="2"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg><span>Boloboc</span></button>
+<div class="bb" id="bb"></div>
 
 <div id="print"></div>
 <div class="modal" id="intake" role="dialog" aria-modal="true" aria-label="Verificare la intrare"></div>
@@ -426,6 +453,7 @@ function render(){
   if(VIEW==="cereri") v.innerHTML = viewCereri();
   if(VIEW==="carte") v.innerHTML = viewCarte();
   if(VIEW==="conformitate") v.innerHTML = viewConformitate();
+  if($("#bb") && $("#bb").classList.contains("on")) bbRender();
   if(VIEW==="rezultate") v.innerHTML = viewRezultate();
   bind();
   autosave();
@@ -1446,6 +1474,132 @@ function viewConformitate(){
   <p class="muted" style="line-height:1.5">Verificarea e orientativă și nu înlocuiește verificarea dirigintelui de șantier sau a comisiei de recepție. Surse (verificate în noiembrie 2026): HG 343/2017 – Regulamentul privind recepția construcțiilor (art. 9–10, 15, 24, 27, 37, Anexele 2, 4, 6); Legea 10/1995, art. 23; Ordinul MDRAP 1370/2014 – procedura de control ISC în faze determinante; HG 668/2017; deficiențele frecvente prezentate de ISC. Cerințele specifice beneficiarului (de exemplu, ale operatorului de rețea) se adaugă în lista-tip de la Carte tehnică.</p>`;
 }
 
+/* ---- BOLOBOC ----
+   Asistent fără AI: răspunde din situația dosarului, din ghidul aplicației și din noțiunile de specialitate.
+   Totul rulează în pagină; întrebările nu pleacă nicăieri. */
+const go = (v, t) => `<button class="btn g sm" data-bgo="${v}">${t}</button>`;
+const BB_KB = [
+  // --- folosirea aplicației ---
+  {k:["incarc documente","adaug documente","adaug folder","incarc folder","cum incep","cum adaug"], a:()=>`Mergi la <b>Inventar</b> și apasă <b>Adaugă folder</b>, apoi alege folderul lucrării cu toate subfolderele. Înainte să intre în inventar, fiecare fișier trece prin verificarea la intrare, unde aprobi ce se adaugă. ${go("inventar","Deschide Inventarul")}`},
+  {k:["verificare intrare","copie identica","de ce nu s-a adaugat","respins","debifat"], a:()=>`La intrare, aplicația compară fiecare fișier cu ce există: <b>copiile identice</b> se resping, <b>versiunile noi</b> îți cer o decizie, fișierele care <b>completează o lipsă</b> o rezolvă automat, iar <b>documentele noi necerute</b> vin debifate după prima încărcare, ca să nu intre din greșeală.`},
+  {k:["duplicate","versiune vigoare","care versiune","versiuni"], a:()=>{ const g = dupGroups(), nev = g.filter(x=>!x.docs.some(d=>d.viz)).length; return `Grupurile de duplicate reunesc fișiere cu același conținut sau cu aceeași denumire de bază (rev1, rev2, final). Pentru fiecare grup alegi versiunea <b>în vigoare</b>; celelalte rămân ca istoric și nu apar în opis. ${g.length?`Acum ai <b>${g.length}</b> ${g.length===1?"grup":"grupuri"}, din care <b>${nev}</b> fără versiune aleasă.`:""} ${go("duplicate","Deschide Duplicate")}`; }},
+  {k:["data portocalie","data estimata","estimata","de verificat data"], a:()=>{ const n = S.docs.filter(d=>d.dataSrc==="estimat").length; return `Data e portocalie când aplicația n-a găsit-o în denumirea fișierului și a pus data ultimei modificări a fișierului, care de obicei e data copierii, nu data actului. Corecteaz-o din document; în opis, datele estimate nu se tipăresc. ${n?`Ai <b>${n}</b> date estimate.`:""} ${go("inventar","Deschide Inventarul")}`; }},
+  {k:["carte tehnica parametri","tronsoane","balize","cod pv","numerotare pv","lista tip"], a:()=>`La <b>Carte tehnică</b> completezi codul lucrării, tronsoanele, deschiderile cu balize și stâlpii cu priză. Din ele, aplicația generează toate PV-urile și buletinele așteptate, numerotate ca în borderou, și le caută în inventar. ${go("carte","Deschide Cartea tehnică")}`},
+  {k:["borderou","borderouri","tiparesc borderou"], a:()=>`Borderourile se tipăresc de la <b>Carte tehnică → Tipărește borderourile</b>: câte unul pe dosar, cu numerotarea calculată; documentele lipsă apar marcate LIPSĂ. Ca să obții PDF, alege „Salvare ca PDF” în fereastra de tipărire. ${go("carte","Deschide Cartea tehnică")}`},
+  {k:["opis","pdf opis","tiparesc opis"], a:()=>`Opisul se generează de la <b>Rezultate → Generează opisul</b>. Conține documentele în vigoare, grupate pe capitole, plus lipsurile marcate LIPSĂ. Pentru PDF, alege „Salvare ca PDF” la tipărire. ${go("rezultate","Deschide Rezultate")}`},
+  {k:["cerere","cer documente","trimit cerere","email cerere","adresa cerere"], a:()=>`La <b>Cereri</b>, lipsurile sunt grupate pe „de la cine se recuperează”. Alegi termenul și apeși <b>Pregătește cererea</b>: poți copia textul, îl poți deschide în email sau poți tipări o adresă formală. După <b>Marchează ca trimisă</b>, aplicația urmărește termenul și bifează singură documentele care sosesc. ${go("cereri","Deschide Cereri")}`},
+  {k:["reamintire","nu a raspuns","nu trimite","intarzie"], a:()=>bbCereri()},
+  {k:["am documentul","nu l-a recunoscut","nu gaseste documentul","nu se aplica"], a:()=>`Verificările se fac după denumirea fișierelor. Dacă ai un document pe care aplicația nu l-a recunoscut, apasă <b>Am documentul</b> la cerința respectivă din Conformitate. Dacă cerința nu e valabilă pentru lucrarea ta, apasă <b>Nu se aplică</b>. Denumirile clare (de exemplu „PV lucrari ascunse priza st 8”) ajută recunoașterea.`},
+  {k:["salvez proiect","salvare","deschid proiect","pierd datele","unde se salveaza"], a:()=>`Proiectul se păstrează automat în browserul acestui calculator. Ca să nu-l pierzi și să-l poți muta pe alt calculator, apasă sus <b>Salvează proiect</b>: primești un fișier .json, pe care îl redeschizi cu <b>Deschide proiect</b>.`},
+  {k:["confidential","date personale","trimite internet","sigur","cine vede"], a:()=>`Aplicația rulează doar în browserul tău. Fișierele sunt citite local (denumire, mărime, amprentă) și nu sunt trimise nicăieri; site-ul nu are server. Nici întrebările puse mie nu pleacă de pe calculator.`},
+  {k:["golesc","sterg proiect","incep de la zero","proiect nou"], a:()=>`Salvează întâi proiectul curent (<b>Salvează proiect</b>), apoi la <b>Proiect → Golește</b> pornești de la zero. ${go("proiect","Deschide Proiect")}`},
+  {k:["exemplu","demo","cum arata"], a:()=>`Pe site, la <b>Proiect → Deschide exemplul</b> se încarcă o lucrare demonstrativă cu date fictive. ${go("proiect","Deschide Proiect")}`},
+  {k:["export","csv","excel"], a:()=>`La <b>Rezultate</b> ai <b>Export inventar (CSV)</b> și <b>Export statistici (CSV)</b>; se deschid direct în Excel. ${go("rezultate","Deschide Rezultate")}`},
+  {k:["conformitate","verificare norme","verificare conformitate","legislatie"], a:()=>`La <b>Conformitate</b>, aplicația verifică dosarul față de HG 343/2017, Legea 10/1995 și procedura ISC (Ordinul MDRAP 1370/2014). Fiecare lipsă are gravitatea (control ISC, blochează recepția, recomandat) și temeiul legal. Alege faza lucrării ca să vezi ce e scadent acum. ${go("conformitate","Deschide Conformitate")}`},
+  // --- noțiuni de specialitate ---
+  {k:["faza determinanta","faze determinante"], a:()=>`O <b>fază determinantă</b> e o etapă de execuție hotărâtoare pentru rezistența și stabilitatea construcției. Proiectantul le stabilește în <b>programul de control pe faze determinante</b>, beneficiarul și verificatorul îl acceptă, iar ISC îl aprobă. Executantul convoacă ISC cu <b>cel puțin 3 zile lucrătoare</b> înainte, iar lucrarea continuă doar după acceptul scris, consemnat în procesul-verbal de control. <span class="bb-law">Ordinul MDRAP 1370/2014, art. 9, 15, 18; Legea 10/1995, art. 23 lit. d)</span>`},
+  {k:["lucrari ascunse","pv lucrari ascunse"], a:()=>`<b>PV-ul de lucrări ascunse</b> consemnează calitatea lucrărilor care urmează să fie acoperite (fundații, armături, prize de pământ îngropate etc.) și nu mai pot fi verificate ulterior. Se semnează de executant (RTE) și de dirigintele de șantier și intră în capitolul B al cărții tehnice. <span class="bb-law">HG 343/2017, Anexa 6, pct. 8 lit. b)</span>`},
+  {k:["carte tehnica capitole","ce contine cartea tehnica","cartea tehnica","capitol a","capitol b","capitol c","capitol d"], a:()=>`<b>Cartea tehnică</b> are fișa de date sintetice și patru capitole: <b>A</b> proiectarea, <b>B</b> execuția, <b>C</b> recepția, <b>D</b> exploatarea, întreținerea și urmărirea comportării, plus jurnalul evenimentelor. Investitorul o întocmește (dirigintele o constituie ca secretar al comisiei) și o predă proprietarului în două etape: A și B la terminarea lucrărilor, C și D la recepția finală. <span class="bb-law">HG 343/2017, art. 11 alin. (3), art. 37, Anexa 6</span> ${go("carte","Vezi situația cărții")}`},
+  {k:["as built","asbuilt"], a:()=>`Proiectul <b>as built</b> reflectă lucrarea așa cum a fost executată efectiv, cu toate modificările față de proiect. Comisia îl examinează la recepție ca parte din cartea tehnică; lipsa lui e o cauză frecventă de suspendare a recepției. <span class="bb-law">HG 343/2017, art. 15 alin. (3); Anexa 6, pct. 7 lit. c)</span>`},
+  {k:["receptie terminare","receptia la terminarea","termene receptie","comisie receptie","dureaza receptia","durata receptie","termen receptie","cate zile receptie"], a:()=>`La <b>recepția la terminarea lucrărilor</b>: executantul anunță terminarea; investitorul are <b>5 zile</b> să acționeze, autoritățile <b>10 zile</b> să-și numească reprezentanții, iar investitorul numește comisia în <b>3 zile</b>. Comisia lucrează cu cel puțin <b>2/3</b> din membri; dacă suspendă recepția, remedierile au cel mult <b>90 de zile</b>. Procesul-verbal se transmite în <b>5 zile</b>. <span class="bb-law">HG 343/2017, art. 9, 10, 15, 17, 23</span>`},
+  {k:["receptie finala","receptia finala","dupa garantie","cand receptia finala","receptie finala cand"], a:()=>`<b>Recepția finală</b> începe în cel mult <b>10 zile</b> de la expirarea perioadei de garanție. Comisia verifică PV-ul de recepție la terminare, raportul proprietarului privind comportarea în garanție, cartea tehnică completată și remedierea viciilor apărute. <span class="bb-law">HG 343/2017, art. 24, 27</span>`},
+  {k:["rte","responsabil tehnic executie"], a:()=>`<b>RTE</b> (responsabilul tehnic cu execuția) e persoana autorizată a executantului care urmărește calitatea: verifică proiectul și planul de control, certificatele produselor, semnează PV-urile de faze determinante și de lucrări ascunse și participă la întocmirea cărții tehnice.`},
+  {k:["diriginte","diriginte santier","dirigintele"], a:()=>`<b>Dirigintele de șantier</b> autorizat reprezintă investitorul: verifică autorizația și proiectul înainte de începere, controlează calitatea produselor și lucrărilor, semnează documentele de verificare și, ca secretar al comisiei de recepție, constituie cartea tehnică. <span class="bb-law">HG 343/2017, art. 11 alin. (3)</span>`},
+  {k:["declaratie performanta","certificat calitate","agrement","documente materiale","declaratie conformitate"], a:()=>`Executantul poate folosi doar produse <b>certificate sau cu agrement tehnic</b>. Pentru fiecare material principal păstrezi documentul de calitate primit de la furnizor (declarație de performanță sau de conformitate, certificat, agrement) și verifici că se potrivește cu produsul pus în operă. <span class="bb-law">Legea 10/1995, art. 23 lit. f); HG 668/2017; HG 343/2017, Anexa 6, pct. 8 lit. b)</span>`},
+  {k:["dispozitie santier","dispozitii santier"], a:()=>`<b>Dispoziția de șantier</b> e documentul prin care proiectantul modifică sau completează proiectul în timpul execuției. Trebuie să fie completă, cu desene, și se înregistrează în registrul unic de dispoziții; ISC constată des dispoziții lipsă sau fără desene. <span class="bb-law">HG 343/2017, Anexa 6, pct. 8 lit. b); Ordinul 839/2009, art. 67</span>`},
+  {k:["jurnal evenimente","jurnalul evenimentelor"], a:()=>`<b>Jurnalul evenimentelor</b> face parte din cartea tehnică (capitolul D) și se ține de proprietar: consemnează evenimentele din exploatare (reparații, intervenții, evenimente deosebite). <span class="bb-law">HG 343/2017, Anexa 6, pct. 10 lit. h)</span>`},
+  {k:["isc","inspectoratul","control isc","ce verifica isc","isc verifica","verifica isc"], a:()=>`<b>ISC</b> (Inspectoratul de Stat în Construcții) controlează calitatea pe faze determinante și participă la recepție, unde examinează documentele din art. 15 alin. (3), cu excepția devizului general. Deficiențele cele mai frecvente: program de faze determinante lipsă, documente de calitate lipsă, dispoziții de șantier fără desene, cartea tehnică incompletă și lipsa proiectului as built. ${go("conformitate","Verifică dosarul")} <span class="bb-law">Ordinul MDRAP 1370/2014; HG 343/2017, art. 15 alin. (4)</span>`}
+];
+
+function bbLipsuri(){
+  const out = [];
+  if(!S.docs.length) return `Încă nu ai încărcat documente, așa că nu am ce verifica. Începe de la <b>Inventar → Adaugă folder</b>. ${go("inventar","Deschide Inventarul")}`;
+  const ev = cfEval().filter(x=>x.st==="miss");
+  const bl = ev.filter(x=>x.r.grav!=="recom");
+  if(bl.length) out.push(`<b>${bl.length}</b> ${bl.length===1?"cerință legală lipsește":"cerințe legale lipsesc"} pentru faza curentă și pot bloca controlul ISC sau recepția:<ul>${bl.slice(0,6).map(x=>`<li>${esc(x.r.titlu)} <span class="bb-law">${esc(x.r.temei)}</span></li>`).join("")}</ul>${bl.length>6?`și încă ${bl.length-6}.`:""}`);
+  if(S.ct){ const m = ctMissing(false); if(m.length) out.push(`În cartea tehnică (capitolele A și B) lipsesc <b>${m.length}</b> documente, de exemplu: ${m.slice(0,3).map(i=>esc(lden(i))).join("; ")}.`); }
+  const lo = openLipsuri().length; if(lo) out.push(`În lista de Lipsuri ai <b>${lo}</b> ${lo===1?"document deschis":"documente deschise"}.`);
+  if(!out.length) return `Nu găsesc nimic lipsă pentru faza curentă. Verifică totuși faza aleasă la Conformitate și, dacă e cazul, completează parametrii cărții tehnice. ${go("conformitate","Deschide Conformitate")}`;
+  return out.join("<br><br>") + `<br>${go("conformitate","Vezi Conformitate")} ${go("lipsuri","Vezi Lipsuri")}`;
+}
+function bbCereri(){
+  if(!S.cereri.length) return `Nu ai trimis încă nicio cerere. Le pregătești de la <b>Cereri</b>, din lipsurile grupate pe expeditor. ${go("cereri","Deschide Cereri")}`;
+  const late = S.cereri.map(c=>({c, st:cerStatus(c)})).filter(x=>x.st.late);
+  const open = S.cereri.filter(c=>!cerStatus(c).done).length;
+  if(!late.length) return `Ai <b>${open}</b> ${open===1?"cerere deschisă":"cereri deschise"} și niciuna nu a depășit termenul. ${go("cereri","Deschide Cereri")}`;
+  return `Au depășit termenul:<ul>${late.map(x=>`<li><b>${esc(x.c.catre)}</b> — ${x.st.total-x.st.got} ${x.st.total-x.st.got===1?"document":"documente"}, întârziere ${x.st.over} ${x.st.over===1?"zi":"zile"}</li>`).join("")}</ul>Trimite-le o <b>Reamintire</b> de la Cereri: mesajul conține doar documentele încă neprimite. ${go("cereri","Deschide Cereri")}`;
+}
+function bbNext(){
+  if(!S.docs.length) return `Primul pas: încarcă documentele lucrării de la <b>Inventar → Adaugă folder</b>. ${go("inventar","Deschide Inventarul")}`;
+  const nev = dupGroups().filter(x=>!x.docs.some(d=>d.viz)).length;
+  if(nev) return `Ai <b>${nev}</b> ${nev===1?"grup":"grupuri"} de duplicate fără versiunea în vigoare aleasă. Rezolvă-le întâi, ca opisul și verificările să lucreze pe documentele corecte. ${go("duplicate","Deschide Duplicate")}`;
+  const bl = cfEval().filter(x=>x.st==="miss" && x.r.grav!=="recom").length;
+  if(bl) return `Verifică lipsurile legale: ${bl} ${bl===1?"cerință":"cerințe"} la Conformitate. Cele care nu sunt de fapt lipsă le marchezi „Am documentul”; restul le trimiți la Lipsuri și le ceri de la Cereri. ${go("conformitate","Deschide Conformitate")}`;
+  const nec = openLipsuri().filter(l=>!lipsaCerere(l)).length;
+  if(nec) return `Ai ${nec} ${nec===1?"lipsă necerută":"lipsuri necerute"}. Pregătește cererile către cei care trebuie să le trimită. ${go("cereri","Deschide Cereri")}`;
+  const est = S.docs.filter(d=>d.dataSrc==="estimat").length;
+  if(est) return `Corectează cele ${est} date estimate (portocalii) din Inventar, ca opisul să aibă datele reale ale actelor. ${go("inventar","Deschide Inventarul")}`;
+  return `Dosarul arată bine. Poți genera opisul și borderourile pentru predare. ${go("rezultate","Opis")} ${go("carte","Borderouri")}`;
+}
+const BB_CTX = [
+  {k:["ce lipseste","lipsa","lipsesc","ce mai am nevoie","ce imi trebuie","ce documente"], a:bbLipsuri},
+  {k:["cine intarzie","cine imi datoreaza","cereri intarziate","termen depasit","cine nu a trimis"], a:bbCereri},
+  {k:["ce fac acum","pasul urmator","ce urmeaza","de unde incep","ce trebuie sa fac"], a:bbNext}
+];
+
+function bbAnswer(q){
+  const have = new Set(words(q));
+  if(!have.size) return null;
+  let best = null, bs = 0;
+  // „opis” se potrivește cu „opisul”: comparăm după început, de la 4 litere în sus
+  const hv = [...have];
+  const has = w => have.has(w) || (w.length>=4 && hv.some(h=>h.length>=4 && (h.startsWith(w) || w.startsWith(h))));
+  // o frază întreagă câștigă (cu cât mai lungă, cu atât mai specifică); parțial doar cu minimum două cuvinte comune
+  const score = phrases => { let m = 0; for(const p of phrases){ const w = words(p); if(!w.length) continue; const hit = w.filter(has).length; const s = hit===w.length ? 10 + w.length : (hit>=2 ? hit/w.length*5 : 0); if(s>m) m=s; } return m; };
+  for(const e of BB_CTX.concat(BB_KB)){ const s = score(e.k); if(s>bs){ bs=s; best=e; } }
+  // cerințele din Conformitate răspund după titlul lor
+  for(const r of CF_RULES){ const s = score([r.titlu.replace(/\(.*?\)/g,""), ...(r.kws||[])]); if(s>bs){ bs=s; best={a:()=>`<b>${esc(r.titlu)}</b>. ${esc(r.deCe)} <span class="bb-law">${esc(r.temei)}</span> ${go("conformitate","Vezi în Conformitate")}`}; } }
+  return bs >= 2.5 ? best.a() : null;
+}
+
+let BB_LOG = [];
+const BB_SUG = {
+  proiect:["Ce fac acum?","Cum încarc documentele?","Unde se salvează datele?"],
+  inventar:["De ce e data portocalie?","Ce lipsește?","Ce sunt duplicatele?"],
+  duplicate:["Ce sunt duplicatele?","Ce fac acum?"],
+  carte:["Ce conține cartea tehnică?","Cum tipăresc borderourile?","Ce lipsește?"],
+  conformitate:["Ce este o fază determinantă?","Ce verifică ISC?","Ce este proiectul as built?"],
+  lipsuri:["Cum trimit o cerere?","Ce lipsește?"],
+  cereri:["Cine întârzie?","Cum trimit o reamintire?"],
+  rezultate:["Cum fac opisul în PDF?","Ce fac acum?"]
+};
+function bbRender(){
+  const box = $("#bb"); if(!box) return;
+  const sug = BB_SUG[VIEW] || BB_SUG.proiect;
+  box.innerHTML = `<div class="bb-panel" role="dialog" aria-label="Boloboc">
+    <div class="bb-h"><span class="bb-logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="8" width="20" height="8" rx="2"/><rect x="8.5" y="10" width="7" height="4" rx="2"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg></span><div><b>Boloboc</b><span>te ajută cu aplicația și cu dosarul</span></div><button class="bb-x" id="bbClose" aria-label="Închide">×</button></div>
+    <div class="bb-log" id="bbLog">
+      ${BB_LOG.length ? "" : `<div class="bb-msg bot">Salut! Sunt Boloboc. Întreabă-mă ce lipsește din dosar, cum folosești o funcție sau ce înseamnă un termen, de exemplu „fază determinantă”.</div>`}
+      ${BB_LOG.map(m=>`<div class="bb-msg ${m.who}">${m.html}</div>`).join("")}
+    </div>
+    <div class="bb-sug">${sug.map(s=>`<button data-bsug="${esc(s)}">${esc(s)}</button>`).join("")}</div>
+    <form class="bb-in" id="bbForm"><input type="text" id="bbQ" placeholder="Scrie o întrebare…" autocomplete="off"><button class="btn sm" type="submit">Întreabă</button></form>
+  </div>`;
+  const log = $("#bbLog"); log.scrollTop = log.scrollHeight;
+  $("#bbClose").onclick = () => { box.classList.remove("on"); };
+  box.querySelectorAll("[data-bsug]").forEach(b=>b.onclick=()=>bbAsk(b.dataset.bsug));
+  box.querySelectorAll("[data-bgo]").forEach(b=>b.onclick=()=>{ VIEW=b.dataset.bgo; render(); if(window.innerWidth<760) box.classList.remove("on"); });
+  $("#bbForm").onsubmit = e => { e.preventDefault(); const q = $("#bbQ").value.trim(); if(q) bbAsk(q); };
+  setTimeout(()=>{ const i=$("#bbQ"); if(i && window.innerWidth>=760) i.focus(); }, 30);
+}
+function bbAsk(q){
+  BB_LOG.push({who:"me", html:esc(q)});
+  const a = bbAnswer(q);
+  BB_LOG.push({who:"bot", html: a || `Nu știu încă să răspund la asta. Încearcă una dintre întrebările de mai jos sau formulează mai simplu, de exemplu „ce lipsește”, „cum trimit o cerere”, „ce e o fază determinantă”.`});
+  if(BB_LOG.length>40) BB_LOG = BB_LOG.slice(-40);
+  bbRender();
+}
+
 /* ---- REZULTATE ---- */
 function metrics(){
   const d = S.docs;
@@ -1728,6 +1882,9 @@ function bind(){
   const bcsv=$("#btnCsv"); if(bcsv) bcsv.onclick=exportCsv;
   const brap=$("#btnRaport"); if(brap) brap.onclick=exportRaport;
 }
+
+/* Boloboc */
+$("#bbFab").onclick = () => { const b = $("#bb"); b.classList.toggle("on"); if(b.classList.contains("on")) bbRender(); };
 
 /* top bar */
 $("#btnSave").onclick=()=>{
