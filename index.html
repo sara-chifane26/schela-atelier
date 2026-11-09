@@ -388,7 +388,7 @@ function renderNav(){
     if(v.id==="inventar") n = S.docs.length || "";
     if(v.id==="duplicate") n = dupGroups().length || "";
     if(v.id==="lipsuri") n = openLipsuri().length || "";
-    if(v.id==="carte" && S.ct) n = ctMissing(false).length || "✓";
+    if(v.id==="carte" && S.ct && S.docs.length) n = ctMissing(false).length || "✓";
     if(v.id==="cereri"){ const late = S.cereri.filter(c=>cerStatus(c).late).length; n = late ? `<b class="late">${late}</b>` : (S.cereri.filter(c=>!cerStatus(c).done).length || ""); }
     return `<button data-v="${v.id}" class="${VIEW===v.id?"on":""}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${v.icon}"/></svg>
