@@ -10,14 +10,16 @@ Aplicația rulează **doar în browserul tău**. Fișierele pe care le alegi sun
 
 ## Exemplu
 
-În pagina **Proiect**, butonul **Deschide exemplul** încarcă un proiect demonstrativ cu **date fictive**: o lucrare de fibră optică pe LEA 110 kV, cu 89 de documente și situația cărții tehnice pe dosare.
+Pe pagina de intrare, butonul **Deschide exemplul** adaugă în listă o lucrare demonstrativă cu **date fictive**: fibră optică pe LEA 110 kV, la Instalații electrice, cu 103 documente și situația cărții tehnice pe dosare.
 
 ## Ce face
 
+Pagina de intrare are opt chenare, câte unul pe domeniu: **construcții civile, drumuri, instalații electrice, termice, sanitare, gaze, rețele edilitare, HVAC**. Fiecare duce la aceeași structură, de la proiect la cartea tehnică. O lucrare poate avea mai multe domenii, iar la instalații electrice alegi tipurile (clădiri, rețele LEA/LES, LEA cu fibră optică, fotovoltaic, paratrăsnet, IDSAI, supraveghere video, antiefracție, control acces). La **Proiect** treci persoanele o singură dată, cu domeniile pe care le acoperă.
+
 1. **Inventar** — încarci folderul lucrării; fiecare fișier trece prin verificarea la intrare (copii identice respinse, versiuni noi semnalate, lipsuri rezolvate automat).
 2. **Duplicate** — alegi versiunea în vigoare.
-3. **Carte tehnică** — alegi tipul lucrării (LEA cu fibră optică, instalații electrice în clădiri, rețele LEA/LES MT-JT, parc fotovoltaic, construcții civile) și parametrii; aplicația generează documentele așteptate pe dosare A–D după HG 343/2017 (Anexa 6), le caută în inventar și tipărește borderourile. Documentele cerute în plus de beneficiar se adaugă într-un câmp separat.
-4. **Conformitate** — verifică dosarul față de legislație (HG 343/2017, Legea 10/1995, Ordinul MDRAP 1370/2014 pentru controlul ISC) și semnalează, pe faze, documentele lipsă cu temeiul legal.
+3. **Carte tehnică** — completezi parametrii fiecărei specialități; aplicația reunește documentele așteptate pe dosare A–D după HG 343/2017 (Anexa 6), cu piesele comune o singură dată, le caută în inventar și tipărește borderourile. Documentele cerute în plus de beneficiar se adaugă într-un câmp separat.
+4. **Conformitate** — verifică dosarul față de legislație (HG 343/2017, Legea 10/1995, Ordinul MDRAP 1370/2014 pentru controlul ISC) și față de normativele fiecărui domeniu (I 7, I 9, I 13, I 5, NTPEE, NP 133, P 118/3, HG 301/2012 etc.) și semnalează, pe faze, documentele lipsă cu temeiul legal.
 5. **Lipsuri** și **Cereri** — ce lipsește, de la cine, cu termene și reamintiri.
 6. **Rezultate** — statistici, opis (tipărire / PDF), exporturi CSV.
 

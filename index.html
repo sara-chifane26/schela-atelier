@@ -167,6 +167,7 @@ td input.isest{color:var(--ochre);border-color:#E3C9A6;background:#FFFBF5}
 .bar.mut i{background:var(--faint)}
 details.ct-det summary{cursor:pointer;display:flex;gap:8px;align-items:center;font-size:14.5px}
 tr.grp-row td{background:var(--surface-3);font-weight:700;font-size:13px;color:var(--muted)}
+tr.grp-row.spec td{background:var(--blue-soft);color:var(--blue);text-transform:uppercase;letter-spacing:.03em}
 @media (max-width:640px){ .ct-row{grid-template-columns:70px 1fr 60px} .ct-row .tag{grid-column:1/-1} }
 /* telefon: meniul devine o bandă orizontală sus */
 @media (max-width:760px){
@@ -202,6 +203,35 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 .msum b{color:var(--ink);font-family:var(--fm)}
 .mf{display:flex;gap:10px;align-items:center;padding:14px 18px;border-top:1px solid var(--line-soft);margin-top:12px}
 .mf .muted{margin-right:auto;max-width:60ch;line-height:1.45;font-size:13px}
+
+/* pagina de intrare: chenarele domeniilor */
+.brand{cursor:pointer}
+.home-h{margin:4px 0 18px}
+.home-h h2{font-size:24px;margin:0 0 6px;letter-spacing:-.02em}
+.home-h p{margin:0;color:var(--muted);font-size:14.5px;max-width:70ch;line-height:1.5}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:22px}
+.tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:170px;padding:22px 12px;border:none;border-radius:2px;background:var(--blue);color:#fff;cursor:pointer;text-align:center;transition:transform .15s ease,filter .15s ease,box-shadow .15s ease}
+.tile.dk{background:#173F5C}
+.tile:hover,.tile:focus-visible{transform:translateY(-3px);filter:brightness(1.12);box-shadow:0 10px 24px rgba(20,33,43,.22)}
+.tile svg{width:52px;height:52px;flex:none}
+.tile b{font-size:19px;font-weight:600;line-height:1.25;letter-spacing:-.01em}
+.tile small{font-size:12.5px;color:#CFE2EF;font-weight:500}
+.chips{display:inline-flex;flex-wrap:wrap;gap:4px}
+.chip{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:10px;background:var(--blue-soft);color:var(--blue);font-size:12px;font-weight:600;white-space:nowrap}
+.lrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line-soft)}
+.lrow:last-child{border-bottom:none}
+.lrow .ln{flex:1 1 260px;min-width:0}
+.lrow .ln b{display:block;font-size:15px;overflow-wrap:anywhere}
+.dom-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.dom-pick label{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line-soft);border-radius:4px;background:var(--surface-3);cursor:pointer;font-size:14px}
+.dom-pick label.on{border-color:var(--blue);background:var(--blue-soft)}
+.prow{display:grid;grid-template-columns:minmax(160px,1.2fr) minmax(170px,1fr) 2fr auto;gap:10px;align-items:start;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+.prow .chips label{display:inline-flex;align-items:center;gap:5px;font-size:13px;border:1px solid var(--line-soft);border-radius:12px;padding:3px 9px;cursor:pointer;background:var(--surface-3)}
+.prow .chips label.on{border-color:var(--blue);background:var(--blue-soft);color:var(--blue)}
+.cov{display:flex;flex-direction:column;gap:4px;margin-top:10px;font-size:13.5px}
+.cov .bad{color:var(--red)} .cov .ok{color:var(--green)}
+@media (max-width:900px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} .prow{grid-template-columns:1fr 1fr} }
+@media (max-width:760px){ .tile{min-height:132px;gap:10px;padding:16px 8px} .tile svg{width:40px;height:40px} .tile b{font-size:16px} .prow{grid-template-columns:1fr} }
 
 /* print */
 #print{display:none}
@@ -281,12 +311,52 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 const CAPS = ["Proiectare","Execuție","SSM și SU","Calitate","Contracte","Aprovizionare","Corespondență","As-built","Neclasificat"];
 const HASH_MAX = 200*1048576;   // fișierele mai mari nu primesc amprentă
 const JUNK = /^(thumbs\.db|desktop\.ini|\.ds_store)$|^~\$|^\._/i;
-const KEY = "schela_atelier_v1";
+const KEY = "schela_atelier_v1";            // versiunea veche: o singură lucrare
+const KEY_IDX = "schela_lucrari_v1";        // lista lucrărilor
+const KEY_L = id => "schela_lucrare_" + id; // fiecare lucrare separat
+
+/* Domeniile de pe pagina de intrare. O lucrare poate avea mai multe domenii bifate;
+   instalațiile electrice au subtipuri, celelalte au câte o listă-tip.
+   „dir” = domeniul de autorizare al dirigintelui de șantier (procedura ISC). */
+const SVG_A = 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
+const DOM = [
+  {id:"constructii", name:"Construcții civile", tpls:["constructii"], dir:"2 – construcții civile, industriale și agricole",
+   desc:"Clădiri: fundații, structură, închideri și finisaje.",
+   icon:`<svg viewBox="0 0 24 24" ${SVG_A}><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-5h6v5M9 11h2M13 11h2"/></svg>`},
+  {id:"drumuri", name:"Drumuri", tpls:["drumuri"], dir:"3 – drumuri, poduri, tunele",
+   desc:"Terasamente, straturi rutiere, îmbrăcăminți asfaltice, podețe.",
+   icon:`<svg viewBox="0 0 24 24" ${SVG_A}><path d="M8 3 4 21M16 3l4 18M12 4v3M12 10v3M12 16v4"/></svg>`},
+  {id:"electrice", name:"Instalații electrice", tpls:["ie-cladiri","retele-mtjt","lea-fo","fotovoltaic","paratrasnet","idsai","video","antiefractie","control-acces"], dir:"8.1 în clădiri / 9.1 rețele (cu legitimație ANRE)",
+   desc:"Clădiri, rețele, fibră optică, fotovoltaic, paratrăsnet, IDSAI și sisteme de securitate.",
+   icon:`<svg viewBox="0 0 24 24" ${SVG_A}><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>`},
+  {id:"termice", name:"Instalații termice", tpls:["termice"], dir:"8.2 / 9.2 – instalații sanitare și termoventilații",
+   desc:"Încălzire centrală: conducte, corpuri de încălzire, surse de căldură.",
+   icon:`<svg viewBox="0 0 24 24" ${SVG_A}><path d="M4 9h16v11H4zM8 9v11M12 9v11M16 9v11M7 3c-1 1.5 1 2 0 4M12 3c-1 1.5 1 2 0 4M17 3c-1 1.5 1 2 0 4"/></svg>`},
+  {id:"sanitare", name:"Instalații sanitare", tpls:["sanitare"], dir:"8.2 / 9.2 – instalații sanitare și termoventilații",
+   desc:"Apă rece și caldă, canalizare interioară, obiecte sanitare.",
+   icon:`<svg viewBox="0 0 24 24" ${SVG_A}><path d="M12 3c3.5 4.5 6 8 6 11a6 6 0 0 1-12 0c0-3 2.5-6.5 6-11z"/></svg>`},
+  {id:"gaze", name:"Instalații de gaze", tpls:["gaze"], dir:"8.3 / 9.4 (cu legitimație ANRE)",
+   desc:"Branșamente, instalații de utilizare și rețele de distribuție.",
+   icon:`<svg viewBox="0 0 24 24" ${SVG_A}><path d="M12 3c1 3.5 5 5.5 5 10.5a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 0 2 1 3 2 3 0-3-1-5 .5-8.5z"/></svg>`},
+  {id:"edilitare", name:"Rețele edilitare", tpls:["apa-canal"], dir:"6.1 / 9.2 – alimentări cu apă și canalizare",
+   desc:"Rețele exterioare de apă și canalizare, cămine, racorduri.",
+   icon:`<svg viewBox="0 0 24 24" ${SVG_A}><path d="M2 10h6v4H2M22 10h-6v4h6M8 12h8M12 12V7M9 7h6"/></svg>`},
+  {id:"hvac", name:"HVAC", tpls:["hvac"], dir:"8.2 – termoventilații",
+   desc:"Ventilare, climatizare, tratarea aerului, echipamente frigorifice.",
+   icon:`<svg viewBox="0 0 24 24" ${SVG_A}><circle cx="12" cy="12" r="2"/><path d="M12 10c0-4 1-7 4-7 0 3-2 5-4 7M14 12c4 0 7 1 7 4-3 0-5-2-7-4M12 14c0 4-1 7-4 7 0-3 2-5 4-7M10 12c-4 0-7-1-7-4 3 0 5 2 7 4"/></svg>`}
+];
+const domById = id => DOM.find(d=>d.id===id);
+const ROLURI = ["Diriginte de șantier","RTE (responsabil tehnic cu execuția)","Proiectant","Verificator de proiect","Executant (firmă)","Electrician / instalator autorizat ANRE","Alt rol"];
 
 let S = blank();
+let CUR = null;        // lucrarea deschisă
+let IDX = [];          // [{id, proiect, dom, n, upd}]
+let LAST_JS = "";
 
 function blank(){
   return {
+    id: newId("w"),
+    dom:[], sub:[], pers:[],
     meta:{firma:"",proiect:"",beneficiar:"",contract:"",amplasament:"",perioada:"",inceput:new Date().toISOString().slice(0,10),semnatar:"",emitent:""},
     docs:[],
     lipsuri:[],
@@ -390,19 +460,78 @@ function migrate(){
   if(S.meta.emitent===undefined) S.meta.emitent = "";
   if(S.ct===undefined) S.ct = null;
   if(S.conf===undefined) S.conf = null;
+  // lucrări pe domenii, cu persoane și specialități
+  if(!S.id) S.id = newId("w");
+  if(!Array.isArray(S.dom)) S.dom = [];
+  if(!Array.isArray(S.sub)) S.sub = [];
+  if(!Array.isArray(S.pers)) S.pers = [];
+  S.pers.forEach(p=>{ if(!p.id) p.id = newId("p"); if(!Array.isArray(p.dom)) p.dom = []; });
+  // cartea tehnică veche avea un singur tip de lucrare: îl transformăm în domeniu + subtip
+  if(S.ct && S.ct.tpl!==undefined){
+    const o = S.ct, pp = Object.assign({}, o.pp||{});
+    pp[o.tpl] = Object.assign({}, o.p||{});
+    const c = {nr:(o.p||{}).nr||"", cod:(o.p||{}).cod||"", extra:(o.p||{}).extra||""};
+    if(pp["ie-cladiri"] && pp["ie-cladiri"].paratr==="Da" && !S.sub.includes("paratrasnet")) S.sub.push("paratrasnet");
+    for(const k in pp){ pp[k] = Object.assign({}, pp[k]); delete pp[k].nr; delete pp[k].cod; delete pp[k].extra; delete pp[k].paratr; }
+    const d = DOM.find(d=>d.tpls.includes(o.tpl));
+    if(d){ if(!S.dom.includes(d.id)) S.dom.push(d.id); if(d.tpls.length>1 && !S.sub.includes(o.tpl)) S.sub.push(o.tpl); }
+    S.ct = {p:c, pp};
+  }
 }
 const pl = (n, one, many) => n + " " + (n===1 ? one : many);
 function newId(p){ return p + Math.random().toString(36).slice(2,10); }
 
 /* ---------------- persistence ---------------- */
+/* Fiecare lucrare se păstrează separat în browser; lista lucrărilor ține doar rezumatul. */
+function saveIdx(){ try{ localStorage.setItem(KEY_IDX, JSON.stringify(IDX)); }catch(e){} }
+function idxEntry(){ return {id:S.id, proiect:S.meta.proiect||"", dom:S.dom.slice(), n:S.docs.length, upd:Date.now()}; }
 function autosave(){
-  try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
+  if(!CUR) return;
+  const js = JSON.stringify(S);
+  if(js===LAST_JS) return;
+  LAST_JS = js;
+  try{ localStorage.setItem(KEY_L(S.id), js); }catch(e){}
+  const i = IDX.findIndex(x=>x.id===S.id), e = idxEntry();
+  if(i<0) IDX.unshift(e); else IDX[i] = e;
+  saveIdx();
+}
+function readLucrare(id){
+  try{ const o = JSON.parse(localStorage.getItem(KEY_L(id))||"null"); return o && o.meta ? o : null; }catch(e){ return null; }
 }
 function autoload(){
-  try{
-    const r = localStorage.getItem(KEY);
-    if(r){ const o = JSON.parse(r); if(o && o.meta) { S = Object.assign(blank(), o); migrate(); } }
-  }catch(e){}
+  try{ IDX = JSON.parse(localStorage.getItem(KEY_IDX)||"[]"); }catch(e){ IDX = []; }
+  if(!Array.isArray(IDX)) IDX = [];
+  // proiectul salvat de versiunea cu o singură lucrare devine prima lucrare din listă
+  if(!IDX.length){
+    try{
+      const o = JSON.parse(localStorage.getItem(KEY)||"null");
+      if(o && o.meta && (o.docs&&o.docs.length || o.meta.proiect)){ S = Object.assign(blank(), o); migrate(); CUR = S.id; autosave(); CUR = null; }
+    }catch(e){}
+  }
+  S = blank();
+}
+function openLucrare(id, view){
+  const o = readLucrare(id);
+  if(!o){ alert("Lucrarea nu mai există în acest browser."); IDX = IDX.filter(x=>x.id!==id); saveIdx(); return render(); }
+  S = Object.assign(blank(), o); S.id = id; migrate(); markDups();
+  CUR = S.id; LAST_JS = ""; VIEW = view || "proiect"; render();
+}
+function newLucrare(domId){
+  S = blank(); if(domId) S.dom = [domId];
+  CUR = S.id; LAST_JS = ""; VIEW = "proiect"; render();
+}
+function closeLucrare(){ autosave(); CUR = null; S = blank(); VIEW = "acasa"; }
+function deleteLucrare(id){
+  try{ localStorage.removeItem(KEY_L(id)); }catch(e){}
+  IDX = IDX.filter(x=>x.id!==id); saveIdx();
+  if(CUR===id) closeLucrare();
+}
+// o lucrare adusă din fișier (sau exemplul) intră în listă; dacă există deja, o înlocuiește
+function importLucrare(o, fixedId){
+  S = Object.assign(blank(), o);
+  if(fixedId) S.id = fixedId;
+  migrate(); markDups();
+  CUR = S.id; LAST_JS = ""; autosave();
 }
 function download(name, text, type){
   const b = new Blob([text], {type: type||"application/json;charset=utf-8"});
@@ -413,7 +542,8 @@ function download(name, text, type){
 }
 
 /* ---------------- views ---------------- */
-let VIEW = "proiect";
+let VIEW = "acasa";
+let DSEL = null;       // domeniul deschis de pe pagina de intrare
 const VIEWS = [
   {id:"proiect", name:"Proiect", icon:"M4 20V6l7-3 7 3v14"},
   {id:"inventar", name:"Inventar", icon:"M4 5h16v14H4z"},
@@ -425,27 +555,47 @@ const VIEWS = [
   {id:"rezultate", name:"Rezultate", icon:"M4 19V9m5 10V5m5 14v-7m5 7V7"}
 ];
 
+const HOME_ICON = "M3 11l9-7 9 7M5 9.5V20h14V9.5";
 function renderNav(){
-  $("#nav").innerHTML = VIEWS.map(v=>{
+  const home = `<button data-v="acasa" class="${VIEW==="acasa"||VIEW==="domeniu"?"on":""}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${HOME_ICON}"/></svg>
+      <span>Toate lucrările</span><span class="n">${IDX.length||""}</span></button>`;
+  if(!CUR){
+    $("#nav").innerHTML = home;
+    $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{ VIEW="acasa"; render(); });
+    return;
+  }
+  $("#nav").innerHTML = home + VIEWS.map(v=>{
     let n = "";
     if(v.id==="inventar") n = S.docs.length || "";
     if(v.id==="duplicate") n = dupGroups().length || "";
     if(v.id==="lipsuri") n = openLipsuri().length || "";
-    if(v.id==="carte" && S.ct && S.docs.length) n = ctMissing(false).length || "✓";
+    if(v.id==="carte" && activeTpls().length && S.docs.length) n = ctMissing(false).length || "✓";
     if(v.id==="conformitate" && S.docs.length){ const b = cfEval().filter(x=>x.st==="miss" && x.r.grav!=="recom").length; n = b ? `<b class="late">${b}</b>` : "✓"; }
     if(v.id==="cereri"){ const late = S.cereri.filter(c=>cerStatus(c).late).length; n = late ? `<b class="late">${late}</b>` : (S.cereri.filter(c=>!cerStatus(c).done).length || ""); }
     return `<button data-v="${v.id}" class="${VIEW===v.id?"on":""}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${v.icon}"/></svg>
       <span>${v.name}</span><span class="n">${n}</span></button>`;
   }).join("");
-  $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{ VIEW=b.dataset.v; render(); });
+  $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{ if(b.dataset.v==="acasa") closeLucrare(); else VIEW=b.dataset.v; render(); });
 }
 
+const domNames = ids => ids.map(id=>(domById(id)||{}).name).filter(Boolean);
+function subTitle(){
+  if(!CUR) return "";
+  const d = domNames(S.dom).join(" · ");
+  return [S.meta.proiect, d].filter(Boolean).map(x=>"· "+x).join(" ");
+}
 function render(){
+  if(!CUR && VIEW!=="acasa" && VIEW!=="domeniu") VIEW = "acasa";
   renderNav();
-  $("#vtitle").textContent = (VIEWS.find(v=>v.id===VIEW)||{}).name;
-  $("#vsub").textContent = S.meta.proiect ? "· " + S.meta.proiect : "";
+  const home = VIEW==="acasa" || VIEW==="domeniu";
+  $("#vtitle").textContent = VIEW==="acasa" ? "Toate lucrările" : VIEW==="domeniu" ? (domById(DSEL)||{}).name||"" : (VIEWS.find(v=>v.id===VIEW)||{}).name;
+  $("#vsub").textContent = home ? "" : subTitle();
+  $("#btnSave").style.display = CUR ? "" : "none";
   const v = $("#view");
+  if(VIEW==="acasa") v.innerHTML = viewAcasa();
+  if(VIEW==="domeniu") v.innerHTML = viewDomeniu();
   if(VIEW==="proiect") v.innerHTML = viewProiect();
   if(VIEW==="inventar") v.innerHTML = viewInventar();
   if(VIEW==="duplicate") v.innerHTML = viewDuplicate();
@@ -459,7 +609,108 @@ function render(){
   autosave();
 }
 
+/* ---- ACASĂ: chenarele domeniilor și lista lucrărilor ---- */
+function lucrariHtml(list, emptyText){
+  if(!list.length) return `<p class="muted" style="margin:0">${emptyText}</p>`;
+  const fmt = t => t ? new Date(t).toLocaleDateString("ro-RO") : "";
+  return [...list].sort((a,b)=>(b.upd||0)-(a.upd||0)).map(l=>`<div class="lrow">
+    <div class="ln"><b>${esc(l.proiect||"Lucrare fără nume")}</b>
+      <span class="chips">${domNames(l.dom||[]).map(n=>`<span class="chip">${esc(n)}</span>`).join("") || `<span class="muted">fără domeniu ales</span>`}</span></div>
+    <span class="muted">${pl(l.n||0,"document","documente")} · ${fmt(l.upd)}</span>
+    <button class="btn sm" data-lopen="${esc(l.id)}">Deschide</button>
+    <button class="btn g sm" data-ldel="${esc(l.id)}">Șterge</button>
+  </div>`).join("");
+}
+function viewAcasa(){
+  return `
+  <div class="home-h">
+    <h2>Alege domeniul lucrării</h2>
+    <p>Fiecare domeniu are aceeași structură, de la proiect până la cartea tehnică, cu listele-tip și verificările lui. O lucrare poate avea mai multe domenii; le bifezi la Proiect.</p>
+  </div>
+  <div class="tiles">${DOM.map((d,i)=>`<button class="tile ${(Math.floor(i/4)+i)%2?"dk":""}" data-dom-open="${d.id}" aria-label="${esc(d.name)}">${d.icon}<b>${esc(d.name)}</b>${IDX.filter(l=>(l.dom||[]).includes(d.id)).length?`<small>${pl(IDX.filter(l=>(l.dom||[]).includes(d.id)).length,"lucrare","lucrări")}</small>`:""}</button>`).join("")}</div>
+  <div class="card">
+    <h3>Lucrările tale</h3>
+    ${lucrariHtml(IDX, "Încă nu ai nicio lucrare. Alege un domeniu de mai sus și apasă „Lucrare nouă”.")}
+  </div>
+  ${/^https?:$/.test(location.protocol) ? `<div class="card">
+    <h3>Vrei să vezi cum arată?</h3>
+    <p style="margin:0 0 12px;font-size:14px;color:var(--muted)">Deschide o lucrare demonstrativă cu date fictive: fibră optică pe LEA 110 kV, la Instalații electrice, cu documentele și cartea tehnică pe dosare. Apare în listă ca o lucrare separată.</p>
+    <button class="btn g sm" id="btnDemo">Deschide exemplul</button>
+  </div>` : ""}
+  <p class="muted" style="line-height:1.5">Lucrările se păstrează în acest browser. Ca să le muți pe alt calculator sau să le păstrezi în siguranță, deschide lucrarea și apasă <b>Salvează proiect</b>.</p>`;
+}
+function viewDomeniu(){
+  const d = domById(DSEL); if(!d) return viewAcasa();
+  const list = IDX.filter(l=>(l.dom||[]).includes(d.id));
+  return `
+  <div class="card">
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <span class="tile" style="min-height:0;width:84px;height:84px;padding:0;cursor:default;transform:none;filter:none;box-shadow:none">${d.icon}</span>
+      <div style="flex:1;min-width:220px">
+        <h3 style="margin:0 0 4px;font-size:20px">${esc(d.name)}</h3>
+        <p class="muted" style="margin:0;font-size:14px">${esc(d.desc)}</p>
+        <p class="muted" style="margin:4px 0 0">Dirigintele de șantier: domeniul de autorizare ${esc(d.dir)}.</p>
+      </div>
+      <button class="btn" id="btnNewL">Lucrare nouă</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>${d.tpls.length>1 ? "Tipuri de lucrări din domeniu" : "Ce verifică aplicația"}</h3>
+    ${d.tpls.map(t=>`<div class="lrow"><div class="ln"><b>${esc(CT_TPL[t].name)}</b><span class="muted">${esc(CT_TPL[t].norme)}</span></div></div>`).join("")}
+    ${d.tpls.length>1 ? `<p class="muted" style="margin:10px 0 0">Într-o lucrare bifezi la Proiect unul sau mai multe tipuri; cartea tehnică le reunește într-un singur dosar.</p>` : ""}
+  </div>
+  <div class="card">
+    <h3>Lucrări în ${esc(d.name.toLowerCase())}</h3>
+    ${lucrariHtml(list, "Nicio lucrare încă în acest domeniu.")}
+  </div>`;
+}
+
 /* ---- PROIECT ---- */
+// tipurile de lucrări (listele-tip) active pentru lucrarea deschisă
+function activeTpls(){
+  const out = [];
+  for(const d of DOM) if(S.dom.includes(d.id)){
+    if(d.tpls.length===1) out.push(d.tpls[0]);
+    else d.tpls.forEach(t=>{ if(S.sub.includes(t)) out.push(t); });
+  }
+  return out.filter(t=>CT_TPL[t]);
+}
+// fiecare domeniu al lucrării are nevoie de un diriginte și de un RTE care îl acoperă
+function acoperire(){
+  return S.dom.map(id=>({d:domById(id),
+    dir: S.pers.filter(p=>p.rol===ROLURI[0] && p.dom.includes(id)),
+    rte: S.pers.filter(p=>p.rol===ROLURI[1] && p.dom.includes(id))})).filter(x=>x.d);
+}
+function viewSpecialitati(){
+  const el = domById("electrice");
+  return `<div class="card">
+    <h3>Domeniile lucrării</h3>
+    <div class="dom-pick">${DOM.map(d=>`<label class="${S.dom.includes(d.id)?"on":""}"><input type="checkbox" data-dom="${d.id}" ${S.dom.includes(d.id)?"checked":""}> ${esc(d.name)}</label>`).join("")}</div>
+    ${S.dom.includes("electrice") ? `<span class="lbl" style="margin-top:14px">Instalații electrice — ce cuprinde lucrarea</span>
+      <div class="dom-pick">${el.tpls.map(t=>`<label class="${S.sub.includes(t)?"on":""}"><input type="checkbox" data-sub="${t}" ${S.sub.includes(t)?"checked":""}> ${esc(CT_TPL[t].short||CT_TPL[t].name)}</label>`).join("")}</div>
+      ${el.tpls.some(t=>S.sub.includes(t)) ? "" : `<p class="muted" style="margin:8px 0 0;color:var(--ochre)">Bifează cel puțin un tip, ca să se genereze lista-tip a cărții tehnice.</p>`}` : ""}
+    ${S.dom.length ? "" : `<p class="muted" style="margin:10px 0 0;color:var(--ochre)">Bifează domeniile lucrării. Ele hotărăsc listele-tip din cartea tehnică și verificările de la Conformitate.</p>`}
+  </div>`;
+}
+function viewPersoane(){
+  const cov = acoperire();
+  return `<div class="card">
+    <h3>Persoane și specialități</h3>
+    <p class="muted" style="margin:0 0 6px">O persoană autorizată pe mai multe domenii se trece o singură dată și bifezi ce acoperă.</p>
+    ${S.pers.map((p,i)=>`<div class="prow">
+      <div><span class="lbl">Nume</span><input type="text" data-pf="${i}:nume" value="${esc(p.nume)}" placeholder="Ing. Nume Prenume"></div>
+      <div><span class="lbl">Rol</span><select data-pf="${i}:rol">${ROLURI.map(r=>`<option ${p.rol===r?"selected":""}>${esc(r)}</option>`).join("")}</select></div>
+      <div><span class="lbl">Acoperă</span><span class="chips">${S.dom.length ? S.dom.map(id=>`<label class="${p.dom.includes(id)?"on":""}"><input type="checkbox" data-pdom="${i}:${id}" ${p.dom.includes(id)?"checked":""}> ${esc(domById(id).name)}</label>`).join("") : `<span class="muted">bifează întâi domeniile lucrării</span>`}</span></div>
+      <div style="padding-top:20px"><button class="btn g sm" data-pdel="${i}" aria-label="Șterge persoana">Șterge</button></div>
+    </div>`).join("")}
+    <div style="margin-top:12px"><button class="btn g sm" id="btnAddPers">Adaugă persoană</button></div>
+    ${cov.length ? `<div class="cov">${cov.map(x=>{
+      const miss = [!x.dir.length?"diriginte de șantier":"", !x.rte.length?"RTE":""].filter(Boolean);
+      return miss.length ? `<span class="bad">${esc(x.d.name)}: lipsește ${miss.join(" și ")} <span class="muted">· diriginte autorizat pe domeniul ${esc(x.d.dir)}</span></span>`
+        : `<span class="ok">${esc(x.d.name)}: diriginte ${esc(x.dir.map(p=>p.nume||"fără nume").join(", "))} · RTE ${esc(x.rte.map(p=>p.nume||"fără nume").join(", "))}</span>`;
+    }).join("")}</div>` : ""}
+  </div>`;
+}
 function viewProiect(){
   const m = S.meta;
   // câmpurile de text cresc pe mai multe rânduri, ca numele lungi să se vadă complet
@@ -468,6 +719,8 @@ function viewProiect(){
     : `<div${wide?' class="wide"':""}><span class="lbl">${l}</span><textarea rows="1" class="grow" data-meta="${k}">${esc(m[k])}</textarea></div>`;
   return `
   <div class="note"><b>Unealtă de lucru pentru dosarele de proiect.</b> Toate datele stau în această pagină, pe calculatorul tău. Nimic nu se încarcă pe internet. Salvează proiectul într-un fișier la finalul fiecărei sesiuni.</div>
+
+  ${viewSpecialitati()}
 
   <div class="card">
     <h3>Datele proiectului</h3>
@@ -490,21 +743,17 @@ function viewProiect(){
     <p style="margin:10px 0 0;font-size:13px;color:var(--muted)">Apar la finalul fiecărei cereri și în antetul adresei tipărite.</p>
   </div>
 
+  ${viewPersoane()}
+
   <div class="card">
     <h3>Observații pe parcurs</h3>
     <textarea rows="5" data-note placeholder="Ce te-a surprins, ce nu a încăput în niciun capitol, ce ai schimba la structură…">${esc(S.note)}</textarea>
   </div>
 
-  ${/^https?:$/.test(location.protocol) ? `<div class="card">
-    <h3>Vrei să vezi cum arată?</h3>
-    <p style="margin:0 0 12px;font-size:14px;color:var(--muted)">Deschide un proiect demonstrativ cu date fictive: o lucrare de fibră optică pe LEA 110 kV, cu 89 de documente și cartea tehnică pe dosare. Înlocuiește proiectul curent din pagină.</p>
-    <button class="btn g sm" id="btnDemo">Deschide exemplul</button>
-  </div>` : ""}
-
   <div class="card" style="border-color:var(--red)">
-    <h3 style="color:var(--red)">Golește tot</h3>
-    <p style="margin:0 0 12px;font-size:14px;color:var(--muted)">Șterge proiectul curent din această pagină. Salvează întâi în fișier dacă vrei să-l păstrezi.</p>
-    <button class="btn g sm" id="btnClear">Golește</button>
+    <h3 style="color:var(--red)">Șterge lucrarea</h3>
+    <p style="margin:0 0 12px;font-size:14px;color:var(--muted)">Scoate lucrarea din acest browser. Salvează întâi în fișier dacă vrei să o păstrezi.</p>
+    <button class="btn g sm" id="btnClear">Șterge lucrarea</button>
   </div>`;
 }
 
@@ -617,8 +866,10 @@ function words(s){
   }
   // cuvintele de 2 litere care rămân (TG, TE, PT, LES) sunt identificatori și contează
   return out.filter(w => w && !STOP.has(w) && (w.length>=2 || /\d/.test(w)))
-            .map(w => /\d/.test(w) ? w : w.slice(0,5));
+            .map(w => /\d/.test(w) ? w : w.slice(0, STEM6.has(w.slice(0,5)) ? 6 : 5));
 }
+// rădăcini de 5 litere care ar amesteca termeni diferiți: contract / control / contor, intervenție / interior
+const STEM6 = new Set(["contr","inter"]);
 // cât de bine acoperă denumirea fișierului cuvintele din denumirea lipsei (0…1)
 function lipsaScore(fileName, lipsaDen){
   const need = [...new Set(words(lipsaDen))]; if(!need.length) return 0;
@@ -1132,43 +1383,95 @@ const CT_COMMON = {
   ]
 };
 
-/* Asamblează dosarele: piese specifice + piese comune + documentele suplimentare ale beneficiarului. */
-function ctBuild(p, spec){
+/* Asamblează dosarele unei lucrări cu una sau mai multe specialități:
+   piesele fiecărei specialități (sub un titlu, când sunt mai multe), apoi piesele comune o singură dată.
+   Un document cerut de mai multe specialități (ex. „Plan propriu SSM”) apare o singură dată. */
+function ctBuild(p, specs){
   const pre = (p.cod||"").trim();
   let n = 0;
   const num = arr => arr.map(i => (i.seq && pre && !i.cod) ? Object.assign(i, {cod:`${pre}-${++n}`}) : i);
+  const multi = specs.length > 1;
+  const merge = (key, common) => {
+    const out = [], seen = new Set();
+    const fresh = i => !i.group && !seen.has(norm(i.den));
+    const push = i => { if(!i.group){ seen.add(norm(i.den)); } out.push(Object.assign({}, i)); };
+    for(const s of specs){
+      const its = s.spec[key] || [];
+      if(!its.some(fresh)) continue;
+      if(multi) out.push({group:s.name, spec:true});
+      its.forEach(i=>{ if(i.group || fresh(i)) push(i); });
+    }
+    const com = (common||[]).filter(fresh);
+    if(com.length){ if(multi && out.length) out.push({group:"Comune tuturor specialităților", spec:true}); com.forEach(push); }
+    return out;
+  };
   const dos = [
-    {id:"A1", ch:"A", items:[...(spec.A1||[]), ...CT_COMMON.A1()]},
-    {id:"A2", ch:"A", items:[...(spec.A2||[]), ...CT_COMMON.A2()]},
-    {id:"B1", ch:"B", items:[...(spec.B1||[]), ...CT_COMMON.B1()]},
-    {id:"B2", ch:"B", items:num([...(spec.B2||[]), ...CT_COMMON.B2()])},
-    {id:"B3", ch:"B", items:num([...(spec.B3||[]), ...CT_COMMON.B3()])},
-    {id:"B4", ch:"B", items:[...(spec.B4||[]), ...CT_COMMON.B4()]}
+    {id:"A1", ch:"A", items:merge("A1", CT_COMMON.A1())},
+    {id:"A2", ch:"A", items:merge("A2", CT_COMMON.A2())},
+    {id:"B1", ch:"B", items:merge("B1", CT_COMMON.B1())},
+    {id:"B2", ch:"B", items:num(merge("B2", CT_COMMON.B2()))},
+    {id:"B3", ch:"B", items:num(merge("B3", CT_COMMON.B3()))},
+    {id:"B4", ch:"B", items:merge("B4", CT_COMMON.B4())}
   ];
-  if(spec.B5) dos.push({id:"B5", ch:"B", items:spec.B5});
+  const b5 = merge("B5");
+  if(b5.length) dos.push({id:"B5", ch:"B", items:num(b5)});
   const extra = parseLines(p.extra);
-  if(extra.length) dos.push({id: spec.B5 ? "B6" : "B5", ch:"B", items:[{group:"Documente suplimentare cerute de beneficiar"}, ...extra.map(x=>({den:x, cap:"Execuție", dela:"Executant"}))]});
-  dos.push({id:"C1", ch:"C", later:"la recepție", items:CT_COMMON.C1()});
-  dos.push({id:"D1", ch:"D", later:"în exploatare", items:CT_COMMON.D1()});
+  if(extra.length) dos.push({id: b5.length ? "B6" : "B5", ch:"B", items:[{group:"Documente suplimentare cerute de beneficiar"}, ...extra.map(x=>({den:x, cap:"Execuție", dela:"Executant"}))]});
+  dos.push({id:"C1", ch:"C", later:"la recepție", items:merge("C1", CT_COMMON.C1())});
+  dos.push({id:"D1", ch:"D", later:"în exploatare", items:merge("D1", CT_COMMON.D1())});
   return dos;
+}
+function ctState(){
+  if(!S.ct || !S.ct.pp) S.ct = {p:{nr:"", cod:"", extra:""}, pp:{}};
+  if(!S.ct.p) S.ct.p = {nr:"", cod:"", extra:""};
+  return S.ct;
+}
+function ctDosare(){
+  const ts = activeTpls(); if(!ts.length) return null;
+  const ct = ctState();
+  const specs = ts.map(t=>({t, name:CT_TPL[t].name, spec:CT_TPL[t].spec(Object.assign({}, ct.p, ct.pp[t]||{}))}));
+  return ctBuild(ct.p, specs);
 }
 const PV = (den, extra) => Object.assign({den, cap:"Execuție", dela:"Executant", seq:true}, extra||{});
 const BUL = (den, extra) => Object.assign({den, cap:"Calitate", dela:"Executant (laborator)", seq:true}, extra||{});
 
-/* Câmpurile comune tuturor tipurilor */
-const P_NR   = {k:"nr",  label:"Lucrare nr.", ph:"5.2/2026"};
-const P_COD  = {k:"cod", label:"Cod pentru numerotarea PV-urilor (opțional)", ph:"26L05.2"};
-const P_EXTRA= {k:"extra", label:"Documente suplimentare cerute de beneficiar — câte unul pe rând", type:"area", ph:"Fișă tehnică echipament\nBuletin verificare protecții conform specificației beneficiarului", wide:true};
+/* Listele-tip pe specialități. Fiecare întoarce piesele specifice pe dosare (A1…D1);
+   piesele comune din Anexa 6 se adaugă o singură dată, la asamblare. */
+const C_EXEC = {den:"Contractul de execuție", kw:"contract", cap:"Contracte", dela:"Beneficiar"};
+const C_SSM  = {den:"Plan propriu SSM", kw:"plan propriu ssm", cap:"SSM și SU", dela:"Executant"};
+const splitList = s => String(s||"").split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean);
+
+/* sistemele de securitate (Legea 333/2003, HG 301/2012) au aceeași structură */
+function secSpec(p, kind, probe){
+  const Z = parseLines(p.zone);
+  return {
+    A1: [{den:"Avizul poliției pentru proiectul sistemului de securitate (obiectivele din HG 301/2012, art. 68)", kws:["aviz politie","avizare proiect securitate","aviz ipj"], cap:"Proiectare", dela:"Beneficiar"}],
+    A2: [{den:`Proiect tehnic – ${kind} (întocmit de societate licențiată)`, kws:[`proiect ${norm(kind)}`], cap:"Proiectare", dela:"Proiectant"}],
+    B1: [C_EXEC,
+      {den:"Licența IGPR a societății care proiectează și instalează sistemele de securitate", kws:["licenta igpr","licenta politie","licenta"], cap:"Contracte", dela:"Executant"}, C_SSM],
+    B2: [{group:"Procese-verbale de execuție"},
+      ...Z.map(z=>PV(`PV lucrări ascunse – trasee de cabluri – ${kind} – ${z}`)),
+      ...Z.map(z=>PV(`PV montaj echipamente – ${kind} – ${z}`))],
+    B3: [{group:"Probe de funcționare"}, PV(`PV probe de funcționare – ${kind} (${probe})`)],
+    B5: [{group:`Punere în funcțiune – ${kind}`},
+      {den:`PV de punere în funcțiune – ${kind}`, kws:[`punere in functiune ${norm(kind)}`], cap:"Execuție", dela:"Executant"},
+      {den:"PV de predare a codurilor, programelor și documentației sistemelor de securitate (HG 301/2012, art. 86)", kws:["predare coduri","predare parole"], cap:"Execuție", dela:"Executant"},
+      {den:"Contractul de întreținere periodică a sistemelor de securitate", kws:["contract intretinere","contract mentenanta"], cap:"Contracte", dela:"Beneficiar"},
+      {den:"Instruirea beneficiarului pentru exploatare", kw:"instruire beneficiar", cap:"Execuție", dela:"Executant"}]
+  };
+}
+const P_ZONE = ph => ({k:"zone", label:"Zone / niveluri — câte una pe rând", type:"area", ph: ph || "Parter\nEtaj 1\nExterior"});
+const SEC_NORME = "Legea 333/2003; HG 301/2012 (Normele metodologice): art. 68–69 avizarea proiectului, art. 76 licența IGPR, art. 86 predarea codurilor și documentației";
 
 const CT_TPL = {
   "lea-fo": {
-    name: "LEA – fibră optică (OPGW / ADSS)",
+    name: "LEA – fibră optică (OPGW / ADSS)", short:"LEA cu fibră optică (OPGW / ADSS)",
     norme: "NTE 003/04/00 (LEA peste 1 kV); HG 343/2017, Anexa 6",
-    params: [P_NR, P_COD, {k:"cond", label:"Conductor", type:"select", opts:["OPGW","ADSS"]},
+    params: [{k:"cond", label:"Conductor", type:"select", opts:["OPGW","ADSS"]},
       {k:"tronsoane", label:"Tronsoane — câte unul pe rând, în ordinea PV-urilor", type:"area", ph:"1-8\n8-15\n15-24"},
       {k:"balize", label:"Balize — deschidere : bucăți, câte una pe rând", type:"area", ph:"12-13 : 2\n44-45 : 4"},
-      {k:"prize", label:"Stâlpi cu priză de pământ", type:"area", ph:"8, 15, 24, 31"}, P_EXTRA],
-    dosare(p){
+      {k:"prize", label:"Stâlpi cu priză de pământ", type:"area", ph:"8, 15, 24, 31"}],
+    spec(p){
       const T = parseTronsoane(p.tronsoane), B = parseBalize(p.balize), P = parseList(p.prize);
       const pre = (p.cod||"").trim(), cond = (p.cond||"OPGW").trim();
       const code = x => pre ? `${pre}-${x}` : "";
@@ -1183,7 +1486,7 @@ const CT_TPL = {
       B.forEach((b,j)=> pv.push(E(`PV montare balize sferice – st. ${b.st} – ${b.buc} buc.`, {cod:code(`${T.length+j+1}`)})));
       P.forEach((st,k)=> pv.push(E(`PV montare priză de pământ – st. ${st}`, {cod:code(`${gP}.${k+1}`)})));
       const bul = P.map((st,k)=>({cod:code(`${gP}.${k+1}.1`), den:`Buletin de verificare priză de pământ – st. ${st}`, cap:"Calitate", dela:"Executant (laborator)"}));
-      return ctBuild(p, {
+      return {
         A1: [{den:"Aviz CTE", kw:"aviz cte", cap:"Proiectare", dela:"Beneficiar"}],
         A2: [{den:"Proiect tehnic de execuție (PTE) – parte scrisă și desenată", kws:["pte","proiect tehnic"], cap:"Proiectare", dela:"Proiectant"}],
         B1: [
@@ -1196,7 +1499,7 @@ const CT_TPL = {
           {den:"Referat RTE", kw:"referat rte", cap:"Execuție", dela:"RTE"},
           {den:"Referat diriginte de șantier", kw:"referat diriginte", cap:"Execuție", dela:"Diriginte de șantier"},
           {den:"Atestate ANRE ale executantului", kw:"atestat anre", cap:"Contracte", dela:"Executant"},
-          {den:"Plan propriu SSM", kw:"plan propriu ssm", cap:"SSM și SU", dela:"Executant"}
+          C_SSM
         ],
         B2: [
           {den:"Planul de control calitate, verificări și încercări (PCCVI)", kw:"pccvi", cap:"Calitate", dela:"Executant"},
@@ -1209,63 +1512,56 @@ const CT_TPL = {
           ...bul,
           {den:"Rapoarte de încercare fibră optică", kw:"raport incercare fibra", cap:"Calitate", dela:"Executant"}
         ]
-      });
+      };
     }
   },
 
   "ie-cladiri": {
-    name: "Instalații electrice în clădiri (joasă tensiune)",
-    norme: "Normativul I7/2011; PE 116; HG 343/2017, Anexa 6",
-    params: [P_NR, P_COD,
+    name: "Instalații electrice în clădiri (joasă tensiune)", short:"Instalații electrice în clădiri",
+    norme: "I 7-2011 (modificat prin Ordinul MDLPA 959/2023); PE 116; HG 343/2017, Anexa 6",
+    params: [
       {k:"tablouri", label:"Tablouri electrice — câte unul pe rând", type:"area", ph:"TG\nTE parter\nTE etaj 1"},
       {k:"zone", label:"Zone cu trasee înglobate / îngropate — câte una pe rând", type:"area", ph:"Parter\nEtaj 1\nRacord exterior"},
-      {k:"prize", label:"Prize de pământ — câte una pe rând", type:"area", ph:"Priza de fundație\nPriza paratrăsnet"},
-      {k:"paratr", label:"Instalație de paratrăsnet", type:"select", opts:["Nu","Da"]}, P_EXTRA],
-    dosare(p){
-      const T = parseLines(p.tablouri), Z = parseLines(p.zone), P = parseLines(p.prize), par = p.paratr==="Da";
-      return ctBuild(p, {
-        A2: [{den:"Proiect tehnic – instalații electrice (piese scrise și desenate)", kws:["proiect tehnic","pt instalatii electrice","pth"], cap:"Proiectare", dela:"Proiectant"}],
-        B1: [
-          {den:"Contractul de execuție", kw:"contract", cap:"Contracte", dela:"Beneficiar"},
+      {k:"prize", label:"Prize de pământ — câte una pe rând", type:"area", ph:"Priza de fundație"}],
+    spec(p){
+      const T = parseLines(p.tablouri), Z = parseLines(p.zone), P = parseLines(p.prize);
+      return {
+        A2: [{den:"Proiect tehnic – instalații electrice (piese scrise și desenate)", kws:["proiect tehnic","pt instalatii electrice","proiect tehnic instalatii electrice","proiect instalatii electrice","pth"], cap:"Proiectare", dela:"Proiectant"}],
+        B1: [C_EXEC,
           {den:"Autorizațiile ANRE ale electricienilor / atestatul executantului", kws:["autorizatie anre","atestat anre"], cap:"Contracte", dela:"Executant"},
-          {den:"Plan propriu SSM", kw:"plan propriu ssm", cap:"SSM și SU", dela:"Executant"}
-        ],
+          C_SSM],
         B2: [
           {group:"Procese-verbale de execuție"},
           ...Z.map(z=>PV(`PV lucrări ascunse – trasee de cabluri înglobate / îngropate – ${z}`)),
           ...P.map(x=>PV(`PV lucrări ascunse – priză de pământ – ${x}`)),
-          ...T.map(t=>PV(`PV montaj tablou electric – ${t}`)),
-          ...(par ? [PV("PV montaj instalație de paratrăsnet")] : [])
+          ...T.map(t=>PV(`PV montaj tablou electric – ${t}`))
         ],
         B3: [
           {group:"Buletine de verificări și măsurători la punerea în funcțiune"},
           ...P.map(x=>BUL(`Buletin măsurare rezistență de dispersie – ${x}`)),
-          ...T.map(t=>BUL(`Buletin verificare tablou ${t} (rezistență de izolație, continuitate PE, dispozitive diferențiale, impedanța buclei)`)),
-          ...(par ? [BUL("Buletin verificare instalație de paratrăsnet")] : [])
+          ...T.map(t=>BUL(`Buletin verificare tablou ${t} (rezistență de izolație, continuitate PE, dispozitive diferențiale, impedanța buclei)`))
         ],
         B4: [{den:"Declarații de conformitate ale tablourilor electrice (asamblor)", kws:["declaratie conformitate tablou","declaratii conformitate tablouri"], cap:"Calitate", dela:"Executant / asamblor"}]
-      });
+      };
     }
   },
 
   "retele-mtjt": {
-    name: "Rețele electrice LEA / LES medie și joasă tensiune",
+    name: "Rețele electrice LEA / LES medie și joasă tensiune", short:"Rețele electrice LEA / LES MT-JT",
     norme: "NTE 003/04/00 (LEA); NTE 007/08/00 (LES); PE 116; HG 343/2017, Anexa 6",
-    params: [P_NR, P_COD,
+    params: [
       {k:"lea", label:"Tronsoane LEA — câte unul pe rând", type:"area", ph:"PT1 - st. 12\nst. 12 - st. 25"},
       {k:"les", label:"Tronsoane LES — câte unul pe rând", type:"area", ph:"PT1 - firidă F1\nPT1 - PT2"},
       {k:"posturi", label:"Posturi de transformare — câte unul pe rând", type:"area", ph:"PT1 20/0,4 kV 400 kVA"},
-      {k:"prize", label:"Prize de pământ (stâlpi, posturi) — separate prin virgulă", type:"area", ph:"PT1, st. 12, st. 25"}, P_EXTRA],
-    dosare(p){
-      const L = parseTronsoane(p.lea), C = parseTronsoane(p.les), PT = parseLines(p.posturi), P = String(p.prize||"").split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean);
-      return ctBuild(p, {
+      {k:"prize", label:"Prize de pământ (stâlpi, posturi) — separate prin virgulă", type:"area", ph:"PT1, st. 12, st. 25"}],
+    spec(p){
+      const L = parseTronsoane(p.lea), C = parseTronsoane(p.les), PT = parseLines(p.posturi), P = splitList(p.prize);
+      return {
         A1: [{den:"Avizul tehnic de racordare / avizul de amplasament al operatorului de rețea", kws:["aviz tehnic racordare","atr","aviz amplasament"], cap:"Proiectare", dela:"Operator de rețea"}],
         A2: [{den:"Proiect tehnic de execuție – rețele electrice (piese scrise și desenate)", kws:["proiect tehnic","pte"], cap:"Proiectare", dela:"Proiectant"}],
-        B1: [
-          {den:"Contractul de execuție", kw:"contract", cap:"Contracte", dela:"Beneficiar"},
+        B1: [C_EXEC,
           {den:"Atestatul ANRE al executantului și autorizațiile electricienilor", kws:["atestat anre","autorizatie anre"], cap:"Contracte", dela:"Executant"},
-          {den:"Plan propriu SSM", kw:"plan propriu ssm", cap:"SSM și SU", dela:"Executant"}
-        ],
+          C_SSM],
         B2: [
           {group:"Procese-verbale de execuție"},
           ...L.flatMap(t=>[PV(`PV trasare și montare stâlpi, cu fundațiile (lucrare ascunsă) – ${t}`), PV(`PV montare conductoare și reglaj săgeți – ${t}`)]),
@@ -1280,20 +1576,20 @@ const CT_TPL = {
           ...PT.flatMap(x=>[BUL(`Buletin încercări transformator și echipamente – ${x}`), BUL(`Buletin verificare protecții – ${x}`)]),
           ...P.map(x=>BUL(`Buletin măsurare priză de pământ – ${x}`))
         ]
-      });
+      };
     }
   },
 
   "fotovoltaic": {
     name: "Parc fotovoltaic",
     norme: "Ordinul ANRE 51/2019 (notificarea unităților generatoare); HG 343/2017, Anexa 6",
-    params: [P_NR, P_COD,
+    params: [
       {k:"blocuri", label:"Blocuri / zone de panouri — câte unul pe rând", type:"area", ph:"Bloc 1\nBloc 2"},
       {k:"posturi", label:"Posturi de transformare / stații — câte unul pe rând", type:"area", ph:"PT1\nStația de racord 20 kV"},
-      {k:"prize", label:"Prize de pământ — separate prin virgulă", type:"area", ph:"Bloc 1, Bloc 2, PT1"}, P_EXTRA],
-    dosare(p){
-      const Bk = parseLines(p.blocuri), PT = parseLines(p.posturi), P = String(p.prize||"").split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean);
-      return ctBuild(p, {
+      {k:"prize", label:"Prize de pământ — separate prin virgulă", type:"area", ph:"Bloc 1, Bloc 2, PT1"}],
+    spec(p){
+      const Bk = parseLines(p.blocuri), PT = parseLines(p.posturi), P = splitList(p.prize);
+      return {
         A1: [
           {den:"Avizul tehnic de racordare (ATR)", kws:["aviz tehnic racordare","atr"], cap:"Proiectare", dela:"Operator de rețea"},
           {den:"Autorizația de înființare ANRE (unde este cazul)", kws:["autorizatie infiintare","autorizatia de infiintare"], cap:"Proiectare", dela:"Beneficiar"}
@@ -1303,7 +1599,7 @@ const CT_TPL = {
           {den:"Contractul de execuție", kw:"contract executie", cap:"Contracte", dela:"Beneficiar"},
           {den:"Contractul de racordare", kw:"contract racordare", cap:"Contracte", dela:"Operator de rețea"},
           {den:"Atestatul ANRE al executantului și autorizațiile electricienilor", kws:["atestat anre","autorizatie anre"], cap:"Contracte", dela:"Executant"},
-          {den:"Plan propriu SSM", kw:"plan propriu ssm", cap:"SSM și SU", dela:"Executant"}
+          C_SSM
         ],
         B2: [
           {group:"Procese-verbale de execuție"},
@@ -1327,25 +1623,99 @@ const CT_TPL = {
           {den:"Notificarea de funcționare temporară / finală", kws:["notificare functionare","nft","nff"], cap:"Execuție", dela:"Operator de rețea"},
           {den:"PV de punere sub tensiune", kw:"punere sub tensiune", cap:"Execuție", dela:"Operator de rețea"}
         ]
-      });
+      };
     }
+  },
+
+  "paratrasnet": {
+    name: "Instalație de protecție împotriva trăsnetului (paratrăsnet)", short:"Paratrăsnet (IPT)",
+    norme: "I 7-2011 (modificat prin Ordinul MDLPA 959/2023); SR EN 62305",
+    params: [
+      {k:"tip", label:"Tipul instalației de captare", type:"select", opts:["Clasică (tije, conductoare de captare)","Cu dispozitiv de amorsare (PDA)"]},
+      {k:"prize", label:"Prize de pământ — câte una pe rând", type:"area", ph:"Priza paratrăsnet\nPriza de fundație"}],
+    spec(p){
+      const P = parseLines(p.prize);
+      return {
+        A2: [{den:"Proiectul instalației de paratrăsnet (evaluarea riscului și nivelul de protecție)", kws:["proiect paratrasnet","evaluare risc trasnet","ipt"], cap:"Proiectare", dela:"Proiectant"}],
+        B2: [
+          {group:"Procese-verbale de execuție"},
+          ...P.map(x=>PV(`PV lucrări ascunse – priză de pământ – ${x}`)),
+          PV("PV montaj instalație de paratrăsnet (captare, coborâri, piese de separație)")
+        ],
+        B3: [
+          {group:"Buletine de măsurători"},
+          ...P.map(x=>BUL(`Buletin măsurare rezistență de dispersie – ${x}`)),
+          BUL("Buletin verificare continuitate coborâri și legături de echipotențializare")
+        ]
+      };
+    }
+  },
+
+  "idsai": {
+    name: "IDSAI – detectare, semnalizare și avertizare la incendiu", short:"IDSAI (detectare și semnalizare incendiu)",
+    norme: "P 118/3-2015 (Ordinul MDRAP 364/2015), cap. 5 – executare, configurare, verificare, mentenanță; firma autorizată de IGSU pentru instalarea și întreținerea sistemelor de semnalizare, alarmare și alertare în caz de incendiu",
+    params: [P_ZONE("Parter\nEtaj 1\nSubsol")],
+    spec(p){
+      const Z = parseLines(p.zone);
+      return {
+        A1: [{den:"Avizul de securitate la incendiu (unde este cazul)", kws:["aviz securitate incendiu","aviz isu"], cap:"Proiectare", dela:"Beneficiar"}],
+        A2: [{den:"Proiect IDSAI (planuri, index zone de detecție, schema bloc, planul de verificare periodică)", kws:["proiect idsai","idsai","detectie incendiu"], cap:"Proiectare", dela:"Proiectant"}],
+        B1: [C_EXEC,
+          {den:"Autorizația IGSU a firmei pentru instalarea și întreținerea sistemelor de semnalizare, alarmare și alertare în caz de incendiu", kws:["autorizatie igsu","igsu"], cap:"Contracte", dela:"Executant"},
+          C_SSM],
+        B2: [
+          {group:"Procese-verbale de execuție"},
+          ...Z.map(z=>PV(`PV lucrări ascunse – trasee de cabluri rezistente la foc – IDSAI – ${z}`)),
+          PV("PV montaj centrală de semnalizare incendiu (ECS)")
+        ],
+        B3: [
+          {group:"Verificări și probe (P 118/3-2015, 5.4)"},
+          ...Z.map(z=>PV(`PV verificare funcțională detectoare și butoane manuale – ${z}`)),
+          PV("PV probe ECS: interfețe, dispozitive de alarmare, transmiterea alarmei")
+        ],
+        B5: [
+          {group:"Configurare, recepție și exploatare IDSAI"},
+          {den:"Documentul care certifică configurarea sistemului", kws:["certificat configurare","configurare idsai"], cap:"Execuție", dela:"Executant"},
+          {den:"PV de recepție IDSAI (după perioada de funcționare preliminară)", kws:["receptie idsai"], cap:"Execuție", dela:"Beneficiar"},
+          {den:"Registrul de control al instalației (OMAI 163/2007)", kws:["registru control","registrul de control"], cap:"SSM și SU", dela:"Executant"},
+          {den:"Instrucțiuni de utilizare, întreținere și testare IDSAI", kws:["instructiuni idsai","instructiuni utilizare idsai"], cap:"Proiectare", dela:"Executant"},
+          {den:"Contractul de mentenanță IDSAI", kws:["mentenanta idsai","contract mentenanta","intretinere idsai"], cap:"Contracte", dela:"Beneficiar"}
+        ]
+      };
+    }
+  },
+
+  "video": {
+    name: "Supraveghere video", short:"Supraveghere video",
+    norme: SEC_NORME,
+    params: [P_ZONE()],
+    spec: p => secSpec(p, "supraveghere video", "câmp vizual, calitatea imaginii, înregistrare și stocare")
+  },
+  "antiefractie": {
+    name: "Sistem de alarmare antiefracție", short:"Antiefracție",
+    norme: SEC_NORME,
+    params: [P_ZONE()],
+    spec: p => secSpec(p, "antiefracție", "detectoare pe zone, armare/dezarmare, transmiterea alarmei")
+  },
+  "control-acces": {
+    name: "Control acces", short:"Control acces",
+    norme: SEC_NORME,
+    params: [P_ZONE("Intrare principală\nAcces personal\nParcare")],
+    spec: p => secSpec(p, "control acces", "cititoare, încuietori, drepturi de acces, deblocare la incendiu")
   },
 
   "constructii": {
     name: "Construcții civile",
-    norme: "HG 343/2017, Anexa 6; NE 012-2:2010 (execuția lucrărilor din beton); C 56-85",
-    params: [P_NR, P_COD,
-      {k:"niveluri", label:"Niveluri cu structură turnată — câte unul pe rând", type:"area", ph:"Parter\nEtaj 1\nEtaj 2"},
-      {k:"hidro", label:"Hidroizolații la fundații / subsol", type:"select", opts:["Da","Nu"]}, P_EXTRA],
-    dosare(p){
+    norme: "HG 343/2017, Anexa 6; NE 012-2:2010 (execuția lucrărilor din beton); Ordinul MDRAP 1370/2014 (faze determinante)",
+    params: [
+      {k:"hidro", label:"Hidroizolații la fundații / subsol", type:"select", opts:["Da","Nu"]},
+      {k:"niveluri", label:"Niveluri cu structură turnată — câte unul pe rând", type:"area", ph:"Parter\nEtaj 1\nEtaj 2"}],
+    spec(p){
       const N = parseLines(p.niveluri), hidro = p.hidro!=="Nu";
-      return ctBuild(p, {
+      return {
         A1: [{den:"Studiul geotehnic", kws:["studiu geotehnic","geotehnic"], cap:"Proiectare", dela:"Proiectant"}],
         A2: [{den:"Proiect tehnic de execuție – arhitectură, rezistență, instalații (piese scrise și desenate)", kws:["proiect tehnic","pth","pte"], cap:"Proiectare", dela:"Proiectant"}],
-        B1: [
-          {den:"Contractul de execuție", kw:"contract", cap:"Contracte", dela:"Beneficiar"},
-          {den:"Plan propriu SSM", kw:"plan propriu ssm", cap:"SSM și SU", dela:"Executant"}
-        ],
+        B1: [C_EXEC, C_SSM],
         B2: [
           {group:"Procese-verbale de execuție și faze determinante"},
           PV("PV de recepție a terenului de fundare (natura terenului, cu geotehnicianul)", {kws:["natura terenului","teren fundare"]}),
@@ -1362,7 +1732,203 @@ const CT_TPL = {
           ...N.map(n=>BUL(`Buletine de încercări beton – ${n}`))
         ],
         B4: [{den:"Certificate de calitate și declarații pentru beton și oțel-beton", kws:["certificat beton","certificat otel","declaratie beton","otel beton"], cap:"Calitate", dela:"Furnizori"}]
-      });
+      };
+    }
+  },
+
+  "drumuri": {
+    name: "Drumuri",
+    norme: "SR EN 13108 (mixturi asfaltice); SR EN 12697 (metode de încercare, carote); AND 605 (mixturi asfaltice executate la cald); STAS 6400 (straturi de bază și de fundație); Ordinul MDRAP 1370/2014 (recepția straturilor pe faze determinante)",
+    params: [
+      {k:"tronsoane", label:"Tronsoane — câte unul pe rând", type:"area", ph:"km 0+000 – km 1+200\nkm 1+200 – km 2+450"},
+      {k:"straturi", label:"Straturi rutiere — câte unul pe rând, de jos în sus", type:"area", ph:"Strat de formă\nStrat de fundație din balast\nStrat de bază din piatră spartă\nStrat de legătură BADPC 22,4\nStrat de uzură BA 16"},
+      {k:"podete", label:"Podețe / lucrări de artă — câte unul pe rând (opțional)", type:"area", ph:"Podeț km 0+450\nPodeț km 1+980"}],
+    spec(p){
+      const T = parseLines(p.tronsoane), L = parseLines(p.straturi), Pd = parseLines(p.podete);
+      const tr = T.length ? T : ["traseu"];
+      return {
+        A1: [{den:"Avizul administratorului drumului și avizul poliției rutiere (unde se cer)", kws:["aviz administrator drum","aviz politie rutiera","aviz politia rutiera"], cap:"Proiectare", dela:"Beneficiar"}],
+        A2: [
+          {den:"Proiect tehnic de execuție – drumuri (piese scrise și desenate)", kws:["proiect tehnic drumuri","proiect drum","proiect tehnic","pte"], cap:"Proiectare", dela:"Proiectant"},
+          {den:"Studiul geotehnic", kws:["studiu geotehnic","geotehnic"], cap:"Proiectare", dela:"Proiectant"}
+        ],
+        B1: [C_EXEC, C_SSM,
+          {den:"Proiectul de semnalizare rutieră pe durata execuției (avizat)", kws:["semnalizare rutiera","semnalizare provizorie"], cap:"SSM și SU", dela:"Executant"}],
+        B2: [
+          {group:"Procese-verbale de execuție și recepție pe faze"},
+          ...tr.map(t=>PV(`PV de trasare și pichetare – ${t}`)),
+          ...tr.map(t=>PV(`PV lucrări ascunse – terasamente și patul drumului (compactare) – ${t}`)),
+          ...L.flatMap(l=>tr.map(t=>PV(`PV de recepție pe fază – ${l} – ${t}`))),
+          ...Pd.flatMap(x=>[PV(`PV lucrări ascunse – fundație și armare – ${x}`), PV(`PV de terminare – ${x}`)])
+        ],
+        B3: [
+          {group:"Încercări și determinări"},
+          {den:"Rețetele mixturilor asfaltice și încercările inițiale de tip", kws:["reteta mixtura","retete mixturi","incercari initiale de tip"], cap:"Calitate", dela:"Executant (laborator)"},
+          ...tr.map(t=>BUL(`Buletine grad de compactare – terasamente – ${t}`)),
+          ...L.map(l=>BUL(`Rapoarte de încercare – ${l} (grosime, grad de compactare, carote)`)),
+          BUL("Măsurători de planeitate și rugozitate (IRI, dreptarul de 3 m)")
+        ],
+        B4: [{den:"Declarații de performanță pentru agregate, bitum, emulsii și mixturi asfaltice", kws:["declaratie performanta agregate","declaratie performanta bitum","declaratie performanta mixtura"], cap:"Calitate", dela:"Furnizori"}]
+      };
+    }
+  },
+
+  "termice": {
+    name: "Instalații termice (încălzire centrală)",
+    norme: "I 13-2015 (Ordinul MDRAP 845/2015): cap. 10 – probe (la rece, la cald, de eficacitate) și punere în funcțiune; cap. 11 – recepție și intrare în exploatare",
+    params: [
+      {k:"zone", label:"Zone / circuite — câte una pe rând", type:"area", ph:"Corp A\nCorp B\nSubsol"},
+      {k:"surse", label:"Surse de căldură — câte una pe rând", type:"area", ph:"Centrala termică CT1\nPunct termic"}],
+    spec(p){
+      const Z = parseLines(p.zone), Sr = parseLines(p.surse);
+      return {
+        A2: [{den:"Proiect tehnic – instalații termice (piese scrise și desenate)", kws:["proiect tehnic instalatii termice","proiect incalzire","proiect tehnic"], cap:"Proiectare", dela:"Proiectant"}],
+        B1: [C_EXEC, C_SSM,
+          {den:"Autorizațiile ISCIR pentru montajul echipamentelor (unde se cer)", kws:["autorizatie iscir","iscir"], cap:"Contracte", dela:"Executant"}],
+        B2: [
+          {group:"Procese-verbale de execuție"},
+          ...Z.map(z=>PV(`PV lucrări ascunse – conducte înglobate / izolate – încălzire – ${z}`)),
+          ...Sr.map(s=>PV(`PV montaj sursă de căldură – ${s}`)),
+          PV("PV spălarea instalației înainte de proba la rece")
+        ],
+        B3: [
+          {group:"Probe (I 13-2015, cap. 10)"},
+          ...Z.map(z=>PV(`PV proba la rece (rezistență și etanșeitate la presiune) – ${z}`)),
+          ...Z.map(z=>PV(`PV proba la cald – ${z}`)),
+          PV("PV proba de eficacitate (în perioada rece)"),
+          ...Sr.map(s=>PV(`PV punere în funcțiune – ${s}`))
+        ],
+        D1: [{den:"Registrul de exploatare al instalației de încălzire", kws:["registru exploatare","registrul de exploatare"], cap:"As-built", dela:"Beneficiar"}]
+      };
+    }
+  },
+
+  "sanitare": {
+    name: "Instalații sanitare",
+    norme: "I 9-2022 (în vigoare din decembrie 2022, înlocuiește I 9-2015)",
+    params: [{k:"zone", label:"Zone / niveluri — câte una pe rând", type:"area", ph:"Subsol\nParter\nEtaj 1"}],
+    spec(p){
+      const Z = parseLines(p.zone);
+      return {
+        A2: [{den:"Proiect tehnic – instalații sanitare (piese scrise și desenate)", kws:["proiect tehnic instalatii sanitare","proiect sanitare","proiect tehnic"], cap:"Proiectare", dela:"Proiectant"}],
+        B1: [C_EXEC, C_SSM],
+        B2: [
+          {group:"Procese-verbale de execuție"},
+          ...Z.map(z=>PV(`PV lucrări ascunse – conducte de apă înglobate – ${z}`)),
+          ...Z.map(z=>PV(`PV lucrări ascunse – canalizare îngropată / înglobată – ${z}`))
+        ],
+        B3: [
+          {group:"Probe"},
+          ...Z.map(z=>PV(`PV probă de rezistență și etanșeitate la presiune – apă rece și caldă – ${z}`)),
+          ...Z.map(z=>PV(`PV probă de etanșeitate și de funcționare – canalizare – ${z}`)),
+          PV("PV spălarea și dezinfectarea instalației de apă"),
+          BUL("Buletin de analiză a apei (potabilitate)")
+        ]
+      };
+    }
+  },
+
+  "gaze": {
+    name: "Instalații de gaze naturale",
+    norme: "NTPEE-2018 (Ordinul ANRE 89/2018), inclusiv PV de punere în funcțiune (Anexa 10); executant autorizat ANRE după regulamentul de autorizare a operatorilor economici din domeniul gazelor naturale (2026, înlocuiește Ordinul ANRE 132/2021)",
+    params: [
+      {k:"tip", label:"Ce cuprinde lucrarea", type:"select", opts:["Instalație de utilizare","Branșament și instalație de utilizare","Rețea de distribuție"]},
+      {k:"tronsoane", label:"Tronsoane / porțiuni probate separat — câte una pe rând", type:"area", ph:"Branșament\nInstalație interioară parter\nInstalație interioară etaj"}],
+    spec(p){
+      const T = parseLines(p.tronsoane), tip = p.tip || "Instalație de utilizare";
+      const tr = T.length ? T : ["instalație"];
+      return {
+        A1: [{den:"Avizul tehnic / acordul de acces al operatorului de distribuție", kws:["aviz tehnic gaze","acord acces","aviz distributie gaze","aviz operator distributie"], cap:"Proiectare", dela:"Operator de distribuție"}],
+        A2: [{den:"Proiectul instalației de gaze, verificat (cu avizul operatorului de distribuție)", kws:["proiect gaze","proiect instalatie gaze","proiect tehnic"], cap:"Proiectare", dela:"Proiectant"}],
+        B1: [C_EXEC,
+          {den:"Autorizația ANRE a operatorului economic executant (de ex. EDIB / EDSB)", kws:["autorizatie anre","edib","edsb"], cap:"Contracte", dela:"Executant"},
+          {den:"Legitimațiile ANRE ale instalatorilor și certificatele sudorilor", kws:["legitimatie anre","legitimatii","certificat sudor"], cap:"Contracte", dela:"Executant"},
+          C_SSM],
+        B2: [
+          {group:"Procese-verbale de execuție"},
+          ...(tip!=="Instalație de utilizare" ? tr.map(t=>PV(`PV lucrări ascunse – pozare conductă (pat de nisip, adâncime, bandă avertizoare) – ${t}`)) : []),
+          ...(tip!=="Rețea de distribuție" ? [PV("PV montaj aparate consumatoare, detector de gaz și electrovalvă")] : []),
+          {den:"Fișele de sudură / buletinele de control al îmbinărilor sudate", kws:["fisa sudura","fise sudura","control suduri"], cap:"Calitate", dela:"Executant"}
+        ],
+        B3: [
+          {group:"Probe"},
+          ...tr.map(t=>PV(`PV probă de rezistență – ${t}`)),
+          ...tr.map(t=>PV(`PV probă de etanșeitate – ${t}`))
+        ],
+        B5: [
+          {group:"Recepție tehnică și punere în funcțiune"},
+          {den:"PV de recepție tehnică a instalației de gaze", kws:["receptie tehnica gaze","receptie tehnica"], cap:"Execuție", dela:"Executant / operator de distribuție"},
+          {den:"PV de punere în funcțiune (NTPEE-2018, Anexa 10), semnat cu delegatul operatorului de distribuție", kws:["punere in functiune gaze","pif gaze","punere in functiune"], cap:"Execuție", dela:"Operator de distribuție"},
+          {den:"Dosarul instalației de utilizare", kws:["dosar instalatie utilizare","dosarul instalatiei"], cap:"As-built", dela:"Executant"}
+        ]
+      };
+    }
+  },
+
+  "apa-canal": {
+    name: "Rețele edilitare – alimentare cu apă și canalizare",
+    norme: "NP 133-2022, vol. I (alimentare cu apă) și vol. II (canalizare), aprobate în ianuarie 2023; SR EN 805 (probe rețele de apă); SR EN 1610 (probe canalizare)",
+    params: [
+      {k:"apa", label:"Tronsoane rețea de apă — câte unul pe rând", type:"area", ph:"Str. Exemplu, C1 – C8\nRacorduri"},
+      {k:"canal", label:"Tronsoane canalizare — câte unul pe rând", type:"area", ph:"Cm1 – Cm6\nCm6 – Cm12"}],
+    spec(p){
+      const A = parseLines(p.apa), C = parseLines(p.canal);
+      return {
+        A1: [{den:"Avizul operatorului de apă-canal", kws:["aviz apa canal","aviz operator apa","aviz compania apa"], cap:"Proiectare", dela:"Operator de apă-canal"}],
+        A2: [{den:"Proiect tehnic de execuție – rețele de apă și canalizare", kws:["proiect tehnic","pte"], cap:"Proiectare", dela:"Proiectant"}],
+        B1: [C_EXEC, C_SSM],
+        B2: [
+          {group:"Procese-verbale de execuție"},
+          ...A.map(t=>PV(`PV lucrări ascunse – pozare conductă de apă (pat, umplutură, compactare) – ${t}`)),
+          ...C.map(t=>PV(`PV lucrări ascunse – pozare canal și cămine – ${t}`))
+        ],
+        B3: [
+          {group:"Probe și încercări"},
+          ...A.map(t=>PV(`PV probă de presiune – rețea de apă – ${t}`)),
+          ...C.map(t=>PV(`PV probă de etanșeitate – canalizare – ${t}`)),
+          ...C.map(t=>({den:`Raport de inspecție video (CCTV) – ${t}`, kws:["inspectie video","cctv"], cap:"Calitate", dela:"Executant", seq:true})),
+          ...(A.length ? [PV("PV spălarea și dezinfectarea rețelei de apă"), BUL("Buletin de analiză a apei (potabilitate)")] : []),
+          BUL("Buletine grad de compactare – umpluturi tranșee")
+        ],
+        B5: [
+          {group:"Predarea către operator"},
+          {den:"PV de recepție / preluare a rețelelor de către operatorul de apă-canal", kws:["preluare operator","receptie operator","predare operator"], cap:"Execuție", dela:"Operator de apă-canal"}
+        ]
+      };
+    }
+  },
+
+  "hvac": {
+    name: "HVAC – ventilare și climatizare",
+    norme: "I 5-2022 (Ordinul MDLPA 173/2023): 8.8 etanșeitatea instalațiilor, cap. 9 punere în funcțiune și recepție; SR EN 12599 (măsurători și reglaj); Regulamentul (UE) 2024/573 (gaze fluorurate)",
+    params: [
+      {k:"frig", label:"Echipamente cu agent frigorific fluorurat", type:"select", opts:["Da","Nu"]},
+      {k:"centrale", label:"Centrale de tratare a aerului / echipamente — câte unul pe rând", type:"area", ph:"CTA 1\nCTA 2\nChiller"},
+      {k:"zone", label:"Zone cu tubulatură ascunsă — câte una pe rând", type:"area", ph:"Parter – plafon fals\nEtaj 1 – ghene"}],
+    spec(p){
+      const Ce = parseLines(p.centrale), Z = parseLines(p.zone), frig = p.frig!=="Nu";
+      return {
+        A2: [{den:"Proiect tehnic – ventilare și climatizare (piese scrise și desenate)", kws:["proiect ventilare","proiect climatizare","proiect hvac","proiect tehnic"], cap:"Proiectare", dela:"Proiectant"}],
+        B1: [C_EXEC, C_SSM,
+          ...(frig ? [{den:"Certificatele pentru gaze fluorurate ale firmei și ale personalului", kws:["f gaz","fgaz","gaze fluorurate","certificat arir"], cap:"Contracte", dela:"Executant"}] : [])],
+        B2: [
+          {group:"Procese-verbale de execuție"},
+          ...Z.map(z=>PV(`PV lucrări ascunse – tubulatură și izolații – ${z}`)),
+          ...Ce.map(c=>PV(`PV montaj echipament – ${c}`))
+        ],
+        B3: [
+          {group:"Verificări, probe și reglaj (I 5-2022, cap. 9)"},
+          ...Z.map(z=>PV(`PV verificarea etanșeității tubulaturii – ${z}`)),
+          ...Ce.map(c=>PV(`PV pornire, reglare și probe – ${c}`)),
+          BUL("Raport de măsurare a debitelor și de echilibrare (SR EN 12599)"),
+          ...(frig ? [PV("PV probă de presiune și etanșeitate – circuit frigorific")] : [])
+        ],
+        B5: [
+          {group:"Punere în funcțiune"},
+          {den:"PV de punere în funcțiune – ventilare și climatizare", kws:["punere in functiune ventilare","punere in functiune hvac","punere in functiune climatizare"], cap:"Execuție", dela:"Executant"},
+          ...(frig ? [{den:"Fișa / registrul echipamentelor cu gaze fluorurate", kws:["registru echipament","fisa echipament","gaze fluorurate"], cap:"As-built", dela:"Beneficiar"}] : [])
+        ]
+      };
     }
   }
 };
@@ -1385,32 +1951,40 @@ function ctNameScore(den, fileName){
 
 // potrivește fiecare document așteptat cu un fișier din inventar
 function ctMatch(){
-  const ct = S.ct; if(!ct || !CT_TPL[ct.tpl]) return null;
-  const dos = CT_TPL[ct.tpl].dosare(ct.p);
+  const dos = ctDosare(); if(!dos) return null;
   const live = S.docs.filter(d=>!d.dup);
   const used = new Set();
   const all = dos.flatMap(d=>d.items.filter(i=>!i.group).map(i=>({i, d})));
   // 1. după cod exact
   for(const x of all){ if(!x.i.cod) continue; const f = live.find(d=>!used.has(d.id) && codeIn(d.name, x.i.cod)); if(f){ x.doc=f; used.add(f.id); } }
-  // 2. după cuvinte cheie / denumire (un document general poate acoperi o singură poziție)
+  // 2. după cuvinte cheie / denumire (un document general poate acoperi o singură poziție).
+  //    Întâi frazele specifice (3+ cuvinte, ex. „proiect tehnic instalații sanitare”), apoi cele generale
+  //    („proiect tehnic”), ca într-o lucrare cu mai multe specialități fiecare să-și ia proiectul ei.
+  const kwHit = (x, d, pass) => {
+    const phrases = (x.i.kws || (x.i.kw ? [x.i.kw] : [])).filter(k=> pass===2 || words(k).length>=3);
+    if(!phrases.length && !(pass===2 && x.i.rx)) return false;
+    const h = new Set(words(d.name+" "+d.path));
+    if((x.i.not||[]).map(words).some(n=>n.every(w=>h.has(w)))) return false;
+    return phrases.map(words).some(n=>n.every(w=>h.has(w))) || (pass===2 && !!x.i.rx && x.i.rx.test(norm(d.name)));
+  };
+  const free = (x, d) => !used.has(d.id) && !(x.i.cod && hasSeriesCode(d.name, x.i.cod));
+  // 2a. frazele specifice (3+ cuvinte): dintre fișierele potrivite îl alegem pe cel din dosarul cu același nume,
+  //     apoi pe cel cu denumirea cea mai scurtă („Declarația executantului” nu ia locul „Declarației de conformitate a executantului”)
   for(const x of all){
     if(x.doc) continue;
-    const cands = live.filter(d=>!used.has(d.id) && !(x.i.cod && hasSeriesCode(d.name, x.i.cod)));
-    let f = null;
-    const phrases = x.i.kws || (x.i.kw ? [x.i.kw] : []);
-    if(phrases.length || x.i.rx){
-      // dintre fișierele care conțin toate cuvintele unei fraze cheie îl alegem pe cel cu denumirea cea mai scurtă
-      // („Declarația executantului” nu trebuie să ia locul „Declarației de conformitate a executantului”)
-      const needs = phrases.map(words), nots = (x.i.not||[]).map(words);
-      f = cands.filter(d=>{
-            const h = new Set(words(d.name+" "+d.path));
-            if(nots.some(n=>n.every(w=>h.has(w)))) return false;
-            return needs.some(n=>n.every(w=>h.has(w))) || (x.i.rx && x.i.rx.test(norm(d.name)));
-          })
-          .sort((a,b)=> inDos(b,x.d.id) - inDos(a,x.d.id) || words(a.name).length - words(b.name).length)[0] || null;
-    }
+    const f = live.filter(d=>free(x,d) && kwHit(x,d,1))
+      .sort((a,b)=> inDos(b,x.d.id) - inDos(a,x.d.id) || words(a.name).length - words(b.name).length)[0];
     if(f){ x.doc=f; used.add(f.id); }
   }
+  // 2b. frazele generale („proiect tehnic”, „contract”): perechile document – fișier se atribuie în ordinea asemănării,
+  //     ca într-o lucrare cu mai multe specialități fiecare să-și ia proiectul ei
+  const kp = [];
+  for(const x of all){
+    if(x.doc) continue;
+    for(const d of live) if(free(x,d) && kwHit(x,d,2)) kp.push({x, d, sc: inDos(d,x.d.id)*10 + ctNameScore(x.i.den, d.name) - words(d.name).length/1000});
+  }
+  kp.sort((a,b)=>b.sc-a.sc);
+  for(const pr of kp){ if(pr.x.doc || used.has(pr.d.id)) continue; pr.x.doc = pr.d; used.add(pr.d.id); }
   // 3. după denumire: toate perechile document așteptat – fișier primesc un scor,
   //    iar perechile cele mai bune se atribuie primele („armare fundații” nu mai ia locul „săpăturii”)
   const pairs = [];
@@ -1436,39 +2010,50 @@ function ctMissing(includeLater){
   return dos.filter(d=>includeLater || !d.later).flatMap(d=>d.items.filter(i=>!i.group && !i.doc));
 }
 
+const P_NR   = {k:"nr",  label:"Lucrare nr.", ph:"5.2/2026"};
+const P_COD  = {k:"cod", label:"Cod pentru numerotarea PV-urilor (opțional)", ph:"26L05.2"};
+const P_EXTRA= {k:"extra", label:"Documente suplimentare cerute de beneficiar — câte unul pe rând", type:"area", ph:"Fișă tehnică echipament\nBuletin verificare protecții conform specificației beneficiarului", wide:true};
+
 function viewCarte(){
-  if(!S.ct) S.ct = {tpl:"lea-fo", p:{nr:"", cod:"", cond:"OPGW", tronsoane:"", balize:"", prize:""}};
-  if(!CT_TPL[S.ct.tpl]) S.ct.tpl = "lea-fo";
-  const T = CT_TPL[S.ct.tpl];
-  const p = S.ct.p;
+  const ts = activeTpls();
+  if(!ts.length) return `<div class="card"><div class="empty">
+    <h3>Alege întâi domeniile lucrării</h3>
+    <p>Lista-tip a cărții tehnice se generează din domeniile bifate la Proiect${S.dom.includes("electrice")?" și, la instalații electrice, din tipurile de lucrări alese":""}.</p>
+    <button class="btn" data-v-go="proiect">Mergi la Proiect</button></div></div>`;
+  const ct = ctState(), p = ct.p;
   const dos = ctMatch();
   const inLips = new Set(S.lipsuri.map(l=>norm(lden(l))));
   const miss = ctMissing(false).filter(i=>!inLips.has(norm(lden(i))));
   const tot = dos.filter(d=>!d.later).reduce((a,d)=>a+d.total,0), got = dos.filter(d=>!d.later).reduce((a,d)=>a+d.got,0);
-  const nPV = dos.filter(d=>d.id==="B2").flatMap(d=>d.items).filter(i=>!i.group && /^PV/.test(i.den)).length;
-  const nBul = dos.filter(d=>d.id==="B3").flatMap(d=>d.items).filter(i=>!i.group && /^Buletin/.test(i.den)).length;
-  const field = f => {
-    const v = p[f.k] ?? "";
-    const inner = f.type==="select" ? `<select data-ctp="${f.k}">${f.opts.map(o=>`<option ${String(v||f.opts[0])===o?"selected":""}>${o}</option>`).join("")}</select>`
-      : f.type==="area" ? `<textarea rows="5" data-ctp="${f.k}" placeholder="${esc(f.ph||"")}">${esc(v)}</textarea>`
-      : `<input type="text" data-ctp="${f.k}" value="${esc(v)}" placeholder="${esc(f.ph||"")}">`;
+  const inB = dos.filter(d=>d.ch==="B").flatMap(d=>d.items).filter(i=>!i.group);
+  const nPV = inB.filter(i=>/^PV/.test(i.den)).length;
+  const nBul = inB.filter(i=>/^(Buletin|Rapoarte de încercare|Raport de)/.test(i.den)).length;
+  const field = (f, t) => {
+    const src = t ? (ct.pp[t]||{}) : p, v = src[f.k] ?? "";
+    const at = t ? `data-ctp="${t}|${f.k}"` : `data-ctc="${f.k}"`;
+    const inner = f.type==="select" ? `<select ${at}>${f.opts.map(o=>`<option ${String(v||f.opts[0])===o?"selected":""}>${o}</option>`).join("")}</select>`
+      : f.type==="area" ? `<textarea rows="5" ${at} placeholder="${esc(f.ph||"")}">${esc(v)}</textarea>`
+      : `<input type="text" ${at} value="${esc(v)}" placeholder="${esc(f.ph||"")}">`;
     return `<div${f.wide?' class="wide"':""}><span class="lbl">${f.label}</span>${inner}</div>`;
   };
   const bar = (g,t,muted) => `<div class="bar ${muted?"mut":""}"><i style="width:${t?Math.round(g/t*100):0}%"></i></div>`;
   return `
-  <div class="note"><b>Cartea tehnică.</b> Alegi tipul lucrării și completezi parametrii; aplicația generează toate documentele așteptate pe dosare, după structura din HG 343/2017 (Anexa 6), le caută în inventar și îți arată situația pe fiecare dosar.</div>
+  <div class="note"><b>Cartea tehnică.</b> Lista-tip se generează din domeniile lucrării (${esc(domNames(S.dom).join(", "))}); completezi parametrii fiecărei specialități, iar aplicația pune documentele așteptate pe dosare, după HG 343/2017 (Anexa 6), le caută în inventar și îți arată situația pe fiecare dosar. Piesele comune apar o singură dată.</div>
 
   <div class="card">
-    <h3>Parametrii lucrării</h3>
-    <div class="grid2">
-      <div class="wide"><span class="lbl">Tipul lucrării</span><select data-cttpl>${Object.entries(CT_TPL).map(([k,t])=>`<option value="${k}" ${S.ct.tpl===k?"selected":""}>${esc(t.name)}</option>`).join("")}</select></div>
-      ${T.params.filter(f=>f.type!=="area").map(field).join("")}
-    </div>
-    <div class="grid2" style="margin-top:12px">
-      ${T.params.filter(f=>f.type==="area").map(field).join("")}
-    </div>
-    <p class="muted" style="margin:10px 0 0">Din parametri rezultă <b>${nPV}</b> procese-verbale de execuție și <b>${nBul}</b> buletine. Repere normative: ${esc(T.norme)}.</p>
+    <h3>Date comune</h3>
+    <div class="grid2">${[P_NR, P_COD].map(f=>field(f)).join("")}</div>
+    <div class="grid2" style="margin-top:12px">${field(P_EXTRA)}</div>
   </div>
+
+  ${ts.map(t=>{ const T = CT_TPL[t]; return `<div class="card">
+    <h3>${esc(T.name)}</h3>
+    ${T.params.filter(f=>f.type!=="area").length ? `<div class="grid2">${T.params.filter(f=>f.type!=="area").map(f=>field(f,t)).join("")}</div>` : ""}
+    <div class="grid2" style="margin-top:12px">${T.params.filter(f=>f.type==="area").map(f=>field(f,t)).join("")}</div>
+    <p class="muted" style="margin:10px 0 0">Repere normative: ${esc(T.norme)}.</p>
+  </div>`; }).join("")}
+
+  <p class="muted" style="margin:-4px 0 14px">Din parametri rezultă <b>${nPV}</b> procese-verbale și <b>${nBul}</b> buletine și rapoarte de încercare în capitolul B.</p>
 
   <div class="card">
     <h3>Situația <span class="muted">· capitolele A și B: ${got} din ${tot} documente găsite în inventar</span></h3>
@@ -1493,7 +2078,7 @@ function viewCarte(){
     <summary><b>Dosar ${d.id}</b> <span class="muted">· ${CT_CH[d.ch].split(" – ")[1]}</span> <span class="num" style="margin-left:auto">${d.got} / ${d.total}</span></summary>
     <div class="tw" style="max-height:none;margin-top:10px"><table>
       <thead><tr><th style="width:150px">Cod</th><th>Document</th><th style="width:130px">Stare</th><th style="width:34%">Fișier din inventar</th></tr></thead>
-      <tbody>${d.items.map(i=> i.group ? `<tr class="grp-row"><td colspan="4">${esc(i.group)}</td></tr>` : `<tr>
+      <tbody>${d.items.map(i=> i.group ? `<tr class="grp-row${i.spec?" spec":""}"><td colspan="4">${esc(i.group)}</td></tr>` : `<tr>
         <td class="num">${esc(i.cod||"")}</td><td>${esc(i.den)}</td>
         <td>${i.doc ? `<span class="tag t-viz">găsit</span>` : d.later ? `<span class="tag t-none">de completat</span>` : `<span class="tag t-late">lipsă</span>`}</td>
         <td class="fn">${i.doc ? esc(i.doc.name) : ""}</td></tr>`).join("")}</tbody>
@@ -1502,7 +2087,7 @@ function viewCarte(){
 }
 
 function buildBorderouri(){
-  const dos = ctMatch(); const m = S.meta, p = S.ct.p;
+  const dos = ctMatch(); const m = S.meta, p = ctState().p;
   return dos.map(d=>{
     let n = 0;
     const rows = d.items.map(i=>{
@@ -1515,6 +2100,7 @@ function buildBorderouri(){
         ${p.nr?`<tr><td>Lucrare nr.:</td><td>${esc(p.nr)}</td></tr>`:""}
         <tr><td>Faza:</td><td>Carte tehnică</td></tr>
         <tr><td>Lucrare:</td><td>${esc(m.proiect||"")}</td></tr>
+        ${S.dom.length?`<tr><td>Specialități:</td><td>${esc(domNames(S.dom).join(", "))}</td></tr>`:""}
         ${m.emitent?`<tr><td>Executant:</td><td>${esc(m.emitent)}</td></tr>`:""}
         <tr><td>Beneficiar:</td><td>${esc(m.beneficiar||"")}</td></tr>
       </tbody></table>
@@ -1642,7 +2228,71 @@ const CF_RULES = [
   {id:"pvfinal", faza:"finala", grav:"receptie",
    titlu:"PV de recepție finală", kws:["receptie finala","pvrf"], cap:"Execuție", dela:"Beneficiar",
    temei:"HG 343/2017, Anexa 4",
-   deCe:"Încheie procesul de recepție; se face în cel mult 10 zile de la expirarea perioadei de garanție (art. 24)."}
+   deCe:"Încheie procesul de recepție; se face în cel mult 10 zile de la expirarea perioadei de garanție (art. 24)."},
+
+  /* persoanele lucrării */
+  {id:"persoane", faza:"inainte", grav:"isc", auto:"pers",
+   titlu:"Diriginte de șantier și RTE pentru fiecare domeniu al lucrării", cap:"Contracte", dela:"Beneficiar / executant",
+   temei:"Legea 10/1995; HG 343/2017, art. 11 alin. (3); procedura ISC de autorizare a diriginților (domeniile 2, 3, 6.1, 8.1–8.3, 9.1–9.4)",
+   deCe:"Fiecare specialitate se urmărește de un diriginte autorizat pe domeniul ei; o persoană autorizată pe mai multe domenii le poate acoperi pe toate. Pentru electrice (8.1, 9.1) și gaze (8.3, 9.4) dirigintele are nevoie și de legitimație ANRE valabilă."},
+
+  /* reguli pe domenii (apar doar când lucrarea are domeniul sau tipul respectiv) */
+  {id:"d-constructii-teren", dom:"constructii", faza:"executie", grav:"isc",
+   titlu:"PV de recepție a terenului de fundare (natura terenului)", kws:["natura terenului","teren fundare","teren de fundare"], cap:"Execuție", dela:"Executant / geotehnician",
+   temei:"Ordinul MDRAP 1370/2014 (faze determinante); HG 343/2017, Anexa 6, pct. 8",
+   deCe:"Verificarea terenului de fundare cu geotehnicianul e de regulă fază determinantă; fără ea nu se toarnă fundațiile."},
+  {id:"d-drumuri-faze", dom:"drumuri", faza:"executie", grav:"isc",
+   titlu:"Recepția pe faze a straturilor rutiere", kws:["receptie pe faza","receptie strat","faza determinanta strat"], cap:"Execuție", dela:"Executant / diriginte",
+   temei:"Ordinul MDRAP 1370/2014; caietele de sarcini pe baza SR EN 13108 și AND 605",
+   deCe:"Fiecare strat (fundație, bază, legătură, uzură) se recepționează înainte să fie acoperit de următorul."},
+  {id:"d-drumuri-carote", dom:"drumuri", faza:"receptie", grav:"receptie",
+   titlu:"Rapoarte de încercare pe carote (grosime, grad de compactare) și planeitate", kws:["carote","carota","grad compactare","planeitate"], cap:"Calitate", dela:"Executant (laborator)",
+   temei:"SR EN 12697 (metode de încercare); SR EN 13108; HG 343/2017, art. 15",
+   deCe:"Comisia de recepție compară grosimile, gradul de compactare și planeitatea cu proiectul; fără rapoartele de laborator recepția nu se poate face."},
+  {id:"d-electrice-anre", dom:"electrice", faza:"inainte", grav:"receptie",
+   titlu:"Atestatul ANRE al executantului și autorizațiile electricienilor", kws:["atestat anre","autorizatie anre","legitimatie anre"], cap:"Contracte", dela:"Executant",
+   temei:"Legea energiei electrice și a gazelor naturale nr. 123/2012; regulamentele ANRE de atestare și autorizare",
+   deCe:"Instalațiile electrice se execută de operatori economici atestați și de electricieni autorizați ANRE; operatorul de rețea le cere la racordare și punere sub tensiune."},
+  {id:"d-termice-probe", dom:"termice", faza:"receptie", grav:"receptie",
+   titlu:"PV-urile probelor la rece și la cald ale instalației de încălzire", kws:["proba la rece","proba la cald","proba rece","proba cald","proba de eficacitate"], cap:"Execuție", dela:"Executant",
+   temei:"I 13-2015, art. 10.2, 10.9–10.12, 10.30–10.34, 10.45",
+   deCe:"Proba la rece se face la 1,5 × presiunea maximă de regim (minimum 5 bar), 3 ore, înainte de izolare și acoperire; proba la cald verifică etanșeitatea, dilatarea și circulația. Se fac în prezența dirigintelui și a proiectantului."},
+  {id:"d-sanitare-probe", dom:"sanitare", faza:"receptie", grav:"receptie",
+   titlu:"PV-urile probelor instalațiilor sanitare (presiune și etanșeitate; canalizare)", kws:["proba presiune apa","apa rece calda","proba etanseitate canalizare","proba functionare canalizare"], notKws:["retea"], cap:"Execuție", dela:"Executant",
+   temei:"I 9-2022; HG 343/2017, art. 15",
+   deCe:"Instalațiile de apă se probează la presiune, iar canalizarea la etanșeitate și funcționare, înainte de acoperire și înainte de recepție."},
+  {id:"d-gaze-anre", dom:"gaze", faza:"inainte", grav:"receptie",
+   titlu:"Executant autorizat ANRE și instalatori cu legitimație ANRE", kws:["edib","edsb","autorizatie anre gaze","legitimatie anre gaze","autorizatie anre operator gaze"], cap:"Contracte", dela:"Executant",
+   temei:"Regulamentul ANRE de autorizare a operatorilor economici din domeniul gazelor naturale (2026, înlocuiește Ordinul ANRE 132/2021); NTPEE-2018",
+   deCe:"Lucrările de gaze se proiectează și se execută doar de operatori economici autorizați ANRE pentru tipul respectiv de lucrare (de exemplu EDIB, EDSB)."},
+  {id:"d-gaze-pif", dom:"gaze", faza:"receptie", grav:"receptie",
+   titlu:"PV de recepție tehnică și PV de punere în funcțiune, cu operatorul de distribuție", kws:["receptie tehnica gaze","punere in functiune gaze","pif gaze"], cap:"Execuție", dela:"Operator de distribuție",
+   temei:"NTPEE-2018 (Ordinul ANRE 89/2018), Anexa 10",
+   deCe:"Punerea în funcțiune se face pe baza PV-ului de recepție tehnică și a documentației aprobate și se semnează de delegatul operatorului de distribuție și de instalatorii autorizați."},
+  {id:"d-edilitare-probe", dom:"edilitare", faza:"receptie", grav:"receptie",
+   titlu:"Probele pe tronsoane: presiune (apă), etanșeitate (canalizare), inspecție video", kws:["proba presiune retea","proba etanseitate canal","proba etanseitate retea","inspectie video","cctv"], cap:"Execuție", dela:"Executant",
+   temei:"NP 133-2022, vol. I și II; SR EN 805; SR EN 1610",
+   deCe:"Fiecare tronson se probează înainte de umplerea tranșeei; operatorul de apă-canal cere de obicei și inspecția video a canalizării înainte de preluare."},
+  {id:"d-edilitare-dezinf", dom:"edilitare", faza:"receptie", grav:"recom",
+   titlu:"Spălarea și dezinfectarea rețelei de apă, cu buletin de analiză", kws:["dezinfectare","dezinfectie","buletin analiza apa","potabilitate"], cap:"Calitate", dela:"Executant",
+   temei:"NP 133-2022, vol. I",
+   deCe:"Rețeaua nouă de apă se dă în folosință după spălare, dezinfectare și analiza apei."},
+  {id:"d-hvac-probe", dom:"hvac", faza:"receptie", grav:"receptie",
+   titlu:"Etanșeitatea tubulaturii, pornirea, reglarea debitelor și probele", kws:["etanseitate tubulatura","echilibrare","masurare debite","reglare ventilare","punere in functiune ventilare","punere in functiune climatizare","pornire reglare"], cap:"Execuție", dela:"Executant",
+   temei:"I 5-2022, 8.8 și cap. 9 (9.10–9.15); SR EN 12599",
+   deCe:"Înainte de recepție se controlează conductele de aer și automatizarea, se pornește și se reglează instalația, iar debitele măsurate se compară cu proiectul."},
+  {id:"d-idsai", sub:["idsai"], tag:"IDSAI", faza:"receptie", grav:"receptie",
+   titlu:"IDSAI: firmă autorizată IGSU, verificare de comisie și registrul de control", kws:["autorizatie igsu","registru control","receptie idsai"], cap:"Execuție", dela:"Executant",
+   temei:"P 118/3-2015, 5.1.6, 5.4.1–5.4.9, 5.6; metodologia IGSU de autorizare a persoanelor care efectuează lucrări în domeniul apărării împotriva incendiilor",
+   deCe:"Sistemul trece printr-o perioadă de funcționare preliminară, apoi o comisie verifică documentația și face probe funcționale. Executantul predă registrul de control, instrucțiunile și documentul de configurare; mentenanța începe imediat după recepție."},
+  {id:"d-sec-licenta", sub:["video","antiefractie","control-acces"], tag:"Sisteme de securitate", faza:"inainte", grav:"receptie",
+   titlu:"Licența IGPR a societății care proiectează și instalează sistemele de securitate", kws:["licenta igpr","licenta politie"], cap:"Contracte", dela:"Executant",
+   temei:"HG 301/2012, art. 70 și 76",
+   deCe:"Proiectarea, instalarea și întreținerea sistemelor de alarmare se fac doar de societăți licențiate de IGPR."},
+  {id:"d-sec-aviz", sub:["video","antiefractie","control-acces"], tag:"Sisteme de securitate", faza:"inainte", grav:"recom",
+   titlu:"Avizul poliției pentru proiect (doar la obiectivele din HG 301/2012, art. 68)", kws:["aviz politie","aviz ipj","avizat politie"], cap:"Proiectare", dela:"Beneficiar",
+   temei:"HG 301/2012, art. 68–69",
+   deCe:"Pentru unitățile de interes strategic sau public, bănci, benzinării, depozite cu valori peste 10.000 euro și celelalte obiective din art. 68, proiectul se avizează de poliție înainte de execuție. Dacă obiectivul nu e în listă, marchează „Nu se aplică”."}
 ];
 
 function cfState(){
@@ -1651,8 +2301,13 @@ function cfState(){
   return S.conf;
 }
 function cfDetect(r){
+  if(r.auto==="pers"){
+    if(!S.dom.length) return {state:"nu", info:"Bifează domeniile lucrării la Proiect"};
+    const lip = acoperire().filter(x=>!x.dir.length || !x.rte.length);
+    return lip.length ? {state:"nu", info:"Fără diriginte sau RTE: " + lip.map(x=>x.d.name).join(", ")} : {state:"da", info:"fiecare domeniu are diriginte și RTE"};
+  }
   if(r.auto==="carte"){
-    if(!S.ct) return {state:"nu", info:"Completează parametrii la Carte tehnică"};
+    if(!activeTpls().length) return {state:"nu", info:"Bifează domeniile lucrării la Proiect"};
     const miss = ctMissing(false).length;
     return miss ? {state:"nu", info:`${miss} documente lipsă în capitolele A și B`} : {state:"da", info:"capitolele A și B complete"};
   }
@@ -1667,7 +2322,9 @@ function cfDetect(r){
 function cfEval(){
   const c = cfState();
   const cur = CF_FAZE.findIndex(f=>f.id===c.faza);
-  return CF_RULES.map(r=>{
+  const ts = activeTpls();
+  // regulile unui domeniu sau ale unui tip de lucrare apar doar dacă lucrarea le are
+  return CF_RULES.filter(r=>(!r.dom || S.dom.includes(r.dom)) && (!r.sub || r.sub.some(t=>ts.includes(t)))).map(r=>{
     const fi = CF_FAZE.findIndex(f=>f.id===r.faza);
     const mark = c.marks[r.id];
     if(r.cond && !r.cond(c)) return {r, st:"na", why:"nu se aplică acestei lucrări"};
@@ -1718,13 +2375,13 @@ function viewConformitate(){
       <h3>${f.name}</h3>
       ${xs.map(x=>`<div class="cf-row ${x.st}">
         <div class="cf-main">
-          <div class="cf-t">${esc(x.r.titlu)} ${stTag(x)} ${x.st==="miss" && inLips.has(norm(x.r.titlu)) ? `<span class="muted">· în Lipsuri</span>` : ""}</div>
+          <div class="cf-t">${esc(x.r.titlu)} ${x.r.dom||x.r.sub ? `<span class="chip">${esc(x.r.tag || (x.r.sub ? CT_TPL[x.r.sub[0]].short||CT_TPL[x.r.sub[0]].name : domById(x.r.dom).name))}</span>` : ""} ${stTag(x)} ${x.st==="miss" && inLips.has(norm(x.r.titlu)) ? `<span class="muted">· în Lipsuri</span>` : ""}</div>
           <div class="cf-why">${esc(x.r.deCe)}</div>
           <div class="cf-law">Temei: ${esc(x.r.temei)}</div>
           ${x.det && x.det.doc ? `<div class="cf-doc">Găsit: <span class="fn">${esc(x.det.doc.name)}</span></div>` : x.det && x.det.info ? `<div class="cf-doc">${esc(x.det.info)}</div>` : ""}
         </div>
         <div class="cf-act">
-          ${x.r.auto ? `<button class="btn g sm" data-v-go="carte">Vezi cartea tehnică</button>` :
+          ${x.r.auto ? `<button class="btn g sm" data-v-go="${x.r.auto==="pers"?"proiect":"carte"}">${x.r.auto==="pers"?"Vezi persoanele":"Vezi cartea tehnică"}</button>` :
             x.st==="miss" || x.st==="later" ? `<button class="btn g sm" data-cfm="${x.r.id}:ok">Am documentul</button><button class="btn g sm" data-cfm="${x.r.id}:na">Nu se aplică</button>` :
             c.marks[x.r.id] ? `<button class="btn g sm" data-cfm="${x.r.id}:">Anulează marcajul</button>` : ""}
         </div>
@@ -1745,17 +2402,28 @@ const BB_KB = [
   {k:["verificare intrare","copie identica","de ce nu s-a adaugat","respins","debifat"], a:()=>`La intrare, aplicația compară fiecare fișier cu ce există: <b>copiile identice</b> se resping, <b>versiunile noi</b> îți cer o decizie, fișierele care <b>completează o lipsă</b> o rezolvă automat, iar <b>documentele noi necerute</b> vin debifate după prima încărcare, ca să nu intre din greșeală.`},
   {k:["duplicate","versiune vigoare","care versiune","versiuni"], a:()=>{ const g = dupGroups(), nev = g.filter(x=>!x.docs.some(d=>d.viz)).length; return `Grupurile de duplicate reunesc fișiere cu același conținut sau cu aceeași denumire de bază (rev1, rev2, final). Pentru fiecare grup alegi versiunea <b>în vigoare</b>; celelalte rămân ca istoric și nu apar în opis. ${g.length?`Acum ai <b>${g.length}</b> ${g.length===1?"grup":"grupuri"}, din care <b>${nev}</b> fără versiune aleasă.`:""} ${go("duplicate","Deschide Duplicate")}`; }},
   {k:["data portocalie","data estimata","estimata","de verificat data"], a:()=>{ const n = S.docs.filter(d=>d.dataSrc==="estimat").length; return `Data e portocalie când aplicația n-a găsit-o în denumirea fișierului și a pus data ultimei modificări a fișierului, care de obicei e data copierii, nu data actului. Corecteaz-o din document; în opis, datele estimate nu se tipăresc. ${n?`Ai <b>${n}</b> date estimate.`:""} ${go("inventar","Deschide Inventarul")}`; }},
-  {k:["carte tehnica parametri","tronsoane","balize","cod pv","numerotare pv","lista tip","tip lucrare","tipuri lucrari","ce tipuri"], a:()=>`La <b>Carte tehnică</b> alegi tipul lucrării: LEA cu fibră optică, instalații electrice în clădiri, rețele LEA/LES de medie și joasă tensiune, parc fotovoltaic sau construcții civile. Apoi completezi parametrii (tronsoane, tablouri, posturi, blocuri, niveluri, prize de pământ). Aplicația generează toate PV-urile și buletinele așteptate pe dosare, după Anexa 6 din HG 343/2017, și le caută în inventar. Documentele cerute în plus de beneficiar le scrii în câmpul „Documente suplimentare”. ${go("carte","Deschide Cartea tehnică")}`},
+  {k:["carte tehnica parametri","tronsoane","balize","cod pv","numerotare pv","lista tip","tip lucrare","tipuri lucrari","ce tipuri"], a:()=>`Lista-tip a cărții tehnice vine din <b>domeniile lucrării</b>, bifate la Proiect: construcții civile, drumuri, instalații electrice, termice, sanitare, gaze, rețele edilitare, HVAC. La instalații electrice alegi și tipurile: în clădiri, rețele LEA/LES, LEA cu fibră optică, fotovoltaic, paratrăsnet, IDSAI, supraveghere video, antiefracție, control acces. La <b>Carte tehnică</b> completezi parametrii fiecărei specialități; aplicația pune PV-urile, probele și buletinele pe dosare, după Anexa 6 din HG 343/2017, iar piesele comune apar o singură dată. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
+  {k:["domenii","mai multe domenii","mai multe specialitati","specialitati","lucrare cu mai multe","categorii","pagina de intrare","chenare"], a:()=>`Pe pagina de intrare alegi domeniul și pornești o <b>lucrare nouă</b>. O lucrare poate avea <b>mai multe domenii</b> (de exemplu o școală: construcții, electrice, termice, sanitare): le bifezi la <b>Proiect → Domeniile lucrării</b>. Cartea tehnică, verificările și cererile țin cont de toate. ${CUR?go("proiect","Deschide Proiect"):""}`},
+  {k:["persoane","ce domenii are dirigintele","domeniile dirigintelui","domenii diriginte","diriginte mai multe domenii","autorizat pe mai multe","cine acopera","rte pentru fiecare","domeniu autorizare"], a:()=>`La <b>Proiect → Persoane și specialități</b> treci fiecare persoană o singură dată și bifezi domeniile pe care le acoperă. Aplicația îți arată ce domeniu nu are diriginte sau RTE. Domeniile de autorizare ale dirigintelui: <b>2</b> construcții civile, <b>3</b> drumuri, <b>6.1</b> apă și canalizare, <b>8.1</b> instalații electrice, <b>8.2</b> sanitare și termoventilații, <b>8.3</b> gaze, <b>9.1–9.4</b> rețele (electrice, termice și sanitare, telecomunicații, gaze). La 8.1, 8.3, 9.1 și 9.4 e nevoie și de legitimație ANRE. ${CUR?go("proiect","Deschide Proiect"):""}`},
+  {k:["probe termice","proba la rece","proba la cald","proba de eficacitate","probe incalzire"], a:()=>`La încălzire se fac trei probe: <b>la rece</b> (rezistență și etanșeitate, la 1,5 × presiunea maximă de regim, minimum 5 bar, 3 ore, înainte de izolare), <b>la cald</b> (etanșeitate, dilatare, circulație) și <b>de eficacitate</b> (12 ore, în perioada rece, cu clădirea terminată). Înainte de proba la rece instalația se spală. Probele se consemnează în procese-verbale, în prezența dirigintelui și a proiectantului. <span class="bb-law">I 13-2015, cap. 10</span>`},
+  {k:["probe sanitare","proba canalizare","proba apa","dezinfectare","potabilitate"], a:()=>`La instalațiile sanitare, conductele de apă se probează la <b>presiune</b> (rezistență și etanșeitate), iar canalizarea la <b>etanșeitate și funcționare</b>, înainte să fie acoperite. Rețelele noi de apă se spală și se dezinfectează, cu buletin de analiză a apei. <span class="bb-law">I 9-2022 (clădiri); NP 133-2022 (rețele)</span>`},
+  {k:["gaze","punere in functiune gaze","pif gaze","receptie tehnica gaze","edib","edsb"], a:()=>`La gaze, executantul trebuie să fie <b>autorizat ANRE</b> pentru tipul lucrării (de exemplu EDIB, EDSB), iar instalatorii au legitimație ANRE. După probele de rezistență și etanșeitate urmează <b>recepția tehnică</b>, apoi <b>punerea în funcțiune</b>, cu PV semnat de delegatul operatorului de distribuție. <span class="bb-law">NTPEE-2018 (Ordinul ANRE 89/2018), Anexa 10</span>`},
+  {k:["hvac","ventilare","climatizare","echilibrare","debite","f gaz"], a:()=>`La ventilare și climatizare se verifică <b>etanșeitatea tubulaturii</b>, se controlează conductele de aer și automatizarea, apoi instalația se <b>pornește și se reglează</b>: debitele măsurate se compară cu proiectul. Echipamentele cu agenți frigorifici fluorurați se montează de personal certificat. <span class="bb-law">I 5-2022, 8.8 și cap. 9; SR EN 12599; Regulamentul (UE) 2024/573</span>`},
+  {k:["drumuri","carote","compactare","asfalt","straturi rutiere","planeitate"], a:()=>`La drumuri, fiecare strat (fundație, bază, legătură, uzură) se <b>recepționează pe fază</b> înainte să fie acoperit. La final, comisia verifică pe <b>carote</b> grosimile și gradul de compactare, plus planeitatea și rugozitatea. Pentru mixturi păstrezi rețetele și încercările inițiale de tip. <span class="bb-law">SR EN 13108; SR EN 12697; AND 605; Ordinul MDRAP 1370/2014</span>`},
+  {k:["retele edilitare","apa canal","inspectie video","proba presiune retea","preluare operator"], a:()=>`La rețelele de apă și canalizare, fiecare tronson se probează înainte de umplerea tranșeei: apa la <b>presiune</b>, canalizarea la <b>etanșeitate</b>. Operatorul cere de obicei și <b>inspecția video</b> a canalului înainte de preluare. Rețeaua de apă se spală și se dezinfectează. <span class="bb-law">NP 133-2022, vol. I și II; SR EN 805; SR EN 1610</span>`},
+  {k:["idsai","detectie incendiu","semnalizare incendiu","registru de control"], a:()=>`La <b>IDSAI</b>, firma trebuie autorizată de IGSU pentru instalarea și întreținerea sistemelor de semnalizare la incendiu. După montaj urmează o perioadă de funcționare preliminară, apoi o comisie verifică documentația și face probe funcționale. Executantul predă <b>registrul de control</b>, instrucțiunile și documentul de configurare, iar mentenanța începe imediat după recepție. <span class="bb-law">P 118/3-2015, cap. 5</span>`},
+  {k:["supraveghere video","camere","antiefractie","control acces","licenta igpr","sisteme securitate"], a:()=>`Sistemele de <b>supraveghere video, antiefracție și control acces</b> se proiectează și se instalează doar de societăți cu <b>licență IGPR</b>. La obiectivele din HG 301/2012, art. 68 (bănci, benzinării, instituții publice, depozite cu valori peste 10.000 euro etc.) proiectul se avizează de poliție înainte de execuție. La predare, beneficiarul primește codurile, programele și documentația pe bază de proces-verbal. <span class="bb-law">Legea 333/2003; HG 301/2012, art. 68–69, 76, 86</span>`},
+  {k:["paratrasnet","ipt","trasnet","priza paratrasnet"], a:()=>`Pentru <b>paratrăsnet</b> păstrezi proiectul cu nivelul de protecție, PV-ul de lucrări ascunse pentru fiecare priză de pământ, PV-ul de montaj (captare, coborâri) și buletinele de măsurare a rezistenței de dispersie și a continuității. <span class="bb-law">I 7-2011 (modificat în 2023); SR EN 62305</span>`},
   {k:["cerinte beneficiar","documente suplimentare","operator retea cere","beneficiarul cere"], a:()=>`Documentele cerute în plus de beneficiar sau de operatorul de rețea le adaugi la <b>Carte tehnică → Documente suplimentare cerute de beneficiar</b>, câte unul pe rând. Apar într-un dosar separat, sunt căutate în inventar ca toate celelalte și pot fi trimise la Lipsuri și cerute. ${go("carte","Deschide Cartea tehnică")}`},
   {k:["borderou","borderouri","tiparesc borderou"], a:()=>`Borderourile se tipăresc de la <b>Carte tehnică → Tipărește borderourile</b>: câte unul pe dosar, cu numerotarea calculată; documentele lipsă apar marcate LIPSĂ. Ca să obții PDF, alege „Salvare ca PDF” în fereastra de tipărire. ${go("carte","Deschide Cartea tehnică")}`},
   {k:["opis","pdf opis","tiparesc opis"], a:()=>`Opisul se generează de la <b>Rezultate → Generează opisul</b>. Conține documentele în vigoare, grupate pe capitole, plus lipsurile marcate LIPSĂ. Pentru PDF, alege „Salvare ca PDF” la tipărire. ${go("rezultate","Deschide Rezultate")}`},
   {k:["cerere","cer documente","trimit cerere","email cerere","adresa cerere"], a:()=>`La <b>Cereri</b>, lipsurile sunt grupate pe „de la cine se recuperează”. Alegi termenul și apeși <b>Pregătește cererea</b>: poți copia textul, îl poți deschide în email sau poți tipări o adresă formală. După <b>Marchează ca trimisă</b>, aplicația urmărește termenul și bifează singură documentele care sosesc. ${go("cereri","Deschide Cereri")}`},
   {k:["reamintire","nu a raspuns","nu trimite","intarzie"], a:()=>bbCereri()},
   {k:["am documentul","nu l-a recunoscut","nu gaseste documentul","nu se aplica"], a:()=>`Verificările se fac după denumirea fișierelor. Dacă ai un document pe care aplicația nu l-a recunoscut, apasă <b>Am documentul</b> la cerința respectivă din Conformitate. Dacă cerința nu e valabilă pentru lucrarea ta, apasă <b>Nu se aplică</b>. Denumirile clare (de exemplu „PV lucrari ascunse priza st 8”) ajută recunoașterea.`},
-  {k:["salvez proiect","salvare","deschid proiect","pierd datele","unde se salveaza"], a:()=>`Proiectul se păstrează automat în browserul acestui calculator. Ca să nu-l pierzi și să-l poți muta pe alt calculator, apasă sus <b>Salvează proiect</b>: primești un fișier .json, pe care îl redeschizi cu <b>Deschide proiect</b>.`},
+  {k:["salvez proiect","salvare","deschid proiect","pierd datele","unde se salveaza"], a:()=>`Fiecare lucrare se păstrează automat în browserul acestui calculator și apare în lista de pe pagina de intrare. Ca să nu-l pierzi și să-l poți muta pe alt calculator, apasă sus <b>Salvează proiect</b>: primești un fișier .json, pe care îl redeschizi cu <b>Deschide proiect</b>.`},
   {k:["confidential","date personale","trimite internet","sigur","cine vede"], a:()=>`Aplicația rulează doar în browserul tău. Fișierele sunt citite local (denumire, mărime, amprentă) și nu sunt trimise nicăieri; site-ul nu are server. Nici întrebările puse mie nu pleacă de pe calculator.`},
-  {k:["golesc","sterg proiect","incep de la zero","proiect nou"], a:()=>`Salvează întâi proiectul curent (<b>Salvează proiect</b>), apoi la <b>Proiect → Golește</b> pornești de la zero. ${go("proiect","Deschide Proiect")}`},
-  {k:["exemplu","demo","cum arata"], a:()=>`Pe site, la <b>Proiect → Deschide exemplul</b> se încarcă o lucrare demonstrativă cu date fictive. ${go("proiect","Deschide Proiect")}`},
+  {k:["golesc","sterg proiect","sterg lucrarea","incep de la zero","proiect nou","lucrare noua"], a:()=>`O <b>lucrare nouă</b> pornești de pe pagina de intrare: alegi domeniul și apeși <b>Lucrare nouă</b>; lucrările existente rămân în listă. O lucrare o scoți din browser de la <b>Proiect → Șterge lucrarea</b> sau din listă; salveaz-o întâi în fișier dacă vrei să o păstrezi.`},
+  {k:["exemplu","demo","cum arata"], a:()=>`Pe site, pe pagina de intrare, butonul <b>Deschide exemplul</b> adaugă în listă o lucrare demonstrativă cu date fictive (fibră optică pe LEA 110 kV, la Instalații electrice).`},
   {k:["export","csv","excel"], a:()=>`La <b>Rezultate</b> ai <b>Export inventar (CSV)</b> și <b>Export statistici (CSV)</b>; se deschid direct în Excel. ${go("rezultate","Deschide Rezultate")}`},
   {k:["conformitate","verificare norme","verificare conformitate","legislatie"], a:()=>`La <b>Conformitate</b>, aplicația verifică dosarul față de HG 343/2017, Legea 10/1995 și procedura ISC (Ordinul MDRAP 1370/2014). Fiecare lipsă are gravitatea (control ISC, blochează recepția, recomandat) și temeiul legal. Alege faza lucrării ca să vezi ce e scadent acum. ${go("conformitate","Deschide Conformitate")}`},
   // --- noțiuni de specialitate ---
@@ -1773,18 +2441,21 @@ const BB_KB = [
   {k:["isc","inspectoratul","control isc","ce verifica isc","isc verifica","verifica isc"], a:()=>`<b>ISC</b> (Inspectoratul de Stat în Construcții) controlează calitatea pe faze determinante și participă la recepție, unde examinează documentele din art. 15 alin. (3), cu excepția devizului general. Deficiențele cele mai frecvente: program de faze determinante lipsă, documente de calitate lipsă, dispoziții de șantier fără desene, cartea tehnică incompletă și lipsa proiectului as built. ${go("conformitate","Verifică dosarul")} <span class="bb-law">Ordinul MDRAP 1370/2014; HG 343/2017, art. 15 alin. (4)</span>`}
 ];
 
+const NO_L = () => `Deschide întâi o lucrare: alege domeniul de pe pagina de intrare sau o lucrare din listă.`;
 function bbLipsuri(){
+  if(!CUR) return NO_L();
   const out = [];
   if(!S.docs.length) return `Încă nu ai încărcat documente, așa că nu am ce verifica. Începe de la <b>Inventar → Adaugă folder</b>. ${go("inventar","Deschide Inventarul")}`;
   const ev = cfEval().filter(x=>x.st==="miss");
   const bl = ev.filter(x=>x.r.grav!=="recom");
   if(bl.length) out.push(`<b>${bl.length}</b> ${bl.length===1?"cerință legală lipsește":"cerințe legale lipsesc"} pentru faza curentă și pot bloca controlul ISC sau recepția:<ul>${bl.slice(0,6).map(x=>`<li>${esc(x.r.titlu)} <span class="bb-law">${esc(x.r.temei)}</span></li>`).join("")}</ul>${bl.length>6?`și încă ${bl.length-6}.`:""}`);
-  if(S.ct){ const m = ctMissing(false); if(m.length) out.push(`În cartea tehnică (capitolele A și B) lipsesc <b>${m.length}</b> documente, de exemplu: ${m.slice(0,3).map(i=>esc(lden(i))).join("; ")}.`); }
+  if(activeTpls().length){ const m = ctMissing(false); if(m.length) out.push(`În cartea tehnică (capitolele A și B) lipsesc <b>${m.length}</b> documente, de exemplu: ${m.slice(0,3).map(i=>esc(lden(i))).join("; ")}.`); }
   const lo = openLipsuri().length; if(lo) out.push(`În lista de Lipsuri ai <b>${lo}</b> ${lo===1?"document deschis":"documente deschise"}.`);
   if(!out.length) return `Nu găsesc nimic lipsă pentru faza curentă. Verifică totuși faza aleasă la Conformitate și, dacă e cazul, completează parametrii cărții tehnice. ${go("conformitate","Deschide Conformitate")}`;
   return out.join("<br><br>") + `<br>${go("conformitate","Vezi Conformitate")} ${go("lipsuri","Vezi Lipsuri")}`;
 }
 function bbCereri(){
+  if(!CUR) return NO_L();
   if(!S.cereri.length) return `Nu ai trimis încă nicio cerere. Le pregătești de la <b>Cereri</b>, din lipsurile grupate pe expeditor. ${go("cereri","Deschide Cereri")}`;
   const late = S.cereri.map(c=>({c, st:cerStatus(c)})).filter(x=>x.st.late);
   const open = S.cereri.filter(c=>!cerStatus(c).done).length;
@@ -1792,6 +2463,8 @@ function bbCereri(){
   return `Au depășit termenul:<ul>${late.map(x=>`<li><b>${esc(x.c.catre)}</b> — ${x.st.total-x.st.got} ${x.st.total-x.st.got===1?"document":"documente"}, întârziere ${x.st.over} ${x.st.over===1?"zi":"zile"}</li>`).join("")}</ul>Trimite-le o <b>Reamintire</b> de la Cereri: mesajul conține doar documentele încă neprimite. ${go("cereri","Deschide Cereri")}`;
 }
 function bbNext(){
+  if(!CUR) return `Alege domeniul lucrării de pe pagina de intrare și apasă <b>Lucrare nouă</b>, sau deschide o lucrare din listă.`;
+  if(!S.dom.length) return `Bifează domeniile lucrării la Proiect: de ele depind cartea tehnică și verificările. ${go("proiect","Deschide Proiect")}`;
   if(!S.docs.length) return `Primul pas: încarcă documentele lucrării de la <b>Inventar → Adaugă folder</b>. ${go("inventar","Deschide Inventarul")}`;
   const nev = dupGroups().filter(x=>!x.docs.some(d=>d.viz)).length;
   if(nev) return `Ai <b>${nev}</b> ${nev===1?"grup":"grupuri"} de duplicate fără versiunea în vigoare aleasă. Rezolvă-le întâi, ca opisul și verificările să lucreze pe documentele corecte. ${go("duplicate","Deschide Duplicate")}`;
@@ -1826,7 +2499,9 @@ function bbAnswer(q){
 
 let BB_LOG = [];
 const BB_SUG = {
-  proiect:["Ce fac acum?","Cum încarc documentele?","Unde se salvează datele?"],
+  acasa:["Ce fac acum?","Pot avea mai multe domenii într-o lucrare?","Unde se salvează datele?"],
+  domeniu:["Ce fac acum?","Ce domenii are dirigintele?","Pot avea mai multe domenii într-o lucrare?"],
+  proiect:["Ce fac acum?","Cine acoperă fiecare domeniu?","Cum încarc documentele?"],
   inventar:["De ce e data portocalie?","Ce lipsește?","Ce sunt duplicatele?"],
   duplicate:["Ce sunt duplicatele?","Ce fac acum?"],
   carte:["Ce conține cartea tehnică?","Cum tipăresc borderourile?","Ce lipsește?"],
@@ -2009,15 +2684,55 @@ function bind(){
 
 
   const bdemo=$("#btnDemo"); if(bdemo) bdemo.onclick=async()=>{
-    if((S.docs.length || S.lipsuri.length) && !confirm("Exemplul înlocuiește proiectul curent din pagină. Ai salvat proiectul?")) return;
+    if(IDX.some(l=>l.id==="demo-lea-nord-sud") && !confirm("Exemplul există deja în listă. Îl redeschizi de la zero?")) return;
     try{
       const r = await fetch("exemple/Demo_LEA_Nord-Sud_schela.json", {cache:"no-store"});
       const o = await r.json(); if(!o || !o.meta) throw new Error("format");
-      S = Object.assign(blank(), o); migrate(); markDups(); VIEW = "carte"; render();
+      importLucrare(o, "demo-lea-nord-sud"); VIEW = "carte"; render();
     }catch(e){ alert("Exemplul nu a putut fi încărcat."); }
   };
   const bc=$("#btnClear");
-  if(bc) bc.onclick=()=>{ if(confirm("Ștergi tot proiectul curent din pagină?")){ S=blank(); render(); } };
+  if(bc) bc.onclick=()=>{ if(confirm(`Ștergi lucrarea „${S.meta.proiect||"fără nume"}” din acest browser?`)){ deleteLucrare(S.id); render(); } };
+
+  // pagina de intrare și pagina domeniului
+  v.querySelectorAll("[data-dom-open]").forEach(b=>b.onclick=()=>{ DSEL=b.dataset.domOpen; VIEW="domeniu"; render(); v.scrollTop=0; });
+  v.querySelectorAll("[data-lopen]").forEach(b=>b.onclick=()=>openLucrare(b.dataset.lopen));
+  v.querySelectorAll("[data-ldel]").forEach(b=>b.onclick=()=>{
+    const l = IDX.find(x=>x.id===b.dataset.ldel); if(!l) return;
+    if(confirm(`Ștergi lucrarea „${l.proiect||"fără nume"}” din acest browser? Dacă ai salvat-o în fișier, o poți redeschide de acolo.`)){ deleteLucrare(l.id); render(); }
+  });
+  const bnl=$("#btnNewL"); if(bnl) bnl.onclick=()=>newLucrare(DSEL);
+
+  // domeniile și tipurile de lucrări
+  v.querySelectorAll("[data-dom]").forEach(el=>el.onchange=()=>{
+    const id = el.dataset.dom;
+    S.dom = el.checked ? DOM.map(d=>d.id).filter(x=>x===id || S.dom.includes(x)) : S.dom.filter(x=>x!==id);
+    if(el.checked && S.pers.length) S.pers.forEach(p=>{ if(S.dom.length===1 && !p.dom.length) p.dom=[id]; });
+    if(!el.checked) S.pers.forEach(p=>{ p.dom = p.dom.filter(x=>x!==id); });
+    render();
+  });
+  v.querySelectorAll("[data-sub]").forEach(el=>el.onchange=()=>{
+    const id = el.dataset.sub, all = domById("electrice").tpls;
+    S.sub = el.checked ? all.filter(x=>x===id || S.sub.includes(x)) : S.sub.filter(x=>x!==id);
+    render();
+  });
+
+  // persoane
+  const bap=$("#btnAddPers"); if(bap) bap.onclick=()=>{
+    S.pers.push({id:newId("p"), nume:"", rol: S.pers.some(p=>p.rol===ROLURI[0]) ? ROLURI[1] : ROLURI[0], dom: S.dom.length===1 ? [S.dom[0]] : []});
+    render(); const ins = v.querySelectorAll('[data-pf$=":nume"]'); if(ins.length) ins[ins.length-1].focus();
+  };
+  v.querySelectorAll("[data-pf]").forEach(el=>{
+    const [i, k] = el.dataset.pf.split(":"); const p = S.pers[+i]; if(!p) return;
+    if(el.tagName==="SELECT") el.onchange=()=>{ p[k]=el.value; render(); };
+    else { el.oninput=()=>{ p[k]=el.value; autosave(); }; el.onchange=()=>render(); }
+  });
+  v.querySelectorAll("[data-pdom]").forEach(el=>el.onchange=()=>{
+    const [i, d] = el.dataset.pdom.split(":"); const p = S.pers[+i]; if(!p) return;
+    p.dom = el.checked ? S.dom.filter(x=>x===d || p.dom.includes(x)) : p.dom.filter(x=>x!==d);
+    render();
+  });
+  v.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>{ S.pers.splice(+b.dataset.pdel,1); render(); });
 
   // file inputs
   const bd=$("#btnPickDir"), bf=$("#btnPickFiles"), ind=$("#inDir"), inf=$("#inFiles");
@@ -2100,15 +2815,12 @@ function bind(){
   };
 
   // carte tehnică
-  v.querySelectorAll("[data-ctp]").forEach(el=>el.onchange=()=>{ S.ct.p[el.dataset.ctp] = el.value; render(); });
-  const ctt = v.querySelector("[data-cttpl]"); if(ctt) ctt.onchange=()=>{
-    // fiecare tip de lucrare își păstrează parametrii; numărul lucrării și codul se preiau
-    const ct = S.ct; ct.pp = ct.pp || {};
-    ct.pp[ct.tpl] = ct.p;
-    ct.tpl = ctt.value;
-    ct.p = ct.pp[ct.tpl] || {nr: ct.p.nr||"", cod: ct.p.cod||""};
-    render();
-  };
+  // parametrii fiecărei specialități se păstrează separat; numărul, codul și documentele suplimentare sunt comune
+  v.querySelectorAll("[data-ctp]").forEach(el=>el.onchange=()=>{
+    const [t, k] = el.dataset.ctp.split("|"); const ct = ctState();
+    (ct.pp[t] = ct.pp[t] || {})[k] = el.value; render();
+  });
+  v.querySelectorAll("[data-ctc]").forEach(el=>el.onchange=()=>{ ctState().p[el.dataset.ctc] = el.value; render(); });
   const ctl=$("#ctToLips"); if(ctl) ctl.onclick=()=>{
     const have = new Set(S.lipsuri.map(l=>norm(lden(l))));
     let n = 0;
@@ -2158,6 +2870,7 @@ $("#bbFab").onclick = () => { const b = $("#bb"); b.classList.toggle("on"); if(b
 
 /* top bar */
 $("#btnSave").onclick=()=>{
+  if(!CUR) return;
   const name=(S.meta.proiect||"proiect").replace(/[^\w\-]+/g,"_")+"_schela.json";
   download(name, JSON.stringify(S,null,2));
 };
@@ -2169,12 +2882,16 @@ $("#fileLoad").onchange=e=>{
     try{
       const o=JSON.parse(r.result);
       if(!o||!o.meta) throw new Error("format");
-      S=Object.assign(blank(),o);
-      migrate(); markDups(); render(); alert("Proiect încărcat: "+(S.meta.proiect||"fără nume")+" — "+S.docs.length+" documente.");
+      // aceeași lucrare (același identificator) se înlocuiește; altfel intră în listă ca lucrare nouă
+      if(o.id && IDX.some(l=>l.id===o.id) && !confirm(`Lucrarea „${o.meta.proiect||"fără nume"}” există deja în listă. O înlocuiești cu versiunea din fișier?`)) o.id = "";
+      autosave();
+      importLucrare(o); VIEW="proiect"; render();
+      alert("Lucrare deschisă: "+(S.meta.proiect||"fără nume")+" — "+S.docs.length+" documente.");
     }catch(err){ alert("Fișierul nu pare a fi un proiect Schela."); }
   };
   r.readAsText(f); e.target.value="";
 };
+$(".brand").onclick=()=>{ if(CUR) closeLucrare(); VIEW="acasa"; render(); };
 
 
 window.addEventListener("beforeunload", autosave);
