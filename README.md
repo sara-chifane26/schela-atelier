@@ -27,4 +27,11 @@ Pagina de intrare are opt chenare, câte unul pe domeniu: **construcții civile,
 
 **Boloboc** — butonul din colțul din dreapta jos: răspunde la întrebări despre dosar („ce lipsește?”, „cine întârzie?”, „ce fac acum?”), despre folosirea aplicației și despre noțiunile de specialitate (faze determinante, lucrări ascunse, as built, recepție), cu temeiul legal. Funcționează fără AI și fără internet: nimic nu pleacă din pagină.
 
-Documentele se adaugă cu butonul sau trăgându-le (fișiere ori foldere întregi) în pagină. Din PDF-uri și din Word (.docx) aplicația citește local începutul textului: recunoaște fișierele cu nume neclar, ia numărul și data PV-urilor și ale dispozițiilor de șantier și denumirea produsului din certificate (cititorul pdf.js se încarcă de pe cdnjs; documentele nu pleacă din calculator). Scanurile fără text și fișierele .doc vechi nu sunt citite.
+Documentele se adaugă cu butonul, trăgându-le (fișiere ori foldere întregi) în pagină sau, în Chrome și Edge, din **folderul lucrării legat** o singură dată (și de pe server, mapat ca disc): „Verifică folderul” aduce doar fișierele noi.
+
+Totul se citește local, în browser:
+- din PDF și Word (.docx și .doc vechi) — începutul textului: numărul și data PV-urilor și ale dispozițiilor, denumirea produsului și producătorul din certificate și declarațiile de performanță;
+- din scanuri și poze — prin OCR în limba română (Tesseract), la cerere;
+- din PDF-urile semnate electronic — numele semnatarilor, care bifează singure semnăturile pe PV-uri.
+
+Bibliotecile pdf.js și Tesseract se încarcă de pe cdnjs / jsDelivr la prima folosire; documentele nu pleacă din calculator.

@@ -537,6 +537,7 @@ function newLucrare(domId){
 function closeLucrare(){ autosave(); CUR = null; S = blank(); VIEW = "acasa"; }
 function deleteLucrare(id){
   try{ localStorage.removeItem(KEY_L(id)); }catch(e){}
+  try{ IDB.del(id); }catch(e){}
   IDX = IDX.filter(x=>x.id!==id); saveIdx();
   if(CUR===id) closeLucrare();
 }
@@ -795,6 +796,7 @@ function viewInventar(){
   }
   const rows = filtered();
   return `
+  ${canLink() ? `<div class="dropzone"><b>Folderul lucrării${S.folder?` „${esc(S.folder.name)}”`:""}:</b> ${S.folder ? `<button class="btn sm" id="btnCheckF">Verifică folderul</button> <span>aduce doar fișierele noi${S.folder.at?` · ultima verificare ${esc(new Date(S.folder.at).toLocaleString("ro-RO",{dateStyle:"short",timeStyle:"short"}))}`:""}</span> <button class="btn g sm" id="btnLinkF">Schimbă folderul</button>` : `<button class="btn g sm" id="btnLinkF">Leagă folderul lucrării</button> <span>(și de pe server, mapat ca disc) — apoi „Verifică folderul” aduce doar ce e nou, fără să-l mai alegi de fiecare dată.</span>`}</div>` : ""}
   <div class="fbar">
     <button class="btn" id="btnPickDir">Adaugă folder</button>
     <button class="btn g" id="btnPickFiles">Adaugă fișiere</button>
@@ -814,7 +816,9 @@ function viewInventar(){
     <button class="btn g sm" id="btnSelNone">Deselectează</button>
     <button class="btn g sm" id="btnDel">Șterge selecția</button>
     <button class="btn g sm" id="btnReclass" title="Aplică regulile actualizate doar documentelor încă neclasificate; ce ai încadrat manual nu se schimbă.">Reîncadrează neclasificatele</button>
-    ${S.docs.some(d=>(d.ext==="pdf"||d.ext==="docx") && d.txt===undefined) ? `<button class="btn g sm" id="btnPdfTxt" title="Alege din nou folderul lucrării; aplicația citește local începutul textului din PDF și Word, ia numărul și data și recunoaște fișierele cu nume neclar.">Citește textul din PDF și Word</button><input type="file" id="inPdfTxt" webkitdirectory directory multiple hidden>` : ""}
+    ${S.docs.some(needsText) ? `<button class="btn g sm" id="btnPdfTxt" title="Aplicația citește local începutul textului din PDF și Word, ia numărul și data, recunoaște fișierele cu nume neclar și semnăturile electronice.">Citește textul din PDF și Word</button>` : ""}
+    ${S.docs.some(needsOcr) ? `<button class="btn g sm" id="btnOcr" title="Citește local scanurile și pozele (OCR, limba română). Durează câteva secunde pe pagină.">Citește scanurile (OCR) · ${S.docs.filter(needsOcr).length}</button>` : ""}
+    <input type="file" id="inSrc" webkitdirectory directory multiple hidden>
   </div>
 
   <div class="tw"><table>
@@ -946,7 +950,9 @@ async function addFiles(list){
       dataSrc: fromName ? "nume" : (mtime ? "estimat" : ""),
       sursa:"", dela:"", viz:false, dup:false, grp:false, sel:false, obs:""
     });
-    enrichDoc(cands[cands.length-1]);
+    const cd = cands[cands.length-1];
+    if(cd.ext==="pdf"){ cd.sig = (await pdfSigInfo(f)) || undefined; cd.sigChecked = true; }
+    enrichDoc(cd);
   }
   busy(false);
   INTAKE = {items: judge(cands), junk, again, first: S.docs.length===0};
@@ -2270,13 +2276,16 @@ function pvNeeds(d){
   return need;
 }
 function pvState(d){
-  const s = S.sem[d.id] || {}, need = pvNeeds(d), miss = need.filter(k=>!s[k]);
-  return {s, need, miss};
+  const man = S.sem[d.id] || {}, a = autoSig(d), s = {};
+  // semnăturile electronice găsite în PDF bifează singure; ce bifezi sau debifezi tu are prioritate
+  for(const [k] of SIGN) s[k] = man[k]!==undefined ? !!man[k] : !!a[k];
+  const need = pvNeeds(d), miss = need.filter(k=>!s[k]);
+  return {s, need, miss, auto:a};
 }
 const pvNesemnate = () => live().filter(isPVdoc).filter(d=>pvState(d).miss.length);
 
 // dispozițiile de șantier din inventar care nu sunt încă în registru
-const isDispDoc = d => { const h = new Set(words(d.name+" "+d.path)); return h.has("dispo") && h.has("santi"); };
+const isDispDoc = d => { const h = new Set(words(docHead(d)+" "+d.path)); return h.has("dispo") && h.has("santi"); };
 const dispNeinregistrate = () => live().filter(isDispDoc).filter(d=>!S.disp.some(x=>x.docId===d.id));
 
 function viewExecutie(){
@@ -2320,13 +2329,14 @@ function viewSemnaturi(){
     <div class="stat ${nes.length?"bad":"ok"}"><div class="v">${nes.length}</div><div class="l">PV-uri cu semnături lipsă</div></div>
     <div class="stat ok"><div class="v">${pvs.length-nes.length}</div><div class="l">PV-uri complete</div></div>
   </div>
-  ${nes.length ? `<div style="margin:-2px 0 14px;display:flex;gap:9px;flex-wrap:wrap"><button class="btn" id="semToLips">Trimite PV-urile nesemnate la Lipsuri</button></div>` : ""}
+  ${nes.length ? `<div style="margin:-2px 0 14px;display:flex;gap:9px;flex-wrap:wrap"><button class="btn" id="semToLips">Trimite PV-urile nesemnate la Lipsuri</button><button class="btn g" id="semAll">Marchează toate ca semnate</button></div>` : ""}
+  <p class="muted" style="margin:-6px 0 12px">PDF-urile semnate electronic se bifează singure, după numele semnatarului din certificat comparat cu persoanele de la Proiect. La PV-urile scanate bifezi tu.</p>
   ${pvs.length ? `<div class="tw" style="max-height:none"><table>
-    <thead><tr><th>Proces-verbal</th><th style="width:80px">Nr.</th><th style="width:96px">Data</th>${SIGN.map(([k,t])=>`<th style="width:92px">${t}</th>`).join("")}<th style="width:120px">Stare</th></tr></thead>
+    <thead><tr><th>Proces-verbal</th><th style="width:80px">Nr.</th><th style="width:96px">Data</th>${SIGN.map(([k,t])=>`<th style="width:92px">${t}</th>`).join("")}<th style="width:160px">Stare</th></tr></thead>
     <tbody>${pvs.map(d=>{ const st = pvState(d); return `<tr>
-      <td class="fn">${esc(d.name)}${d.txt?`<span class="path">${esc(d.txt.slice(0,70))}…</span>`:""}</td><td class="num">${esc(d.nr||"")}</td><td class="num">${d.dataSrc==="estimat"?"":esc(roDate(d.data))}</td>
-      ${SIGN.map(([k])=>`<td>${st.need.includes(k) ? `<label class="ck"><input type="checkbox" class="chk" data-sg="${d.id}:${k}" ${st.s[k]?"checked":""}> semnat</label>` : `<span class="muted">—</span>`}</td>`).join("")}
-      <td>${st.miss.length ? `<span class="tag t-late">lipsă ${st.miss.length}</span>` : `<span class="tag t-viz">complet</span>`}</td>
+      <td class="fn">${esc(d.name)}${d.txt?`<span class="path">${esc(d.txt.slice(0,70))}…</span>`:""}${d.sig?`<span class="path" style="color:var(--green)">semnat electronic${d.sig.names.length?": "+esc(d.sig.names.join(", ")):""}</span>`:""}</td><td class="num">${esc(d.nr||"")}</td><td class="num">${d.dataSrc==="estimat"?"":esc(roDate(d.data))}</td>
+      ${SIGN.map(([k])=>`<td>${st.need.includes(k) ? `<label class="ck" ${st.auto[k]?`title="Semnătură electronică: ${esc(st.auto[k])}"`:""}><input type="checkbox" class="chk" data-sg="${d.id}:${k}" ${st.s[k]?"checked":""}> ${st.auto[k] && st.s[k] ? "electronic" : "semnat"}</label>` : `<span class="muted">—</span>`}</td>`).join("")}
+      <td>${st.miss.length ? `<span class="tag t-late">lipsă ${st.miss.length}</span> <button class="btn g sm" data-sgall="${d.id}" title="Bifează toate semnăturile cerute">toate</button>` : `<span class="tag t-viz">complet</span>`}</td>
     </tr>`; }).join("")}</tbody></table></div>` : `<div class="card"><div class="empty"><h3>Niciun proces-verbal în inventar</h3><p>PV-urile apar aici după ce le adaugi la Inventar.</p></div></div>`}`;
 }
 function viewDispozitii(){
@@ -2412,6 +2422,7 @@ function openArrange(){
         ${canWrite ? "" : `<div class="note warn">Browserul acesta nu poate scrie foldere. Deschide aplicația în <b>Chrome</b> sau <b>Edge</b> pe calculator.</div>`}
         <p style="margin:0 0 8px"><b>1.</b> Alege din nou folderul cu documentele lucrării (cel din care ai făcut inventarul).</p>
         <button class="btn g" id="arrSrcBtn" ${canWrite?"":"disabled"}>Alege folderul cu documente</button>
+        ${S.folder && canWrite ? `<button class="btn g" id="arrLinked">Folosește folderul legat „${esc(S.folder.name)}”</button>` : ""}
         <input type="file" id="arrSrc" webkitdirectory directory multiple hidden>
         ${ARR.files ? `<p class="muted" style="margin:8px 0 0">Am găsit ${found} din ${plan.length} fișiere.${found<plan.length?" Cele lipsă sunt probabil în alt folder; poți continua cu ce s-a găsit.":""}</p>` : ""}
         <p style="margin:14px 0 8px"><b>2.</b> Alege unde se creează dosarul (de exemplu Desktop sau un stick).</p>
@@ -2424,6 +2435,7 @@ function openArrange(){
     $("#arrClose").onclick = () => { ARR=null; $("#intake").classList.remove("on"); $("#intake").innerHTML=""; };
     const src = $("#arrSrc");
     $("#arrSrcBtn").onclick = () => src.click();
+    const al = $("#arrLinked"); if(al) al.onclick = async () => { const m = await sourceFilesMap(); if(m){ ARR.files = m; draw(); } else alert("Nu am acces la folderul legat."); };
     src.onchange = () => {
       const m = new Map();
       for(const f of src.files){ const path = (f.webkitRelativePath||"").split("/").slice(0,-1).join("/"); m.set(path+"|"+f.name+"|"+f.size, f); m.set("|"+f.name+"|"+f.size, f); }
@@ -2491,14 +2503,17 @@ async function pdfText(file){
   }catch(e){ return null; }
 }
 // citește textul pentru documentele PDF din inventar care nu îl au încă (după ce alegi din nou folderul)
-async function readPdfTexts(files){
-  const m = new Map(); for(const f of files){ const path = (f.webkitRelativePath||"").split("/").slice(0,-1).join("/"); m.set(path+"|"+f.name+"|"+f.size, f); m.set("|"+f.name+"|"+f.size, f); }
-  const todo = S.docs.filter(d=>(d.ext==="pdf" || d.ext==="docx") && d.txt===undefined);
+const filesMap = files => { const m = new Map(); for(const f of files){ const path = (f.webkitRelativePath||"").split("/").slice(0,-1).join("/"); m.set(path+"|"+f.name+"|"+f.size, f); m.set("|"+f.name+"|"+f.size, f); } return m; };
+const needsText = d => (["pdf","docx","doc"].includes(d.ext) && d.txt===undefined) || (d.ext==="pdf" && !d.sigChecked);
+async function readPdfTexts(m){
+  const todo = S.docs.filter(needsText);
   if(todo.some(d=>d.ext==="pdf")){ busy(true, "Se încarcă cititorul de PDF…"); if(!await loadPdfJs()) alert("Cititorul de PDF nu s-a putut încărca (e nevoie de internet la prima folosire). Citesc doar documentele Word."); }
   let n = 0, txt = 0;
   for(const d of todo){
     const f = m.get(d.path+"|"+d.name+"|"+d.size) || m.get("|"+d.name+"|"+d.size); if(!f) continue;
     busy(true, `Se citește textul… ${++n} din ${todo.length}`);
+    if(d.ext==="pdf" && !d.sigChecked){ d.sig = (await pdfSigInfo(f)) || undefined; d.sigChecked = true; }
+    if(d.txt!==undefined) continue;
     const t = await fileText(f); if(t===undefined) continue;
     d.txt = t; if(t) txt++;
     enrichDoc(d);
@@ -2545,6 +2560,7 @@ async function fileText(f){
   const x = extOf(f.name);
   if(f.size > 40*1048576) return undefined;
   if(x==="docx") return (await docxText(f)) || "";
+  if(x==="doc") return (await docText(f)) || "";
   if(x==="pdf" && window.pdfjsLib) return (await pdfText(f)) || "";
   return undefined;
 }
@@ -2578,11 +2594,11 @@ function enrichDoc(d){
 // ce material și ce producător scrie pe un certificat / o declarație
 function certInfo(d){
   const t = d.txt || ""; if(!t) return null;
-  const stop = "(?=\\s(?:producator|producatorul|fabricant|furnizor|furnizorul|cod|lot|lotul|cantitate|nr|data|seria|standard|marca|tip)\\b|[;,]\\s|$)";
-  const m = t.match(new RegExp("(?:denumire(?:a)?\\s+produs(?:ului)?|produs(?:ul)?|denumire\\s+material|material(?:ul)?|pentru\\s+produsul)\\s*[:\\-]?\\s*(.{3,70}?)" + stop));
+  const stop = "(?=\\s(?:producator|producatorul|fabricant|fabricantul|fabricat|furnizor|furnizorul|utilizare|cod|lot|lotul|cantitate|nr|data|seria|standard|marca|tip)\\b|\\s\\d{1,2}\\.\\s|[;]\\s|,\\s(?=[a-z]+:)|$)";
+  const m = t.match(new RegExp("(?:cod(?:ul)?\\s+unic\\s+de\\s+identificare\\s+(?:a|al)\\s+produsului[\\s\\-]*tip|denumire(?:a)?\\s+comerciala|denumire(?:a)?\\s+produs(?:ului)?|descriere(?:a)?\\s+produs(?:ului)?|tip(?:ul)?\\s+produs(?:ului)?|produs(?:ul)?|denumire\\s+material|material(?:ul)?|articol(?:ul)?|pentru\\s+produsul)\\s*[:\\-]?\\s*(.{3,70}?)" + stop));
   if(!m) return null;
-  const f = t.match(/(?:producator(?:ul)?|fabricant(?:ul)?|furnizor(?:ul)?)\s*[:\-]\s*(.{3,50}?)(?=\s(?:adresa|cui|cod|str|produs|nr|tel)\b|[;,]\s|$)/);
-  const cap1 = s => s.trim().replace(/\S*\d\S*/g, w=>w.toUpperCase()).replace(/^./, c=>c.toUpperCase());
+  const f = t.match(/(?:producator(?:ul)?|fabricant(?:ul)?|fabricat de|furnizor(?:ul)?|numele si adresa (?:producatorului|fabricantului))\s*[:\-]?\s*(.{3,50}?)(?=\s(?:adresa|cui|cod|str|produs|nr|tel)\b|[;,]\s|$)/);
+  const cap1 = s => s.trim().replace(/\S*\d\S*/g, w=>w.toUpperCase().replace(/(\d)X(\d)/g,"$1x$2")).replace(/^./, c=>c.toUpperCase());
   return {den: cap1(m[1]), furn: f ? f[1].trim().replace(/\b(srl|sa|sc)\b/g, x=>x.toUpperCase()).replace(/(^|\s)(\S)/g,(a,b,c)=>b+c.toUpperCase()) : ""};
 }
 function certSugestii(){
@@ -2619,6 +2635,226 @@ window.addEventListener("drop", async e=>{
   busy(false);
   if(files.length) addFiles(files);
 });
+
+/* ---- SEMNĂTURI ELECTRONICE ÎN PDF ----
+   Un PDF semnat digital conține un dicționar /Type /Sig, cu certificatul semnatarului în /Contents.
+   Citim numele din câmpul /Name și din certificat (CN, OID 2.5.4.3), fără să validăm criptografic semnătura. */
+const CA_WORDS = /\b(ca|root|authority|autoritate|certsign|digisign|trans sped|transsped|alfasign|qualified|calificat|trust|issuing|class|tsa|timestamp|ocsp)\b/i;
+async function pdfSigInfo(file){
+  try{
+    if(file.size > 40*1048576) return null;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const s = new TextDecoder("latin1").decode(bytes);
+    if(!/\/Type\s*\/Sig\b|\/ByteRange\s*\[/.test(s)) return null;
+    const names = new Set();
+    let m; const rn = /\/Name\s*\(([^)]{2,80})\)/g;
+    while((m = rn.exec(s))) names.add(m[1].trim());
+    const rc = /\/Contents\s*<([0-9A-Fa-f]{200,})>/g;
+    while((m = rc.exec(s))){
+      const hex = m[1].toLowerCase();
+      // 06 03 55 04 03 = OID commonName, urmat de un șir (UTF8 0c, Printable 13, BMP 1e, IA5 16, T61 14)
+      let i = 0;
+      while((i = hex.indexOf("0603550403", i)) >= 0){
+        const tag = hex.substr(i+10,2), len = parseInt(hex.substr(i+12,2),16);
+        if(["0c","13","16","14","1e"].includes(tag) && len>1 && len<128){
+          const raw = hex.substr(i+14, len*2); let txt = "";
+          if(tag==="1e"){ for(let k=0;k<raw.length;k+=4) txt += String.fromCharCode(parseInt(raw.substr(k,4),16)); }
+          else { const b = new Uint8Array(raw.match(/../g).map(x=>parseInt(x,16))); txt = new TextDecoder(tag==="0c"?"utf-8":"latin1").decode(b); }
+          if(!CA_WORDS.test(norm(txt))) names.add(txt.trim());
+        }
+        i += 10;
+      }
+    }
+    const count = (s.match(/\/Type\s*\/Sig\b/g)||[]).length || 1;
+    return {n: count, names:[...names].slice(0,8)};
+  }catch(e){ return null; }
+}
+// ce roluri acoperă semnăturile electronice ale unui PV: după persoanele lucrării și după „inspectorat”
+function autoSig(d){
+  const out = {};
+  if(!d.sig || !d.sig.names) return out;
+  const toks = n => new Set(norm(n).replace(/\b(ing|ec|dr|arh)\b\.?/g," ").split(/[^a-z]+/).filter(w=>w.length>=3));
+  const RK = {[ROLURI[0]]:"dir", [ROLURI[1]]:"rte", [ROLURI[2]]:"pr"};
+  for(const nm of d.sig.names){
+    const t = toks(nm);
+    if(/inspector|\bisc\b/.test(norm(nm))) out.isc = nm;
+    for(const p of S.pers){
+      const k = RK[p.rol]; if(!k || !p.nume) continue;
+      const pt = [...toks(p.nume)];
+      if(pt.length && pt.filter(w=>t.has(w)).length >= Math.min(2, pt.length)) out[k] = nm;
+    }
+  }
+  return out;
+}
+
+/* ---- WORD VECHI (.doc) ----
+   Fișierul e un „compound file”; textul stă în fluxul WordDocument. Îl găsim și scoatem
+   primele rânduri lizibile (Unicode sau cp1252) — suficient pentru titlu, număr și dată. */
+async function docText(file){
+  try{
+    const b = new Uint8Array(await file.arrayBuffer()), dv = new DataView(b.buffer);
+    if(dv.getUint32(0,true)!==0xE011CFD0) return null;
+    const ss = 1 << dv.getUint16(0x1E,true), sec = n => 512 + n*ss, END = 0xFFFFFFFA;
+    // tabela de alocare (FAT), din DIFAT
+    const difat = []; for(let i=0;i<109;i++){ const v = dv.getUint32(0x4C+i*4,true); if(v<END) difat.push(v); }
+    let dif = dv.getUint32(0x44,true), g = 0;
+    while(dif < END && g++ < 1000){ for(let i=0;i<ss/4-1;i++){ const v = dv.getUint32(sec(dif)+i*4,true); if(v<END) difat.push(v); } dif = dv.getUint32(sec(dif)+ss-4,true); }
+    const fat = []; for(const fs of difat) for(let i=0;i<ss/4;i++) fat.push(dv.getUint32(sec(fs)+i*4,true));
+    const chain = (st, t) => { const out=[]; let c=st, k=0; while(c<END && k++<500000){ out.push(c); c = t[c]; } return out; };
+    const readBig = (st, size) => { const out = new Uint8Array(size); let o=0; for(const c of chain(st, fat)){ const n = Math.min(ss, size-o); if(n<=0) break; out.set(b.subarray(sec(c), sec(c)+n), o); o+=n; } return out; };
+    // directorul
+    const ents = {};
+    let root = null;
+    for(const ds of chain(dv.getUint32(0x30,true), fat)) for(let e=0; e<ss/128; e++){
+      const p = sec(ds)+e*128, nl = dv.getUint16(p+0x40,true); if(nl<2) continue;
+      let nm = ""; for(let k=0;k<nl-2;k+=2) nm += String.fromCharCode(dv.getUint16(p+k,true));
+      const ent = {st:dv.getUint32(p+0x74,true), size:dv.getUint32(p+0x78,true), type:b[p+0x42]};
+      if(ent.type===5) root = ent; else ents[nm] = ent;
+    }
+    // fluxurile mici (< 4096 octeți) stau în „mini stream”
+    const cutoff = dv.getUint32(0x38,true);
+    let mini = null, minifat = null;
+    const readStream = ent => {
+      if(ent.size >= cutoff) return readBig(ent.st, ent.size);
+      if(!mini){ mini = readBig(root.st, root.size); minifat = []; const mf = readBig(dv.getUint32(0x3C,true), dv.getUint32(0x40,true)*ss); for(let i=0;i<mf.length/4;i++) minifat.push(new DataView(mf.buffer).getUint32(i*4,true)); }
+      const out = new Uint8Array(ent.size); let o = 0;
+      for(const c of chain(ent.st, minifat)){ const n = Math.min(64, ent.size-o); if(n<=0) break; out.set(mini.subarray(c*64, c*64+n), o); o+=n; }
+      return out;
+    };
+    if(!ents.WordDocument) return null;
+    const w = readStream(ents.WordDocument), wv = new DataView(w.buffer);
+    const flags = wv.getUint16(0x0A,true);
+    if(flags & 0x0100) return "";                                   // document criptat
+    const tbl = ents[(flags & 0x0200) ? "1Table" : "0Table"]; if(!tbl) return null;
+    const t = readStream(tbl), tv = new DataView(t.buffer);
+    const fcClx = wv.getUint32(0x01A2,true), lcbClx = wv.getUint32(0x01A6,true);
+    // Clx: înregistrări Prc (0x01) urmate de Pcdt (0x02) cu tabela de bucăți de text
+    let q = fcClx;
+    while(q < fcClx+lcbClx && t[q]===0x01) q += 3 + tv.getUint16(q+1,true);
+    if(t[q]!==0x02) return null;
+    const lcb = tv.getUint32(q+1,true), pl0 = q+5, n = (lcb-4)/12;
+    let txt = "";
+    for(let i=0; i<n && txt.length<1500; i++){
+      const cp0 = tv.getUint32(pl0+i*4,true), cp1 = tv.getUint32(pl0+(i+1)*4,true);
+      const pcd = pl0 + (n+1)*4 + i*8, fcv = tv.getUint32(pcd+2,true);
+      const comp = (fcv & 0x40000000) !== 0, len = cp1-cp0;
+      if(comp){ const fc = (fcv & 0x3FFFFFFF)/2; txt += new TextDecoder("windows-1252").decode(w.subarray(fc, fc+len)); }
+      else { txt += new TextDecoder("utf-16le").decode(w.subarray(fcv, fcv+len*2)); }
+    }
+    // codurile de câmp (0x13 … 0x14 rezultat 0x15) și caracterele de control
+    txt = txt.replace(/\x13[^\x14\x15]*\x14?/g,"").replace(/[\x00-\x1f]/g," ");
+    return norm(txt).replace(/\s+/g," ").trim().slice(0,800);
+  }catch(e){ return null; }
+}
+
+/* ---- OCR (scanuri fără text) ----
+   Tesseract rulează în pagină, local, cu limba română; motorul și dicționarul se descarcă o singură dată
+   de pe jsDelivr. Pentru PDF-uri scanate citim prima pagină, desenată cu pdf.js. */
+const OCR_SRC = window.OCR_SRC || "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+const OCR_OPT = window.OCR_OPT || {workerPath:"https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js", corePath:"https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1", langPath:"https://cdn.jsdelivr.net/npm/@tesseract.js-data/ron/4.0.0"};
+let OCR_P = null;
+function loadOcr(){
+  if(window.Tesseract) return Promise.resolve(window.Tesseract);
+  if(OCR_P) return OCR_P;
+  OCR_P = new Promise(res=>{
+    const s = document.createElement("script"); s.src = OCR_SRC;
+    const t = setTimeout(()=>res(null), 20000);
+    s.onload = () => { clearTimeout(t); res(window.Tesseract||null); };
+    s.onerror = () => { clearTimeout(t); res(null); };
+    document.head.appendChild(s);
+  }).then(l=>{ if(!l) OCR_P = null; return l; });
+  return OCR_P;
+}
+async function pdfFirstPageImage(file){
+  const lib = await loadPdfJs(); if(!lib) return null;
+  const doc = await lib.getDocument({data: await file.arrayBuffer()}).promise;
+  const page = await doc.getPage(1);
+  const vp0 = page.getViewport({scale:1}), scale = Math.min(2.5, 1800 / Math.max(vp0.width, vp0.height));
+  const vp = page.getViewport({scale});
+  const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
+  await page.render({canvasContext:c.getContext("2d"), viewport:vp}).promise;
+  doc.destroy && doc.destroy();
+  return c;
+}
+async function runOcr(files){
+  const T = await loadOcr();
+  if(!T){ busy(false); alert("Cititorul OCR nu s-a putut încărca. E nevoie de internet la prima folosire."); return; }
+  let worker;
+  try{ worker = await T.createWorker("ron", 1, OCR_OPT); }catch(e){ busy(false); alert("Cititorul OCR nu a pornit: " + (e && e.message || e)); return; }
+  let n = 0, ok = 0;
+  for(const {d, f} of files){
+    busy(true, `OCR… ${++n} din ${files.length} (câteva secunde pe pagină)`);
+    try{
+      const src = d.ext==="pdf" ? await pdfFirstPageImage(f) : f;
+      if(!src) continue;
+      const r = await worker.recognize(src);
+      const t = norm(r.data.text||"").replace(/\s+/g," ").trim().slice(0,800);
+      if(t.length > 20){ d.txt = t; d.ocr = true; enrichDoc(d); ok++; } else d.ocr = true;
+    }catch(e){ d.ocr = true; }
+  }
+  await worker.terminate();
+  busy(false); render();
+  alert(`OCR gata: ${pl(ok,"document citit","documente citite")} din ${files.length}. Verifică datele și numerele preluate; la scanurile neclare citirea poate greși.`);
+}
+// documentele care au nevoie de OCR: imagini și PDF-uri fără text
+const needsOcr = d => !d.ocr && (["jpg","jpeg","png","tif","tiff","bmp","webp"].includes(d.ext) || (d.ext==="pdf" && d.txt===""));
+
+/* ---- FOLDERUL LUCRĂRII, ȚINUT MINTE (Chrome, Edge) ----
+   Legătura spre folder (inclusiv de pe server, mapat ca disc) se păstrează în browser; la „Verifică folderul”
+   aplicația îl parcurge și aduce doar fișierele noi, prin verificarea la intrare. */
+const IDB = {
+  db(){ return new Promise((res,rej)=>{ const r = indexedDB.open("schela_foldere", 1); r.onupgradeneeded = () => r.result.createObjectStore("h"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async get(k){ const db = await this.db(); return new Promise(res=>{ const q = db.transaction("h").objectStore("h").get(k); q.onsuccess = () => res(q.result||null); q.onerror = () => res(null); }); },
+  async set(k,v){ const db = await this.db(); return new Promise(res=>{ const t = db.transaction("h","readwrite"); t.objectStore("h").put(v,k); t.oncomplete = () => res(true); t.onerror = () => res(false); }); },
+  async del(k){ const db = await this.db(); return new Promise(res=>{ const t = db.transaction("h","readwrite"); t.objectStore("h").delete(k); t.oncomplete = () => res(true); }); }
+};
+const FH = new Map();   // legăturile din sesiunea curentă (și dacă browserul nu le poate păstra)
+const canLink = () => typeof window.showDirectoryPicker === "function" && typeof indexedDB !== "undefined";
+async function linkFolder(){
+  let h; try{ h = await window.showDirectoryPicker({mode:"read"}); }catch(e){ return; }
+  FH.set(S.id, h); try{ await IDB.set(S.id, h); }catch(e){}
+  S.folder = {name:h.name, at:""}; render();
+  if(confirm(`Folderul „${h.name}” e legat de lucrare. Îl verific acum și aduc fișierele noi?`)) checkFolder();
+}
+async function folderHandle(ask){
+  if(!canLink()) return null;
+  let h = FH.get(S.id) || null;
+  if(!h){ try{ h = await IDB.get(S.id); }catch(e){ return null; } if(h) FH.set(S.id, h); }
+  if(!h) return null;
+  try{
+    let p = await h.queryPermission({mode:"read"});
+    if(p!=="granted" && ask) p = await h.requestPermission({mode:"read"});
+    return p==="granted" ? h : null;
+  }catch(e){ return null; }
+}
+async function folderFiles(h){
+  const out = [];
+  async function walk(dir, path){
+    for await (const [name, e] of dir.entries()){
+      if(e.kind==="file"){ try{ out.push({f: await e.getFile(), path}); }catch(err){} }
+      else await walk(e, path+"/"+name);
+    }
+  }
+  await walk(h, h.name);
+  return out;
+}
+async function checkFolder(){
+  const h = await folderHandle(true);
+  if(!h){ alert("Nu am acces la folderul legat. Leagă-l din nou (poate a fost mutat sau serverul nu e conectat)."); return; }
+  busy(true, `Se parcurge „${h.name}”…`);
+  const files = await folderFiles(h);
+  busy(false);
+  S.folder = {name:h.name, at:new Date().toISOString()};
+  addFiles(files);
+}
+// fișierele lucrării pentru aranjare, citirea textului sau OCR: din folderul legat sau ales acum
+async function sourceFilesMap(){
+  const h = await folderHandle(true); if(!h) return null;
+  busy(true, `Se parcurge „${h.name}”…`);
+  const fl = await folderFiles(h); busy(false);
+  const m = new Map(); for(const {f, path} of fl){ m.set(path+"|"+f.name+"|"+f.size, f); m.set("|"+f.name+"|"+f.size, f); }
+  return m;
+}
 
 /* ---- CONFORMITATE ----
    Verificare orientativă a dosarului față de actele normative. Detectarea se face după
@@ -2975,11 +3211,12 @@ const BB_KB = [
   {k:["export","csv","excel"], a:()=>`La <b>Rezultate</b> ai <b>Export inventar (CSV)</b> și <b>Export statistici (CSV)</b>; se deschid direct în Excel. ${go("rezultate","Deschide Rezultate")}`},
   {k:["conformitate","verificare norme","verificare conformitate","legislatie"], a:()=>`La <b>Conformitate</b>, aplicația verifică dosarul față de HG 343/2017, Legea 10/1995 și procedura ISC (Ordinul MDRAP 1370/2014). Fiecare lipsă are gravitatea (control ISC, blochează recepția, recomandat) și temeiul legal. Alege faza lucrării ca să vezi ce e scadent acum. ${go("conformitate","Deschide Conformitate")}`},
   {k:["materiale","cum verific certificatele","verific certificatele","verificare certificate","certificate materiale","certificat nu corespunde","documente de calitate materiale","lista materiale"], a:()=>`La <b>Materiale</b> lipești lista materialelor principale (din deviz, ofertă sau avize), câte unul pe rând, opțional cu furnizorul după „;”. Aplicația caută documentul de calitate al fiecăruia în inventar; tu bifezi <b>Corespunde</b> după ce verifici că tipul, dimensiunile și producătorul se potrivesc cu materialul livrat. Ce lipsește trimiți la Lipsuri și ceri de la furnizori. ${CUR?go("materiale","Deschide Materiale"):""}`},
-  {k:["semnaturi","pv nesemnat","pv nesemnate","cine semneaza pv","semnaturi lipsa"], a:()=>`La <b>Execuție → Semnături pe PV-uri</b> apar toate procesele-verbale din inventar. Bifezi cine a semnat: RTE și dirigintele la orice PV, iar la fazele determinante și la natura terenului și proiectantul și ISC. Cele incomplete le trimiți la Lipsuri. ${CUR?go("executie:sem","Vezi semnăturile"):""}`},
+  {k:["semnaturi","pv nesemnat","pv nesemnate","cine semneaza pv","semnaturi lipsa"], a:()=>`La <b>Execuție → Semnături pe PV-uri</b> apar toate procesele-verbale din inventar. PDF-urile semnate electronic se bifează singure, după numele din certificat comparat cu persoanele de la Proiect; la cele scanate bifezi tu (sau „toate” pe rând). RTE și dirigintele semnează orice PV, iar la fazele determinante și la natura terenului și proiectantul și ISC. Cele incomplete le trimiți la Lipsuri. ${CUR?go("executie:sem","Vezi semnăturile"):""}`},
   {k:["convocare isc","cand convoc","calendar faze","termen convocare","3 zile lucratoare"], a:()=>`La <b>Execuție → Faze determinante</b> treci data estimată a fiecărei faze; aplicația calculează până când trebuie trimisă convocarea (cu cel puțin 3 zile lucrătoare înainte, fără sărbătorile legale) și îți pregătește un model de text. ${(()=>{ if(!CUR) return ""; const u = fazeUrgente(); return u.length ? `Acum ai <b>${u.length}</b> ${u.length===1?"convocare urgentă":"convocări urgente"}: ${u.slice(0,3).map(f=>esc(f.den)).join("; ")}.` : ""; })()} ${CUR?go("executie:faze","Vezi fazele"):""} <span class="bb-law">Ordinul MDRAP 1370/2014, art. 15</span>`},
   {k:["modificari proiect","registru dispozitii","dispozitie fara desen","inclus in as built","modificari de proiect"], a:()=>`Modificările de proiect le ții la <b>Execuție → Dispoziții de șantier</b>: fiecare dispoziție cu numărul, data, ce modifică, dacă are desen și dacă a intrat în as built. Aplicația preia singură dispozițiile găsite în inventar și îți arată ce lipsește înainte de recepție. ${CUR?go("executie:disp","Vezi dispozițiile"):""} <span class="bb-law">HG 343/2017, Anexa 6, pct. 7 lit. c)</span>`},
   {k:["aranjeaza dosarul","foldere dosare","copiez fisierele","stick","organizez dosarul","dosar pe calculator"], a:()=>`La <b>Carte tehnică → Aranjează dosarul pe calculator</b> aplicația face un folder cu subfolderele Dosar A1 … Dosar D1 și pune în ele copii ale fișierelor găsite, numerotate ca în borderou, plus lista documentelor. Originalele nu se ating. Merge în Chrome și Edge, pe calculator. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
-  {k:["scan","nume neclar","citeste pdf","text pdf","continut pdf","ocr"], a:()=>`Din PDF-uri aplicația citește local începutul textului, ca să recunoască și fișierele cu nume neclar, de exemplu „scan001.pdf”. Pentru documentele deja în inventar apasă <b>Inventar → Citește textul din PDF-uri</b> și alege din nou folderul. Scanurile fără strat de text nu pot fi citite: pentru ele ar trebui OCR; redenumește-le sau leagă-le manual.`},
+  {k:["scan","nume neclar","citeste pdf","text pdf","continut pdf","ocr","scanuri","poze","doc vechi","word vechi"], a:()=>`Din PDF-uri și din Word (.docx și .doc) aplicația citește local începutul textului: recunoaște fișierele cu nume neclar și ia numărul și data. Pentru <b>scanuri și poze</b> apasă <b>Inventar → Citește scanurile (OCR)</b>: textul se citește în pagină, în limba română, câteva secunde pe pagină. La scanurile neclare verifică ce a preluat.`},
+  {k:["server","folderul lucrarii","leaga folderul","verifica folderul","fisiere noi","sincronizare"], a:()=>`La <b>Inventar → Leagă folderul lucrării</b> alegi o singură dată folderul (și de pe server, dacă e mapat ca disc). Apoi <b>Verifică folderul</b> aduce doar fișierele noi, prin verificarea la intrare. Merge în Chrome și Edge; browserul cere permisiunea o dată pe sesiune. ${CUR?go("inventar","Deschide Inventarul"):""}`},
   // --- noțiuni de specialitate ---
   {k:["faza determinanta","faze determinante"], a:()=>`O <b>fază determinantă</b> e o etapă de execuție hotărâtoare pentru rezistența și stabilitatea construcției. Proiectantul le stabilește în <b>programul de control pe faze determinante</b>, beneficiarul și verificatorul îl acceptă, iar ISC îl aprobă. Executantul convoacă ISC cu <b>cel puțin 3 zile lucrătoare</b> înainte, iar lucrarea continuă doar după acceptul scris, consemnat în procesul-verbal de control. <span class="bb-law">Ordinul MDRAP 1370/2014, art. 9, 15, 18; Legea 10/1995, art. 23 lit. d)</span>`},
   {k:["lucrari ascunse","pv lucrari ascunse"], a:()=>`<b>PV-ul de lucrări ascunse</b> consemnează calitatea lucrărilor care urmează să fie acoperite (fundații, armături, prize de pământ îngropate etc.) și nu mai pot fi verificate ulterior. Se semnează de executant (RTE) și de dirigintele de șantier și intră în capitolul B al cărții tehnice. <span class="bb-law">HG 343/2017, Anexa 6, pct. 8 lit. b)</span>`},
@@ -3484,7 +3721,25 @@ function bind(){
   };
   // aranjarea dosarului și textul din PDF-uri
   const car=$("#ctArrange"); if(car) car.onclick=openArrange;
-  const bpt=$("#btnPdfTxt"), ipt=$("#inPdfTxt"); if(bpt&&ipt){ bpt.onclick=()=>ipt.click(); ipt.onchange=()=>{ if(ipt.files.length) readPdfTexts([...ipt.files]); ipt.value=""; }; }
+  // sursa fișierelor: folderul legat sau alegerea folderului acum
+  const withSource = async cb => {
+    const inp = $("#inSrc");
+    const pick = () => { if(!inp) return; inp.onchange = () => { const fs = [...inp.files]; inp.value = ""; if(fs.length) cb(filesMap(fs)); }; inp.click(); };
+    if(!S.folder) return pick();          // fără folder legat: alegi folderul acum
+    const m = await sourceFilesMap(); if(m) return cb(m);
+    if(confirm("Nu am acces la folderul legat. Alegi folderul acum?")) pick();
+  };
+  const bpt=$("#btnPdfTxt"); if(bpt) bpt.onclick=()=>withSource(readPdfTexts);
+  const boc=$("#btnOcr"); if(boc) boc.onclick=()=>withSource(m=>{
+    const list = S.docs.filter(needsOcr).map(d=>({d, f: m.get(d.path+"|"+d.name+"|"+d.size) || m.get("|"+d.name+"|"+d.size)})).filter(x=>x.f);
+    if(!list.length) return alert("Nu am găsit scanurile în folderul ales.");
+    if(list.length>15 && !confirm(`Sunt ${list.length} scanuri; OCR-ul durează câteva secunde pe fiecare. Continui?`)) return;
+    busy(true, "Se încarcă cititorul OCR (prima dată durează mai mult)…"); runOcr(list);
+  });
+  const blf=$("#btnLinkF"); if(blf) blf.onclick=linkFolder;
+  const bcf=$("#btnCheckF"); if(bcf) bcf.onclick=checkFolder;
+  v.querySelectorAll("[data-sgall]").forEach(b=>b.onclick=()=>{ const d = S.docs.find(x=>x.id===b.dataset.sgall); if(!d) return; const st = pvState(d); const o = S.sem[d.id] = S.sem[d.id] || {}; st.need.forEach(k=>o[k]=true); render(); });
+  const sga=$("#semAll"); if(sga) sga.onclick=()=>{ const l = pvNesemnate(); if(!confirm(`Marchezi ${pl(l.length,"PV","PV-uri")} ca semnate de toți cei care trebuie să semneze? Fă asta doar dacă ai verificat documentele.`)) return; l.forEach(d=>{ const o = S.sem[d.id] = S.sem[d.id] || {}; pvNeeds(d).forEach(k=>o[k]=true); }); render(); };
 
   // rezultate
   const bo=$("#btnOpis"); if(bo) bo.onclick=()=>{ $("#print").innerHTML=buildOpis(); setTimeout(()=>window.print(),60); };
