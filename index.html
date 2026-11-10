@@ -293,6 +293,8 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
   table.opis tr.miss td{background:#FDF6EE;color:#A9620F}
   tr{break-inside:avoid}
   .bd{break-after:page;font-size:10.5pt;line-height:1.45}
+  .opd{break-after:page}
+  .opd:last-child{break-after:auto}
   .bd:last-child{break-after:auto}
   .bd-h{border-collapse:collapse;margin-bottom:28px}
   .bd-h td{padding:2px 14px 2px 0;vertical-align:top}
@@ -2157,6 +2159,34 @@ const P_NR   = {k:"nr",  label:"Lucrare nr.", ph:"01/2026"};
 const P_COD  = {k:"cod", label:"Cod pentru numerotarea PV-urilor (opțional)", ph:"01-2026"};
 const P_EXTRA= {k:"extra", label:"Documente suplimentare cerute de beneficiar — câte unul pe rând", type:"area", ph:"Fișă tehnică echipament\nBuletin verificare protecții conform specificației beneficiarului", wide:true};
 
+/* Opisul unui dosar al cărții tehnice: poziția, documentul, numărul și data. */
+function buildOpisDosar(d){
+  const m = S.meta, p = ctState().p;
+  let n = 0;
+  const rows = d.items.filter(i=>!i.na).map(i=>{
+    if(i.group) return `<tr class="cap"><td colspan="4">${esc(i.group)}</td></tr>`;
+    n++;
+    const doc = i.doc, nr = doc ? (doc.nr || findNr(doc.name) || "") : "", dt = doc && doc.dataSrc!=="estimat" ? roDate(doc.data) : "";
+    return `<tr class="${doc?"":"miss"}"><td>${n}</td><td>${i.cod?esc(i.cod)+" – ":""}${esc(i.den)}${doc?"":` <b>— LIPSĂ</b>`}</td><td>${esc(nr)}</td><td>${esc(dt)}</td></tr>`;
+  }).join("");
+  return `<div class="opd">
+    <div class="opis-h">
+      <h2>OPIS — Dosar ${esc(d.id)} · ${esc(dosTitle(d))}</h2>
+      <div class="m">${esc(CT_CH[d.ch])}<br>
+        Lucrare: ${esc(m.proiect||"—")}${p.nr?` · nr. ${esc(p.nr)}`:""} · Beneficiar: ${esc(m.beneficiar||"—")}${m.emitent?` · Executant: ${esc(m.emitent)}`:""}</div>
+    </div>
+    <table class="opis">
+      <thead><tr><th style="width:40px">Poz.</th><th>Document</th><th style="width:90px">Nr.</th><th style="width:84px">Data</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="4">Niciun document.</td></tr>`}</tbody>
+    </table>
+    <div class="pf">${pl(n,"poziție","poziții")}${d.total-d.got>0?`, din care ${d.total-d.got} lipsă`:""}. ${m.semnatar?`Întocmit: ${esc(m.semnatar)}`:""}</div>
+  </div>`;
+}
+function printOpisDosare(ids){
+  const dos = (ctMatch()||[]).filter(d=>!ids || ids.includes(d.id));
+  $("#print").innerHTML = dos.map(buildOpisDosar).join("");
+  setTimeout(()=>window.print(), 60);
+}
 function buildBorderouri(){
   const dos = ctMatch(); const m = S.meta, p = ctState().p;
   return dos.map(d=>{
@@ -3086,7 +3116,8 @@ function viewCarte(){
     <div class="card" style="margin-top:6px">
       <div style="display:flex;gap:9px;flex-wrap:wrap">
         <button class="btn" id="ctToLips" ${miss.length?"":"disabled"}>Trimite ${miss.length} ${miss.length===1?"lipsă":"lipsuri"} la Lipsuri</button>
-        <button class="btn o" id="ctPrint">Tipărește borderourile</button>
+        <button class="btn o" id="ctOpisAll">Tipărește opisurile dosarelor</button>
+        <button class="btn g" id="ctPrint">Tipărește borderourile</button>
         <button class="btn g" id="ctArrange" ${got?"":"disabled"}>Aranjează dosarul pe calculator</button>
       </div>
       <p class="muted" style="margin:8px 0 0">Lipsurile din capitolele A și B ajung la Lipsuri, cu „de la cine” completat. Capitolele C și D se completează la recepție și în exploatare.</p>
@@ -3097,7 +3128,8 @@ function viewCarte(){
   return tabs + `
   <div class="crumb"><button class="btn g" id="dosBack">← Înapoi la dosare</button>
     <h2>Dosar ${d.id} · ${esc(dosTitle(d))}</h2>
-    <span class="muted">${d.got} din ${d.total} găsite${d.na?` · ${d.na} nu se aplică`:""}</span></div>
+    <span class="muted">${d.got} din ${d.total} găsite${d.na?` · ${d.na} nu se aplică`:""}</span>
+    <button class="btn o sm" id="dosOpis" style="margin-left:auto">Opisul dosarului ${d.id}</button></div>
   <div class="tw" style="max-height:none"><table>
     <thead><tr><th style="width:120px">Cod</th><th>Document necesar</th><th style="width:120px">Stare</th><th style="width:34%">Fișier din inventar</th><th style="width:150px"></th></tr></thead>
     <tbody>${d.items.map(i=> i.group ? `<tr class="grp-row${i.spec?" spec":""}"><td colspan="5">${esc(i.group)}</td></tr>` : `<tr class="${i.na?"off":""}">
@@ -3619,7 +3651,7 @@ const BB_KB = [
   {k:["paratrasnet","ipt","trasnet","priza paratrasnet"], a:()=>`Pentru <b>paratrăsnet</b> păstrezi proiectul cu nivelul de protecție, PV-ul de lucrări ascunse pentru fiecare priză de pământ, PV-ul de montaj (captare, coborâri) și buletinele de măsurare a rezistenței de dispersie și a continuității. <span class="bb-law">I 7-2011 (modificat în 2023); SR EN 62305</span>`},
   {k:["cerinte beneficiar","documente suplimentare","operator retea cere","beneficiarul cere","lista beneficiar","lista de la beneficiar","excel beneficiar"], a:()=>`Lista primită de la beneficiar o încarci la <b>Carte tehnică → Parametrii lucrării și lista beneficiarului → Încarcă lista</b>: PDF, Word, <b>Excel</b> sau poză. Aplicația scoate documentele (rânduri numerotate, cu liniuță sau coloana cu denumiri din tabel), ți le arată să le confirmi și le pune într-un dosar separat; originalul rămâne la lucrare. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
   {k:["borderou","borderouri","tiparesc borderou"], a:()=>`Borderourile se tipăresc de la <b>Carte tehnică → Tipărește borderourile</b>: câte unul pe dosar, cu numerotarea calculată; documentele lipsă apar marcate LIPSĂ. Ca să obții PDF, alege „Salvare ca PDF” în fereastra de tipărire. ${go("carte","Deschide Cartea tehnică")}`},
-  {k:["opis","pdf opis","tiparesc opis"], a:()=>`Opisul se generează de la <b>Rezultate → Generează opisul</b>. Conține documentele în vigoare, grupate pe capitole, plus lipsurile marcate LIPSĂ. Pentru PDF, alege „Salvare ca PDF” la tipărire. ${go("rezultate","Deschide Rezultate")}`},
+  {k:["opis","pdf opis","tiparesc opis","opis dosar","opisul dosarului"], a:()=>`Fiecare dosar al cărții tehnice are opisul lui: în pagina dosarului apeși <b>Opisul dosarului</b> (poziția, documentul, numărul și data, cu lipsurile marcate), iar pe pagina cu dosarele <b>Tipărește opisurile dosarelor</b> le scoate pe toate, fiecare pe pagina lui. Opisul general al lucrării se generează de la <b>Rezultate → Generează opisul</b>. Conține documentele în vigoare, grupate pe capitole, plus lipsurile marcate LIPSĂ. Pentru PDF, alege „Salvare ca PDF” la tipărire. ${go("rezultate","Deschide Rezultate")}`},
   {k:["cerere","cer documente","trimit cerere","email cerere","adresa cerere"], a:()=>`La <b>Cereri</b>, lipsurile sunt grupate pe „de la cine se recuperează”. Alegi termenul și apeși <b>Pregătește cererea</b>: poți copia textul, îl poți deschide în email sau poți tipări o adresă formală. După <b>Marchează ca trimisă</b>, aplicația urmărește termenul și bifează singură documentele care sosesc. ${go("cereri","Deschide Cereri")}`},
   {k:["reamintire","nu a raspuns","nu trimite","intarzie"], a:()=>bbCereri()},
   {k:["am documentul","nu l-a recunoscut","nu gaseste documentul","nu se aplica"], a:()=>`Verificările se fac după denumirea fișierelor. Dacă ai un document pe care aplicația nu l-a recunoscut, apasă <b>Am documentul</b> la cerința respectivă din Conformitate. Dacă cerința nu e valabilă pentru lucrarea ta, apasă <b>Nu se aplică</b>. Denumirile clare (de exemplu „PV lucrari ascunse priza st 8”) ajută recunoașterea.`},
@@ -3979,6 +4011,8 @@ function bind(){
   // cartea tehnică pe dosare
   v.querySelectorAll("[data-cttab]").forEach(b=>b.onclick=()=>{ CTTAB=b.dataset.cttab; render(); v.scrollTop=0; });
   v.querySelectorAll("[data-dos]").forEach(b=>b.onclick=()=>{ CTSEL=b.dataset.dos; render(); v.scrollTop=0; });
+  const dop=$("#dosOpis"); if(dop) dop.onclick=()=>printOpisDosare([CTSEL]);
+  const doa=$("#ctOpisAll"); if(doa) doa.onclick=()=>printOpisDosare(null);
   const dbk=$("#dosBack"); if(dbk) dbk.onclick=()=>{ CTSEL=null; render(); v.scrollTop=0; };
   const ctMan = () => { const ct = ctState(); return ct.man = ct.man || {}; };
   v.querySelectorAll("[data-ctman]").forEach(el=>el.onchange=()=>{ const m = ctMan(); if(el.value) m[el.dataset.ctman]=el.value; else delete m[el.dataset.ctman]; render(); });
