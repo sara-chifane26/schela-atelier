@@ -233,6 +233,10 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 @media (max-width:900px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} .prow{grid-template-columns:1fr 1fr} }
 @media (max-width:760px){ .tile{min-height:132px;gap:10px;padding:16px 8px} .tile svg{width:40px;height:40px} .tile b{font-size:16px} .prow{grid-template-columns:1fr} }
 
+.fmt{display:inline-block;font-size:12.5px;color:var(--muted);background:var(--surface);border:1px solid var(--line-soft);border-radius:4px;padding:3px 8px;line-height:1.4}
+.fmt b{color:var(--ink);font-weight:600}
+.fmtline{flex-basis:100%;margin-top:2px}
+.tag.t-conv{background:var(--ochre-soft);color:var(--ochre)}
 .drop-ov{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(35,92,130,.18);padding:24px}
 .drop-ov.on{display:flex}
 .drop-ov div{display:flex;flex-direction:column;align-items:center;gap:10px;background:var(--surface);border:2px dashed var(--blue);border-radius:10px;padding:34px 40px;color:var(--blue);text-align:center;max-width:460px;box-shadow:0 12px 40px rgba(20,33,43,.2)}
@@ -346,7 +350,7 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
       <span class="sub" id="vsub"></span>
       <span class="spacer"></span>
       <button class="btn g sm" id="btnSave">Salvează proiect</button>
-      <button class="btn g sm" id="btnLoad">Deschide proiect</button>
+      <button class="btn g sm" id="btnLoad" title="Fișier .json salvat din Schela cu „Salvează proiect”">Deschide proiect (.json)</button>
       <input type="file" id="fileLoad" accept=".json" hidden>
     </div>
     <div class="view" id="view"></div>
@@ -357,8 +361,8 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 <div class="bb" id="bb"></div>
 
 <div id="print"></div>
-<div class="drop-ov" id="dropOv" aria-hidden="true"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M7 10l5 5 5-5M4 17v3h16v-3"/></svg><b>Lasă fișierele aici</b><span>PDF, Word, scanuri sau foldere întregi — trec prin verificarea la intrare</span></div></div>
-<input type="file" id="inGlobal" multiple hidden accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.tif,.tiff,.dwg,.zip">
+<div class="drop-ov" id="dropOv" aria-hidden="true"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M7 10l5 5 5-5M4 17v3h16v-3"/></svg><b>Lasă fișierele aici</b><span>Orice tip de fișier sau foldere întregi (PDF, Word, Excel, poze, DWG…) — trec prin verificarea la intrare</span></div></div>
+<input type="file" id="inGlobal" multiple hidden>
 <div class="modal" id="intake" role="dialog" aria-modal="true" aria-label="Verificare la intrare"></div>
 <div class="busy" id="busy" role="status" aria-live="polite"><div id="busyT">Se citesc fișierele…</div></div>
 
@@ -2278,7 +2282,7 @@ function viewMateriale(){
     <div class="stat ok"><div class="v">${nO}</div><div class="l">verificate</div></div>
   </div>
 
-  <div class="dropzone"><b>Certificate și declarații:</b> trage aici PDF-urile sau documentele Word (sau un folder întreg) ori <button class="btn g sm" data-addfiles>alege fișierele</button> <span>Trec prin verificarea la intrare și se leagă singure de materiale.</span></div>
+  <div class="dropzone"><b>Certificate și declarații:</b> trage aici PDF-urile sau documentele Word (sau un folder întreg) ori <button class="btn g sm" data-addfiles>alege fișierele</button> <span>Trec prin verificarea la intrare și se leagă singure de materiale.</span><span class="fmtline">${fmtTag("calitate")}</span></div>
   ${(()=>{ const sg = certSugestii(); return sg.length ? `<div class="card"><h3>Materiale găsite în certificate</h3>
     <p class="muted" style="margin:0 0 10px">Am citit denumirea produsului din ${pl(sg.length,"document de calitate","documente de calitate")}. Bifează ce intră în listă; fiecare material rămâne legat de documentul lui.</p>
     <div class="dom-pick" style="grid-template-columns:1fr">${sg.map((x,i)=>`<label><input type="checkbox" data-csug="${i}" checked> <span><b>${esc(x.i.den)}</b>${x.i.furn?` · ${esc(x.i.furn)}`:""}<br><span class="muted">din ${esc(x.d.name)}${(()=>{ const q = qualType(x.d); return q ? ` · ${esc(q.tip)}${q.l!=="ro"?" în "+esc(q.limba):""}` : ""; })()}</span></span></label>`).join("")}</div>
@@ -2367,7 +2371,7 @@ function viewExecutie(){
   const dProb = S.disp.filter(x=>!x.desen || !x.asbuilt).length;
   const tab = (id, t, n) => `<button class="btn ${EXTAB===id?"":"g"} sm" data-extab="${id}">${t}${n?` · ${n}`:""}</button>`;
   return `
-  <div class="dropzone"><b>PV-uri și dispoziții de șantier:</b> trage aici fișierele (PDF, Word, foldere) ori <button class="btn g sm" data-addfiles>alege fișierele</button> <span>Numărul și data se iau singure din denumire sau din text.</span></div>
+  <div class="dropzone"><b>PV-uri și dispoziții de șantier:</b> trage aici fișierele (PDF, Word, foldere) ori <button class="btn g sm" data-addfiles>alege fișierele</button> <span>Numărul și data se iau singure din denumire sau din text.</span><span class="fmtline">${fmtTag("oricare")}</span></div>
   <div class="fbar">${tab("faze","Faze determinante",urg)}${tab("sem","Semnături pe PV-uri",nes)}${tab("disp","Dispoziții de șantier",dProb)}</div>
   ${EXTAB==="faze" ? viewFaze() : EXTAB==="sem" ? viewSemnaturi() : viewDispozitii()}`;
 }
@@ -2496,7 +2500,7 @@ function openArrange(){
         <p style="margin:0 0 10px">Aplicația face un folder nou, <b>„Carte tehnică – ${esc(safeName(S.meta.proiect||"lucrare"))}”</b>, cu câte un subfolder pe dosar (Dosar A1 … Dosar D1) și pune în ele <b>copii</b> ale celor <b>${plan.length}</b> fișiere găsite, numerotate ca în borderou. Fișierele originale nu se ating. Alături scrie și lista documentelor (CSV).</p>
         ${canWrite ? "" : `<div class="note warn">Browserul acesta nu poate scrie foldere. Deschide aplicația în <b>Chrome</b> sau <b>Edge</b> pe calculator.</div>`}
         <p style="margin:0 0 8px"><b>1.</b> Alege din nou folderul cu documentele lucrării (cel din care ai făcut inventarul).</p>
-        <button class="btn g" id="arrSrcBtn" ${canWrite?"":"disabled"}>Alege folderul cu documente</button>
+        <button class="btn g" id="arrSrcBtn" ${canWrite?"":"disabled"}>Alege folderul cu documente</button> <span class="fmt"><b>Orice tip de fișier</b> · se copiază exact cum sunt</span>
         ${S.folder && canWrite ? `<button class="btn g" id="arrLinked">Folosește folderul legat „${esc(S.folder.name)}”</button>` : ""}
         <input type="file" id="arrSrc" webkitdirectory directory multiple hidden>
         ${ARR.files ? `<p class="muted" style="margin:8px 0 0">Am găsit ${found} din ${plan.length} fișiere.${found<plan.length?" Cele lipsă sunt probabil în alt folder; poți continua cu ce s-a găsit.":""}</p>` : ""}
@@ -3021,6 +3025,7 @@ function viewInventar(){
         <button class="btn g" id="btnPickFiles">Alege fișiere</button>
         ${canLink() ? `<button class="btn g" id="btnLinkF">Leagă folderul lucrării</button>` : ""}
       </div>
+      <div style="margin-top:14px">${fmtTag("oricare")}</div>
       <input type="file" id="inDir" webkitdirectory directory multiple hidden>
       <input type="file" id="inFiles" multiple hidden>
     </div></div>`;
@@ -3038,6 +3043,7 @@ function viewInventar(){
     ${S.docs.some(needsOcr) ? `<button class="btn g sm" id="btnOcr" title="Citește local scanurile și pozele (OCR). Durează câteva secunde pe pagină.">Citește scanurile (OCR) · ${S.docs.filter(needsOcr).length}</button>` : ""}
     <input type="file" id="inSrc" webkitdirectory directory multiple hidden>
     <span class="count">${S.docs.length} documente</span>
+    <span class="fmtline">${fmtTag("oricare")}</span>
   </div>`;
   // fără rubrică aleasă și fără căutare: chenarele
   if(!INVRUB && !FILTER.q){
@@ -3097,9 +3103,9 @@ function ctParamsHtml(){
   </div>
   <div class="card">
     <h3>Documente suplimentare cerute de beneficiar</h3>
-    <div class="dropzone" style="margin-bottom:12px"><b>Lista beneficiarului:</b> <button class="btn sm" id="benUp">Încarcă lista (PDF, Word, Excel sau poză)</button> <span>Aplicația scoate documentele din listă și ți le arată să le confirmi.</span>
+    <div class="dropzone" style="margin-bottom:12px"><b>Lista beneficiarului:</b> <button class="btn sm" id="benUp">Încarcă lista (PDF, Word, Excel sau poză)</button> <span>Aplicația scoate documentele din listă și ți le arată să le confirmi.</span><span class="fmtline">${fmtTag("lista")}</span>
       ${ct.ben ? `<span style="flex-basis:100%">Lista încărcată: <b>${esc(ct.ben.name)}</b> · ${esc(roDate(ct.ben.at))} <button class="btn g sm" id="benOpen">Deschide originalul</button></span>` : ""}
-      <input type="file" id="inBen" accept=".pdf,.doc,.docx,.xlsx,.xlsm,.csv,.txt,.jpg,.jpeg,.png,.tif,.tiff,.webp" hidden></div>
+      <input type="file" id="inBen" accept=".pdf,.doc,.docx,.xlsx,.xlsm,.xls,.csv,.txt,.jpg,.jpeg,.png,.tif,.tiff,.webp" hidden></div>
     <div class="grid2">${field(P_EXTRA)}</div>
   </div>
   ${ts.map(t=>{ const T = CT_TPL[t]; return `<div class="card">
@@ -3158,7 +3164,7 @@ function viewCarte(){
     <tbody>${d.items.map(i=> i.group ? `<tr class="grp-row${i.spec?" spec":""}"><td colspan="5">${esc(i.group)}</td></tr>` : `<tr class="${i.na?"off":""}">
       <td class="num">${esc(i.cod||"")}</td>
       <td>${esc(i.den)}${i.dela?`<span class="path">de la: ${esc(i.dela)}</span>`:""}</td>
-      <td>${i.na ? `<span class="tag t-none">nu se aplică</span>` : i.doc ? `<span class="tag t-viz">găsit${i.manual?" · ales":""}</span>` : d.later ? `<span class="tag t-none">de completat</span>` : inLips.has(norm(lden(i))) ? `<span class="tag t-dup">în Lipsuri</span>` : `<span class="tag t-late">lipsă</span>`}</td>
+      <td>${i.na ? `<span class="tag t-none">nu se aplică</span>` : i.doc ? `<span class="tag t-viz">găsit${i.manual?" · ales":""}</span>${["pdf","jpg","jpeg","png"].includes(extOf(i.doc.name)) ? "" : `<span class="tag t-conv" title="Ca să intre în cartea tehnică PDF, salvează-l ca PDF și adaugă PDF-ul în inventar.">${esc(extOf(i.doc.name).toUpperCase()||"fișier")} — de salvat ca PDF</span>`}` : d.later ? `<span class="tag t-none">de completat</span>` : inLips.has(norm(lden(i))) ? `<span class="tag t-dup">în Lipsuri</span>` : `<span class="tag t-late">lipsă</span>`}</td>
       <td>${i.na ? "" : `<select data-ctman="${esc(i.key)}"><option value="">${i.doc && !i.manual ? "automat: "+esc(i.doc.name) : "automat — negăsit"}</option>${docs.map(x=>`<option value="${x.id}" ${i.manual && i.doc && i.doc.id===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select>`}</td>
       <td style="white-space:nowrap">${i.na ? `<button class="btn g sm" data-ctna="${esc(i.key)}">Se aplică</button>` : `${!i.doc && !d.later && !inLips.has(norm(lden(i))) ? `<button class="btn g sm" data-ctask="${esc(i.key)}">Cere</button> ` : ""}<button class="btn g sm" data-ctna="${esc(i.key)}">Nu se aplică</button>`}</td>
     </tr>`).join("")}</tbody>
@@ -3299,6 +3305,9 @@ async function readBenList(file){
   return [];
 }
 async function importBenList(file){
+  const x = extOf(file.name);
+  if(x==="xls") return alert("Fișierele Excel vechi (.xls) nu pot fi citite. Deschide-l în Excel și salvează-l ca .xlsx (Salvare ca → Registru de lucru Excel), apoi încarcă-l din nou.");
+  if(!["pdf","doc","docx","xlsx","xlsm","csv","txt","jpg","jpeg","png","tif","tiff","webp","bmp"].includes(x)) return alert(`„${file.name}” nu e un format acceptat pentru lista beneficiarului. ${FMT.lista[0]}.`);
   busy(true, "Se citește lista beneficiarului…");
   const items = await readBenList(file);
   busy(false);
@@ -3333,6 +3342,18 @@ const KEY_FIRMA = "schela_firma_v1";
 let FIRMA = (()=>{ try{ return JSON.parse(localStorage.getItem(KEY_FIRMA)||"null") || {}; }catch(e){ return {}; } })();
 function saveFirma(){ try{ localStorage.setItem(KEY_FIRMA, JSON.stringify(FIRMA)); }catch(e){ alert("Sigla e prea mare pentru a fi păstrată în browser. Alege o imagine mai mică."); } }
 const firmaLine = () => [FIRMA.cui?`CUI ${FIRMA.cui}`:"", FIRMA.reg?`Nr. Reg. Com. ${FIRMA.reg}`:"", FIRMA.adresa||"", FIRMA.tel?`Tel. ${FIRMA.tel}`:"", FIRMA.email||""].filter(Boolean).join(" · ");
+// eticheta cu formatele acceptate, pusă lângă fiecare loc unde se adaugă fișiere
+const FMT = {
+  oricare: ["Orice tip de fișier", "PDF, Word (.docx, .doc), Excel, poze (JPG, PNG), DWG, ZIP… — textul se citește din PDF, Word și, prin OCR, din scanuri și poze"],
+  calitate:["PDF, Word (.docx, .doc), poze (JPG, PNG)", "se citesc tipul documentului, produsul, producătorul, numărul și data"],
+  lista:   ["PDF, Word (.docx, .doc), Excel (.xlsx), CSV, poze (JPG, PNG)", "Excel vechi (.xls): salvează-l întâi ca .xlsx"],
+  sigla:   ["Imagine: PNG sau JPG", "se micșorează singură"],
+  modelW:  ["Doar Word .docx", "un .doc vechi se salvează întâi ca .docx (Word → Salvare ca)"],
+  modelC:  ["Word .docx sau PDF", "PDF-ul intră ca atare, fără câmpuri"],
+  proiect: ["Fișier .json salvat din Schela", "cu „Salvează proiect”"],
+  pdfin:   ["Intră în PDF: PDF, JPG, PNG", "Word, Excel și altele: salvează-le întâi ca PDF"]
+};
+const fmtTag = k => `<span class="fmt" title="${esc(FMT[k][1])}"><b>${esc(FMT[k][0])}</b> · ${esc(FMT[k][1])}</span>`;
 function antetHtml(){
   if(!FIRMA.nume && !FIRMA.logo) return "";
   return `<div class="antet">${FIRMA.logo?`<img src="${FIRMA.logo}" alt="">`:""}<div><b>${esc(FIRMA.nume||"")}</b><span>${esc(firmaLine())}</span></div></div>`;
@@ -3368,11 +3389,12 @@ function openFirma(){
         <span class="lbl" style="margin:0">Sigla</span>
         ${f.logo?`<img src="${f.logo}" alt="" style="max-height:56px;max-width:200px;border:1px solid var(--line-soft);padding:4px;background:#fff">`:`<span class="muted">fără siglă</span>`}
         <button class="btn g sm" id="fmLogo">${f.logo?"Schimbă sigla":"Încarcă sigla"}</button>${f.logo?`<button class="btn g sm" id="fmLogoDel">Scoate sigla</button>`:""}
-        <input type="file" id="inLogo" accept="image/*" hidden>
+        <input type="file" id="inLogo" accept="image/png,image/jpeg" hidden>
+        <span class="fmtline">${fmtTag("sigla")}</span>
       </div>
       <h3 style="margin:22px 0 6px;font-size:15px">Modelele firmei (opțional)</h3>
       <p class="muted" style="margin:0 0 10px">Dacă firma are formularele ei în Word, încarcă-le aici: aplicația le completează singură. Fără model, folosește forma ei, cu antetul firmei.</p>
-      ${MODELE.map(m=>`<div class="lrow"><div class="ln"><b>${m.t}</b><span class="muted">${MODEL_INFO[m.k] ? "model încărcat: "+esc(MODEL_INFO[m.k]) : "forma aplicației"}</span></div>
+      ${MODELE.map(m=>`<div class="lrow"><div class="ln"><b>${m.t}</b><span class="muted">${MODEL_INFO[m.k] ? "model încărcat: "+esc(MODEL_INFO[m.k]) : "forma aplicației"}</span><div style="margin-top:4px">${fmtTag(m.k==="coperta"?"modelC":"modelW")}</div></div>
         <button class="btn g sm" data-mup="${m.k}">${MODEL_INFO[m.k]?"Schimbă modelul":"Încarcă modelul"}</button>${MODEL_INFO[m.k]?`<button class="btn g sm" data-mdel2="${m.k}">Folosește forma aplicației</button>`:""}
         <input type="file" data-min="${m.k}" accept="${m.ext}" hidden></div>`).join("")}
       <details style="margin:12px 0 4px"><summary style="cursor:pointer;font-weight:600;font-size:14px">Ce câmpuri pot pune în model</summary>
@@ -3389,11 +3411,13 @@ function openFirma(){
   box.querySelectorAll("[data-fm]").forEach(el=>el.oninput=()=>{ FIRMA[el.dataset.fm] = el.value; saveFirma(); });
   const lg = $("#inLogo");
   $("#fmLogo").onclick = () => lg.click();
-  lg.onchange = async () => { const fl = lg.files[0]; lg.value=""; if(!fl) return; const d = await loadLogo(fl); if(!d) return alert("Imaginea nu a putut fi citită."); FIRMA.logo = d; saveFirma(); openFirma(); };
+  lg.onchange = async () => { const fl = lg.files[0]; lg.value=""; if(!fl) return; if(!/^image\/(png|jpeg)$/.test(fl.type) && !["png","jpg","jpeg"].includes(extOf(fl.name))) return alert("Sigla trebuie să fie o imagine PNG sau JPG."); const d = await loadLogo(fl); if(!d) return alert("Imaginea nu a putut fi citită."); FIRMA.logo = d; saveFirma(); openFirma(); };
   const ld = $("#fmLogoDel"); if(ld) ld.onclick = () => { delete FIRMA.logo; saveFirma(); openFirma(); };
   box.querySelectorAll("[data-mup]").forEach(b=>b.onclick=()=>box.querySelector(`[data-min="${b.dataset.mup}"]`).click());
   box.querySelectorAll("[data-min]").forEach(inp=>inp.onchange=async()=>{
     const fl = inp.files[0]; inp.value=""; if(!fl) return;
+    const okExt = inp.dataset.min==="coperta" ? ["docx","pdf"] : ["docx"];
+    if(!okExt.includes(extOf(fl.name))) return alert(`„${fl.name}” nu e un format acceptat aici. ${FMT[inp.dataset.min==="coperta"?"modelC":"modelW"][0]} — ${FMT[inp.dataset.min==="coperta"?"modelC":"modelW"][1]}.`);
     if(extOf(fl.name)==="docx"){ const xml = (await zipTexts(fl, n=>n==="word/document.xml"))["word/document.xml"]||""; const txt = xml.replace(/<[^>]+>/g,""); if(!/\{[a-z_]+\}/.test(txt)) alert("Modelul nu are niciun câmp între acolade (de ex. {lucrare}). Îl păstrez, dar va ieși exact cum e. Vezi „Ce câmpuri pot pune în model”."); }
     try{ await IDB.set("model:"+inp.dataset.min, fl); MODEL_INFO[inp.dataset.min] = fl.name; }catch(e){ alert("Modelul nu a putut fi păstrat în browser."); }
     openFirma();
@@ -3632,7 +3656,8 @@ function openCartePdf(){
           <label><input type="checkbox" id="cpFile" checked> Numărul filei pe fiecare pagină</label>
           <label><input type="checkbox" id="cpGoale"> Și dosarele fără niciun document</label>
         </div>
-        <p class="muted" style="margin:10px 0 0">Documentele Word nu pot fi puse direct în PDF: salvează-le întâi ca PDF (Word → Salvare ca → PDF) și adaugă-le în inventar. Aplicația îți spune la final care au rămas pe dinafară.</p>
+        <p style="margin:10px 0 0">${fmtTag("pdfin")}</p>
+        ${(()=>{ const nc = (ctMatch()||[]).flatMap(d=>d.items).filter(i=>i.doc && !i.na && !["pdf","jpg","jpeg","png"].includes(extOf(i.doc.name))); return nc.length ? `<div class="note warn" style="margin:10px 0 0">${pl(nc.length,"document nu va intra","documente nu vor intra")} în PDF până nu le salvezi ca PDF: ${esc(nc.slice(0,6).map(i=>i.doc.name).join(", "))}${nc.length>6?"…":""}. Salvează-le ca PDF (Word → Salvare ca → PDF) și adaugă PDF-ul în inventar.</div>` : ""; })()}
         <p class="muted" id="cpMsg" style="margin:10px 0 0">${msg||""}</p>
       </div>
       <div class="mf"><span class="muted">Totul se face în browser; fișierele nu pleacă din calculator.</span><button class="btn g" id="cpClose">Închide</button><button class="btn" id="cpGo">${S.folder?"Creează PDF-ul din folderul legat":"Alege folderul cu documente și creează PDF-ul"}</button>
@@ -4611,6 +4636,7 @@ $("#btnSave").onclick=()=>{
 $("#btnLoad").onclick=()=>$("#fileLoad").click();
 $("#fileLoad").onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
+  if(extOf(f.name)!=="json"){ e.target.value=""; return alert(`„${f.name}” nu e un proiect Schela. Aici se deschide doar fișierul .json salvat cu „Salvează proiect”. Documentele lucrării se adaugă la Inventar.`); }
   const r=new FileReader();
   r.onload=()=>{
     try{
