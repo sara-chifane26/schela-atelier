@@ -258,6 +258,22 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 .dtile .dt-n b{color:var(--ink)}
 .lsec{font-size:13px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 4px}
 
+.dominfo{display:flex;flex-wrap:wrap;gap:10px}
+.domchip{display:inline-flex;align-items:center;gap:10px;background:var(--blue);color:#fff;border-radius:4px;padding:8px 14px}
+.domchip svg{width:24px;height:24px}
+.domchip b{font-size:15px}
+.linkbtn{background:none;border:none;color:var(--blue);font-weight:600;font-size:14px;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px}
+.pcard{border:1px solid var(--line-soft);border-radius:6px;padding:10px 12px;margin:10px 0;background:var(--surface-3)}
+.pcard .prow{border-bottom:none;padding:0;grid-template-columns:minmax(160px,1.3fr) minmax(170px,1fr) minmax(160px,1fr) auto}
+.autchips label{font-size:12.5px}
+.chips label{display:inline-flex;align-items:center;gap:5px;font-size:13px;border:1px solid var(--line-soft);border-radius:12px;padding:3px 9px;cursor:pointer;background:var(--surface)}
+.chips label.on{border-color:var(--blue);background:var(--blue-soft);color:var(--blue)}
+.tiles.tip{grid-template-columns:repeat(3,minmax(0,1fr))}
+.tiles.tip .tile{min-height:92px;position:relative;opacity:.72}
+.tiles.tip .tile.on{opacity:1;outline:3px solid var(--ochre);outline-offset:-3px}
+.tiles.tip .tick{position:absolute;top:8px;right:12px;font-size:20px;font-weight:800;color:#fff}
+@media (max-width:760px){ .tiles.tip{grid-template-columns:1fr 1fr} .pcard .prow{grid-template-columns:1fr} }
+
 /* print */
 #print{display:none}
 @media print{
@@ -576,7 +592,8 @@ function openLucrare(id, view){
 }
 function newLucrare(domId){
   S = blank(); if(domId) S.dom = [domId];
-  CUR = S.id; LAST_JS = ""; VIEW = "proiect"; render();
+  CUR = S.id; LAST_JS = ""; VIEW = "proiect"; MORE_DOM = false; render();
+  if(domId==="electrice" && typeof openTipChooser==="function") openTipChooser(true);
 }
 function closeLucrare(){ autosave(); CUR = null; S = blank(); VIEW = "acasa"; }
 function deleteLucrare(id){
@@ -751,36 +768,98 @@ function acoperire(){
     dir: S.pers.filter(p=>p.rol===ROLURI[0] && p.dom.includes(id)),
     rte: S.pers.filter(p=>p.rol===ROLURI[1] && p.dom.includes(id))})).filter(x=>x.d);
 }
+/* Domeniile de autorizare ale dirigintelui de șantier (procedura ISC) și domeniile lucrării pe care le acoperă. */
+const AUT_DIR = [
+  {c:"2",   t:"Construcții civile, industriale și agricole", dom:["constructii"]},
+  {c:"3",   t:"Drumuri, poduri, tunele", dom:["drumuri"]},
+  {c:"6.1", t:"Alimentări cu apă și canalizare", dom:["edilitare"]},
+  {c:"8.1", t:"Instalații electrice", dom:["electrice"], anre:true},
+  {c:"8.2", t:"Instalații sanitare, termoventilații", dom:["termice","sanitare","hvac"]},
+  {c:"8.3", t:"Instalații gaze naturale", dom:["gaze"], anre:true},
+  {c:"9.1", t:"Rețele electrice", dom:["electrice"], anre:true},
+  {c:"9.2", t:"Rețele termice și sanitare", dom:["termice","sanitare","edilitare"]},
+  {c:"9.3", t:"Rețele de telecomunicații", dom:[]},
+  {c:"9.4", t:"Rețele de gaze naturale", dom:["gaze"], anre:true}
+];
+const autByC = c => AUT_DIR.find(a=>a.c===c);
+let MORE_DOM = false;   // „Lucrarea are și alte specialități?” deschis
+
+// tipul lucrării (la instalații electrice): fereastră cu chenare, la „Lucrare nouă” și la „Schimbă”
+function openTipChooser(isNew){
+  const el = domById("electrice"), sel = new Set(S.sub.filter(t=>el.tpls.includes(t)));
+  const draw = () => {
+    $("#intake").innerHTML = `<div class="mbox" style="width:min(900px,100%)">
+      <div class="mh"><h2>${isNew ? "Ce fel de lucrare de instalații electrice?" : "Schimbă tipul lucrării"}</h2></div>
+      <div style="padding:0 18px"><p class="muted" style="margin:0 0 12px">Alege unul sau mai multe — de exemplu o clădire cu paratrăsnet și IDSAI. Din tip se generează lista documentelor din cartea tehnică.</p>
+      <div class="tiles tip">${el.tpls.map((t,i)=>`<button class="tile ${sel.has(t)?"on":""} ${(Math.floor(i/3)+i)%2?"dk":""}" data-tip="${t}">${sel.has(t)?`<span class="tick">✓</span>`:""}<b>${esc(CT_TPL[t].short||CT_TPL[t].name)}</b></button>`).join("")}</div></div>
+      <div class="mf"><span class="muted">${sel.size ? pl(sel.size,"tip ales","tipuri alese") : "Niciun tip ales încă."}</span>
+        ${isNew ? "" : `<button class="btn g" id="tipCancel">Renunță</button>`}
+        <button class="btn" id="tipOk" ${sel.size?"":"disabled"}>${isNew ? "Continuă" : "Salvează"}</button></div>
+    </div>`;
+    $("#intake").classList.add("on");
+    $("#intake").querySelectorAll("[data-tip]").forEach(b=>b.onclick=()=>{ const t=b.dataset.tip; sel.has(t)?sel.delete(t):sel.add(t); draw(); });
+    const c = $("#tipCancel"); if(c) c.onclick = () => { $("#intake").classList.remove("on"); $("#intake").innerHTML=""; };
+    $("#tipOk").onclick = () => {
+      const removed = S.sub.filter(t=>el.tpls.includes(t) && !sel.has(t));
+      if(removed.length && !isNew && tplHasWork(removed) && !confirm(`Scoți ${removed.map(t=>"„"+(CT_TPL[t].short||CT_TPL[t].name)+"”").join(", ")}? Lista lor din cartea tehnică dispare; documentele rămân în inventar.`)) return;
+      S.sub = el.tpls.filter(t=>sel.has(t)).concat(S.sub.filter(t=>!el.tpls.includes(t)));
+      $("#intake").classList.remove("on"); $("#intake").innerHTML=""; render();
+    };
+  };
+  draw();
+}
+// are cartea tehnică documente găsite sau alese pentru aceste tipuri?
+function tplHasWork(ts){
+  try{
+    const ct = ctState(), dens = new Set();
+    for(const t of ts){ const sp = CT_TPL[t].spec(Object.assign({}, ct.p, ct.pp[t]||{})); Object.values(sp).flat().forEach(i=>{ if(i && !i.group) dens.add(norm(i.den)); }); }
+    return (ctMatch()||[]).some(d=>d.items.some(i=>!i.group && (i.doc || i.na) && dens.has(norm(i.den))));
+  }catch(e){ return true; }
+}
 function viewSpecialitati(){
-  const el = domById("electrice");
+  const el = domById("electrice"), tips = S.sub.filter(t=>el.tpls.includes(t));
+  const main = S.dom.map(id=>domById(id)).filter(Boolean);
   return `<div class="card">
-    <h3>Domeniile lucrării</h3>
-    <div class="dom-pick">${DOM.map(d=>`<label class="${S.dom.includes(d.id)?"on":""}"><input type="checkbox" data-dom="${d.id}" ${S.dom.includes(d.id)?"checked":""}> ${esc(d.name)}</label>`).join("")}</div>
-    ${S.dom.includes("electrice") ? `<span class="lbl" style="margin-top:14px">Instalații electrice — ce cuprinde lucrarea</span>
-      <div class="dom-pick">${el.tpls.map(t=>`<label class="${S.sub.includes(t)?"on":""}"><input type="checkbox" data-sub="${t}" ${S.sub.includes(t)?"checked":""}> ${esc(CT_TPL[t].short||CT_TPL[t].name)}</label>`).join("")}</div>
-      ${el.tpls.some(t=>S.sub.includes(t)) ? "" : `<p class="muted" style="margin:8px 0 0;color:var(--ochre)">Bifează cel puțin un tip, ca să se genereze lista-tip a cărții tehnice.</p>`}` : ""}
-    ${S.dom.length ? "" : `<p class="muted" style="margin:10px 0 0;color:var(--ochre)">Bifează domeniile lucrării. Ele hotărăsc listele-tip din cartea tehnică și verificările de la Conformitate.</p>`}
+    <h3>Domeniul lucrării</h3>
+    ${main.length ? `<div class="dominfo">${main.map(d=>`<span class="domchip">${d.icon}<b>${esc(d.name)}</b></span>`).join("")}</div>` : `<p class="muted" style="margin:0;color:var(--ochre)">Lucrarea nu are încă un domeniu. Alege-l mai jos.</p>`}
+    ${S.dom.includes("electrice") ? `<p style="margin:12px 0 0;font-size:14.5px"><span class="lbl" style="display:inline;margin-right:6px">Tip:</span> ${tips.length ? `<b>${esc(tips.map(t=>CT_TPL[t].short||CT_TPL[t].name).join(" · "))}</b>` : `<span style="color:var(--ochre)">neales</span>`} <button class="btn g sm" id="tipChange" style="margin-left:8px">${tips.length?"Schimbă":"Alege tipul"}</button></p>` : ""}
+    <p style="margin:12px 0 0"><button class="linkbtn" id="moreDom">${MORE_DOM || !main.length ? "Ascunde celelalte specialități" : "Lucrarea are și alte specialități?"}</button></p>
+    ${MORE_DOM || !main.length ? `<div class="dom-pick" style="margin-top:10px">${DOM.map(d=>`<label class="${S.dom.includes(d.id)?"on":""}"><input type="checkbox" data-dom="${d.id}" ${S.dom.includes(d.id)?"checked":""}> ${esc(d.name)}</label>`).join("")}</div>
+      <p class="muted" style="margin:8px 0 0">De exemplu o școală: construcții, electrice, termice și sanitare în același dosar.</p>` : ""}
   </div>`;
 }
 function viewPersoane(){
   const cov = acoperire();
+  const warn = [];
+  for(const p of S.pers.filter(p=>p.rol===ROLURI[0])){
+    for(const id of p.dom){ const ok = (p.aut||[]).some(c=>(autByC(c)||{dom:[]}).dom.includes(id)); if(!ok && (p.aut||[]).length) warn.push(`${p.nume||"Dirigintele"} acoperă ${domById(id).name}, dar nu are bifat un domeniu de autorizare potrivit (${AUT_DIR.filter(a=>a.dom.includes(id)).map(a=>a.c).join(" sau ")}).`); }
+  }
   return `<div class="card">
     <h3>Persoane și specialități</h3>
-    <p class="muted" style="margin:0 0 6px">O persoană autorizată pe mai multe domenii se trece o singură dată și bifezi ce acoperă.</p>
-    ${S.pers.map((p,i)=>`<div class="prow">
-      <div><span class="lbl">Nume</span><input type="text" data-pf="${i}:nume" value="${esc(p.nume)}" placeholder="Ing. Nume Prenume"></div>
-      <div><span class="lbl">Rol</span><select data-pf="${i}:rol">${ROLURI.map(r=>`<option ${p.rol===r?"selected":""}>${esc(r)}</option>`).join("")}</select></div>
-      <div><span class="lbl">Acoperă</span><span class="chips">${S.dom.length ? S.dom.map(id=>`<label class="${p.dom.includes(id)?"on":""}"><input type="checkbox" data-pdom="${i}:${id}" ${p.dom.includes(id)?"checked":""}> ${esc(domById(id).name)}</label>`).join("") : `<span class="muted">bifează întâi domeniile lucrării</span>`}</span></div>
-      <div style="padding-top:20px"><button class="btn g sm" data-pdel="${i}" aria-label="Șterge persoana">Șterge</button></div>
+    <p class="muted" style="margin:0 0 6px">Treci fiecare persoană o singură dată. La diriginte bifezi domeniile de autorizare de pe autorizația ISC; aplicația bifează singură ce acoperă din lucrare.</p>
+    ${S.pers.map((p,i)=>`<div class="pcard">
+      <div class="prow">
+        <div><span class="lbl">Nume</span><input type="text" data-pf="${i}:nume" value="${esc(p.nume)}" placeholder="Ing. Nume Prenume"></div>
+        <div><span class="lbl">Rol</span><select data-pf="${i}:rol">${ROLURI.map(r=>`<option ${p.rol===r?"selected":""}>${esc(r)}</option>`).join("")}</select></div>
+        <div><span class="lbl">Nr. autorizație / legitimație</span><input type="text" data-pf="${i}:autnr" value="${esc(p.autnr||"")}" placeholder="${p.rol===ROLURI[0]?"autorizație ISC nr.":p.rol===ROLURI[5]?"legitimație ANRE nr.":"nr. și emitent"}"></div>
+        <div style="padding-top:20px"><button class="btn g sm" data-pdel="${i}" aria-label="Șterge persoana">Șterge</button></div>
+      </div>
+      ${p.rol===ROLURI[0] ? `<span class="lbl" style="margin-top:4px">Domenii de autorizare (diriginte de șantier)</span>
+        <div class="chips autchips">${AUT_DIR.map(a=>`<label class="${(p.aut||[]).includes(a.c)?"on":""}" title="${esc(a.t)}${a.anre?" — cu legitimație ANRE valabilă":""}"><input type="checkbox" data-paut="${i}:${a.c}" ${(p.aut||[]).includes(a.c)?"checked":""}> <b>${a.c}</b> ${esc(a.t)}</label>`).join("")}</div>
+        ${(p.aut||[]).some(c=>autByC(c)&&autByC(c).anre) ? `<p class="muted" style="margin:6px 0 0">La ${(p.aut||[]).filter(c=>autByC(c)&&autByC(c).anre).join(", ")} dirigintele trebuie să aibă și legitimație ANRE valabilă.</p>` : ""}` :
+        p.rol===ROLURI[1] ? `<p class="muted" style="margin:4px 0 0">Domeniile de autorizare ale RTE le treci la „Nr. autorizație”, așa cum apar pe autorizația ISC.</p>` : ""}
+      <span class="lbl" style="margin-top:8px">Acoperă în această lucrare</span>
+      <span class="chips">${S.dom.length ? S.dom.map(id=>`<label class="${p.dom.includes(id)?"on":""}"><input type="checkbox" data-pdom="${i}:${id}" ${p.dom.includes(id)?"checked":""}> ${esc(domById(id).name)}</label>`).join("") : `<span class="muted">alege întâi domeniul lucrării</span>`}</span>
     </div>`).join("")}
     <div style="margin-top:12px"><button class="btn g sm" id="btnAddPers">Adaugă persoană</button></div>
     ${cov.length ? `<div class="cov">${cov.map(x=>{
       const miss = [!x.dir.length?"diriginte de șantier":"", !x.rte.length?"RTE":""].filter(Boolean);
       return miss.length ? `<span class="bad">${esc(x.d.name)}: lipsește ${miss.join(" și ")} <span class="muted">· diriginte autorizat pe domeniul ${esc(x.d.dir)}</span></span>`
         : `<span class="ok">${esc(x.d.name)}: diriginte ${esc(x.dir.map(p=>p.nume||"fără nume").join(", "))} · RTE ${esc(x.rte.map(p=>p.nume||"fără nume").join(", "))}</span>`;
-    }).join("")}</div>` : ""}
+    }).join("")}${warn.map(w=>`<span class="bad">${esc(w)}</span>`).join("")}</div>` : ""}
   </div>`;
 }
+
 // lucrarea trece la „Finalizate” după recepția la terminarea lucrărilor
 function pvReceptieDoc(){ return live().find(d=>{ const w = new Set(words(d.name+" "+(d.txt||"").slice(0,120))); return (w.has("recep") && w.has("termi")) || w.has("pvrtl"); }); }
 function viewStadiu(){
@@ -3840,10 +3919,14 @@ function bind(){
   const bnl=$("#btnNewL"); if(bnl) bnl.onclick=()=>newLucrare(DSEL);
 
   // domeniile și tipurile de lucrări
+  const tc=$("#tipChange"); if(tc) tc.onclick=()=>openTipChooser(false);
+  const md=$("#moreDom"); if(md) md.onclick=()=>{ MORE_DOM=!MORE_DOM; render(); };
   v.querySelectorAll("[data-dom]").forEach(el=>el.onchange=()=>{
     const id = el.dataset.dom;
+    if(!el.checked){ const ts = domById(id).tpls.filter(t=>activeTpls().includes(t)); if(ts.length && tplHasWork(ts) && !confirm(`Scoți „${domById(id).name}” din lucrare? Lista lui din cartea tehnică dispare; documentele rămân în inventar.`)){ el.checked = true; return; } }
+    if(el.checked && id==="electrice" && !S.sub.some(t=>domById("electrice").tpls.includes(t))) setTimeout(()=>openTipChooser(true), 0);
     S.dom = el.checked ? DOM.map(d=>d.id).filter(x=>x===id || S.dom.includes(x)) : S.dom.filter(x=>x!==id);
-    if(el.checked && S.pers.length) S.pers.forEach(p=>{ if(S.dom.length===1 && !p.dom.length) p.dom=[id]; });
+    if(el.checked && S.pers.length) S.pers.forEach(p=>{ if(S.dom.length===1 && !p.dom.length) p.dom=[id]; if((p.aut||[]).some(c=>(autByC(c)||{dom:[]}).dom.includes(id)) && !p.dom.includes(id)) p.dom.push(id); });
     if(!el.checked) S.pers.forEach(p=>{ p.dom = p.dom.filter(x=>x!==id); });
     render();
   });
@@ -3873,6 +3956,13 @@ function bind(){
     render();
   });
   v.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>{ S.pers.splice(+b.dataset.pdel,1); render(); });
+  v.querySelectorAll("[data-paut]").forEach(el=>el.onchange=()=>{
+    const [i, c] = el.dataset.paut.split(":"); const p = S.pers[+i]; if(!p) return;
+    p.aut = el.checked ? AUT_DIR.map(a=>a.c).filter(x=>x===c || (p.aut||[]).includes(x)) : (p.aut||[]).filter(x=>x!==c);
+    // bifează singur domeniile lucrării acoperite de autorizare
+    if(el.checked){ const a = autByC(c); a.dom.filter(d=>S.dom.includes(d) && !p.dom.includes(d)).forEach(d=>p.dom.push(d)); }
+    render();
+  });
 
   // file inputs
   const bd=$("#btnPickDir"), bf=$("#btnPickFiles"), ind=$("#inDir"), inf=$("#inFiles");
