@@ -233,6 +233,11 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 @media (max-width:900px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} .prow{grid-template-columns:1fr 1fr} }
 @media (max-width:760px){ .tile{min-height:132px;gap:10px;padding:16px 8px} .tile svg{width:40px;height:40px} .tile b{font-size:16px} .prow{grid-template-columns:1fr} }
 
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(30px);z-index:70;display:flex;gap:14px;align-items:center;background:#14212B;color:#fff;padding:10px 12px 10px 18px;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:calc(100vw - 32px)}
+.toast.on{opacity:1;transform:translateX(-50%);pointer-events:auto}
+.toast .btn{background:#fff;color:#14212B;border-color:#fff}
+#banner .bnr{margin:10px 20px 0;display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+@media (max-width:760px){ #banner .bnr{margin:8px 12px 0} }
 .fmt{display:inline-block;font-size:12.5px;color:var(--muted);background:var(--surface);border:1px solid var(--line-soft);border-radius:4px;padding:3px 8px;line-height:1.4}
 .fmt b{color:var(--ink);font-weight:600}
 .fmtline{flex-basis:100%;margin-top:2px}
@@ -353,6 +358,7 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
       <button class="btn g sm" id="btnLoad" title="Fișier .json salvat din Schela cu „Salvează proiect”">Deschide proiect (.json)</button>
       <input type="file" id="fileLoad" accept=".json" hidden>
     </div>
+    <div id="banner"></div>
     <div class="view" id="view"></div>
   </div>
 </div>
@@ -361,6 +367,7 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 <div class="bb" id="bb"></div>
 
 <div id="print"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="drop-ov" id="dropOv" aria-hidden="true"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M7 10l5 5 5-5M4 17v3h16v-3"/></svg><b>Lasă fișierele aici</b><span>Orice tip de fișier sau foldere întregi (PDF, Word, Excel, poze, DWG…) — trec prin verificarea la intrare</span></div></div>
 <input type="file" id="inGlobal" multiple hidden>
 <div class="modal" id="intake" role="dialog" aria-modal="true" aria-label="Verificare la intrare"></div>
@@ -554,6 +561,8 @@ function migrate(){
   if(!Array.isArray(S.faze)) S.faze = [];
   if(!Array.isArray(S.disp)) S.disp = [];
   if(!S.sem || typeof S.sem!=="object") S.sem = {};
+  if(!Array.isArray(S.trash)) S.trash = [];
+  purgeTrash();
   S.pers.forEach(p=>{ if(!p.id) p.id = newId("p"); if(!Array.isArray(p.dom)) p.dom = []; });
   // cartea tehnică veche avea un singur tip de lucrare: îl transformăm în domeniu + subtip
   if(S.ct && S.ct.tpl!==undefined){
@@ -593,6 +602,7 @@ function readLucrare(id){
 }
 function autoload(){
   try{ IDX = JSON.parse(localStorage.getItem(KEY_IDX)||"[]"); }catch(e){ IDX = []; }
+  try{ purgeCos(); }catch(e){}
   if(!Array.isArray(IDX)) IDX = [];
   // proiectul salvat de versiunea cu o singură lucrare devine prima lucrare din listă
   if(!IDX.length){
@@ -617,11 +627,13 @@ function newLucrare(domId){
   if(domId==="electrice" && typeof openTipChooser==="function") openTipChooser(true);
 }
 function closeLucrare(){ autosave(); CUR = null; S = blank(); VIEW = "acasa"; }
+// lucrarea ștearsă stă 30 de zile în coș (datele rămân în browser până la golire)
 function deleteLucrare(id){
-  try{ localStorage.removeItem(KEY_L(id)); }catch(e){}
-  try{ IDB.del(id); IDB.del("ben:"+id); }catch(e){}
-  IDX = IDX.filter(x=>x.id!==id); saveIdx();
   if(CUR===id) closeLucrare();
+  const e = IDX.find(x=>x.id===id);
+  saveCos([{id, proiect:(e&&e.proiect)||"", dom:(e&&e.dom)||[], at:new Date().toISOString(), entry:e||null}, ...readCos().filter(x=>x.id!==id)]);
+  IDX = IDX.filter(x=>x.id!==id); saveIdx();
+  toast(`Lucrarea „${(e&&e.proiect)||"fără nume"}” e în coș ${TRASH_DAYS} de zile`, () => { restoreLucrare(id); render(); });
 }
 // o lucrare adusă din fișier (sau exemplul) intră în listă; dacă există deja, o înlocuiește
 function importLucrare(o, fixedId){
@@ -664,6 +676,7 @@ function renderNav(){
     $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{ VIEW="acasa"; render(); });
     return;
   }
+  const trN = (S.trash||[]).length;
   $("#nav").innerHTML = home + VIEWS.map(v=>{
     let n = "";
     if(v.id==="inventar") n = S.docs.length || "";
@@ -677,8 +690,8 @@ function renderNav(){
     return `<button data-v="${v.id}" class="${VIEW===v.id?"on":""}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${v.icon}"/></svg>
       <span>${v.name}</span><span class="n">${n}</span></button>`;
-  }).join("");
-  $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{ if(b.dataset.v==="acasa") closeLucrare(); else VIEW=b.dataset.v; render(); });
+  }).join("") + `<button data-v="cos" class="navcos"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg><span>Coș de gunoi</span><span class="n">${trN||""}</span></button>`;
+  $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{ if(b.dataset.v==="cos") return openTrash(); if(b.dataset.v==="acasa") closeLucrare(); else VIEW=b.dataset.v; render(); });
 }
 
 const domNames = ids => ids.map(id=>(domById(id)||{}).name).filter(Boolean);
@@ -710,6 +723,7 @@ function render(){
   if(VIEW==="rezultate") v.innerHTML = viewRezultate();
   bind();
   autosave();
+  renderBanner();
 }
 
 /* ---- ACASĂ: chenarele domeniilor și lista lucrărilor ---- */
@@ -741,6 +755,7 @@ function viewAcasa(){
     ${FIRMA.logo?`<img src="${FIRMA.logo}" alt="" style="max-height:44px;max-width:160px">`:""}
     <div style="flex:1;min-width:220px"><h3 style="margin:0 0 2px">Firma mea</h3><span class="muted">${FIRMA.nume ? esc(FIRMA.nume)+" · antetul apare pe copertă, opisuri, borderouri și cereri"+(Object.values(MODEL_INFO).some(Boolean)?" · modele proprii încărcate":"") : "Completează antetul firmei (siglă, denumire, CUI) și, dacă ai, modelele tale Word — apar pe tot ce tipărește aplicația."}</span></div>
     <button class="btn ${FIRMA.nume?"g":""} sm" id="btnFirma">${FIRMA.nume?"Modifică":"Completează"}</button></div></div>
+  ${readCos().length ? `<div class="card"><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:220px"><h3 style="margin:0 0 2px">Coș de gunoi</h3><span class="muted">${pl(readCos().length,"lucrare ștearsă","lucrări șterse")} · se pot restaura ${TRASH_DAYS} de zile</span></div><button class="btn g sm" id="btnCosL">Deschide coșul</button></div></div>` : ""}
   ${/^https?:$/.test(location.protocol) ? `<div class="card">
     <h3>Vrei să vezi cum arată?</h3>
     <p style="margin:0 0 12px;font-size:14px;color:var(--muted)">Deschide o lucrare demonstrativă cu date fictive: fibră optică pe LEA 110 kV, la Instalații electrice, cu documentele și cartea tehnică pe dosare. O găsești apoi în chenarul Instalații electrice, ca lucrare separată.</p>
@@ -3029,7 +3044,8 @@ function viewInventar(){
   }
   const counts = {}; S.docs.forEach(d=>{ const r = rubOf(d); counts[r] = (counts[r]||0) + 1; });
   const top = `
-  ${canLink() ? `<div class="dropzone"><b>Folderul lucrării${S.folder?` „${esc(S.folder.name)}”`:""}:</b> ${S.folder ? `<button class="btn sm" id="btnCheckF">Verifică folderul</button> <span>aduce doar fișierele noi${S.folder.at?` · ultima verificare ${esc(new Date(S.folder.at).toLocaleString("ro-RO",{dateStyle:"short",timeStyle:"short"}))}`:""}</span> <button class="btn g sm" id="btnLinkF">Schimbă folderul</button>` : `<button class="btn g sm" id="btnLinkF">Leagă folderul lucrării</button> <span>(și de pe server, mapat ca disc) — apoi „Verifică folderul” aduce doar ce e nou.</span>`}</div>` : ""}
+  ${canLink() ? `<div class="dropzone"><b>Folderul lucrării${S.folder?` „${esc(S.folder.name)}”`:""}:</b> ${S.folder ? `<button class="btn sm" id="btnCheckF">Verifică folderul</button> <span>aduce doar fișierele noi${S.folder.at?` · ultima verificare ${esc(new Date(S.folder.at).toLocaleString("ro-RO",{dateStyle:"short",timeStyle:"short"}))}`:""}</span> <button class="btn g sm" id="btnLinkF">Schimbă folderul</button>
+    <span class="fmtline"><label class="ck"><input type="checkbox" class="chk" data-autobk ${S.autoBackup?"checked":""}> <b>Salvează automat copia lucrării în acest folder</b></label> <span class="muted">${S.autoBackup ? (S.backupAt ? "ultima copie "+esc(new Date(S.backupAt).toLocaleString("ro-RO",{dateStyle:"short",timeStyle:"short"}))+" · " : "")+"fișierul „"+esc(backupName())+"” și ultimele 5 versiuni în „Schela - copii”" : "ca lucrarea să nu depindă de browser"}</span>${S.autoBackup?` <button class="btn g sm" id="bkNow">Salvează acum</button>`:""}</span>` : `<button class="btn g sm" id="btnLinkF">Leagă folderul lucrării</button> <span>(și de pe server, mapat ca disc) — apoi „Verifică folderul” aduce doar ce e nou, iar aplicația poate salva automat copia lucrării acolo.</span>`}</div>` : ""}
   <div class="fbar">
     <button class="btn" id="btnPickDir">Adaugă folder</button>
     <button class="btn g" id="btnPickFiles">Adaugă fișiere</button>
@@ -3685,6 +3701,144 @@ function openCartePdf(){
   draw();
 }
 
+/* ---- COȘUL DE GUNOI ----
+   Ce ștergi nu dispare imediat: stă 30 de zile în coș și se poate restaura exact cum era.
+   Coșul lucrării (documente, lipsuri, cereri, persoane, materiale, faze, dispoziții) stă în lucrare;
+   lucrările șterse stau într-un coș separat, pe pagina de intrare. */
+const TRASH_DAYS = 30, KEY_TRASH = "schela_cos_lucrari_v1";
+const TR_KIND = {doc:"Document", lipsa:"Lipsă", cerere:"Cerere", pers:"Persoană", mat:"Material", faza:"Fază determinantă", disp:"Dispoziție de șantier"};
+const trLabel = t => t.kind==="doc" ? t.item.name : t.kind==="lipsa" ? lden(t.item) : t.kind==="cerere" ? `către ${t.item.catre}` : t.kind==="pers" ? (t.item.nume||"fără nume")+" · "+t.item.rol : t.kind==="mat" ? t.item.den : t.kind==="faza" ? (t.item.den||"fază fără nume") : t.kind==="disp" ? `nr. ${t.item.nr||"—"} ${t.item.desc||""}` : "";
+const fresh30 = at => (Date.now() - new Date(at).getTime()) < TRASH_DAYS*86400000;
+function purgeTrash(){ if(Array.isArray(S.trash)) S.trash = S.trash.filter(t=>fresh30(t.at)); }
+// mută în coș; „extra” păstrează ce trebuie refăcut la restaurare (ex. cererile din care a fost scoasă o lipsă)
+function toTrash(kind, items, extra){
+  if(!Array.isArray(S.trash)) S.trash = [];
+  const at = new Date().toISOString(), ids = [];
+  for(const it of [].concat(items)){ const t = {id:newId("t"), kind, at, item:JSON.parse(JSON.stringify(it)), extra:extra?JSON.parse(JSON.stringify(extra)):null}; S.trash.unshift(t); ids.push(t.id); }
+  toast(`${ids.length>1 ? pl(ids.length, TR_KIND[kind].toLowerCase()+" ștearsă", "elemente șterse") : TR_KIND[kind]+" șters"+(["lipsa","cerere","pers","faza","disp"].includes(kind)?"ă":"")} · în coș ${TRASH_DAYS} de zile`, () => { ids.forEach(restoreTrash); render(); });
+}
+function restoreTrash(tid){
+  const i = (S.trash||[]).findIndex(t=>t.id===tid); if(i<0) return;
+  const t = S.trash.splice(i,1)[0], it = t.item;
+  if(t.kind==="doc"){ if(!S.docs.some(d=>d.id===it.id)) S.docs.push(Object.assign(it,{sel:false})); markDups(); }
+  if(t.kind==="lipsa"){ if(!S.lipsuri.some(l=>l.id===it.id)) S.lipsuri.push(it); (t.extra||[]).forEach(c=>{ const cur = S.cereri.find(x=>x.id===c.id); if(cur){ if(!cur.items.includes(it.id)) cur.items.push(it.id); } else S.cereri.push(c); }); }
+  if(t.kind==="cerere"){ if(!S.cereri.some(c=>c.id===it.id)) S.cereri.push(it); }
+  if(t.kind==="pers") S.pers.push(it);
+  if(t.kind==="mat") S.mat.push(it);
+  if(t.kind==="faza") S.faze.push(it);
+  if(t.kind==="disp") S.disp.push(it);
+}
+// lucrările șterse
+const readCos = () => { try{ const a = JSON.parse(localStorage.getItem(KEY_TRASH)||"[]"); return Array.isArray(a) ? a : []; }catch(e){ return []; } };
+const saveCos = a => { try{ localStorage.setItem(KEY_TRASH, JSON.stringify(a)); }catch(e){} };
+function purgeCos(){
+  const a = readCos(), keep = [];
+  for(const x of a){ if(fresh30(x.at)) keep.push(x); else { try{ localStorage.removeItem(KEY_L(x.id)); IDB.del(x.id); IDB.del("ben:"+x.id); }catch(e){} } }
+  if(keep.length!==a.length) saveCos(keep);
+}
+function restoreLucrare(id){
+  const a = readCos(), x = a.find(y=>y.id===id); if(!x) return;
+  const o = readLucrare(id); if(!o){ saveCos(a.filter(y=>y.id!==id)); return alert("Lucrarea nu mai poate fi restaurată."); }
+  IDX = IDX.filter(l=>l.id!==id); IDX.unshift(Object.assign({}, x.entry || {id, proiect:o.meta.proiect||"", dom:o.dom||[], n:(o.docs||[]).length}, {upd:Date.now()})); saveIdx();
+  saveCos(a.filter(y=>y.id!==id));
+}
+function deleteForever(id){
+  try{ localStorage.removeItem(KEY_L(id)); IDB.del(id); IDB.del("ben:"+id); }catch(e){}
+  saveCos(readCos().filter(y=>y.id!==id));
+}
+// mesajul de jos, cu „Anulează”
+let TOAST_T = null;
+function toast(msg, undo){
+  const el = $("#toast"); if(!el) return;
+  el.innerHTML = `<span>${esc(msg)}</span>${undo?`<button class="btn sm" id="toastUndo">Anulează</button>`:""}`;
+  el.classList.add("on");
+  if(undo) $("#toastUndo").onclick = () => { el.classList.remove("on"); undo(); };
+  clearTimeout(TOAST_T); TOAST_T = setTimeout(()=>el.classList.remove("on"), 9000);
+}
+function openTrash(){
+  const lucr = !CUR;
+  const list = lucr ? readCos() : (S.trash||[]);
+  const days = at => Math.max(0, TRASH_DAYS - Math.floor((Date.now()-new Date(at).getTime())/86400000));
+  $("#intake").innerHTML = `<div class="mbox" style="width:min(820px,100%)">
+    <div class="mh"><h2>Coș de gunoi</h2><span class="muted">${lucr ? "lucrări șterse" : "din lucrarea „"+esc(S.meta.proiect||"fără nume")+"”"} · se golește singur după ${TRASH_DAYS} de zile</span></div>
+    <div style="padding:0 18px;overflow:auto">
+      ${list.length ? `<div class="tw" style="max-height:56vh"><table><tbody>${list.map(t=>`<tr>
+        <td style="width:150px"><span class="tag t-none">${lucr ? "Lucrare" : TR_KIND[t.kind]}</span></td>
+        <td class="fn">${esc(lucr ? (t.proiect||"Lucrare fără nume") : trLabel(t))}</td>
+        <td class="num" style="width:150px">șters ${esc(new Date(t.at).toLocaleDateString("ro-RO"))} · ${days(t.at)} zile rămase</td>
+        <td style="width:220px;white-space:nowrap"><button class="btn sm" data-trr="${esc(t.id)}">Restaurează</button> <button class="btn g sm" data-trd="${esc(t.id)}">Șterge definitiv</button></td>
+      </tr>`).join("")}</tbody></table></div>` : `<div class="empty"><h3>Coșul e gol</h3><p>Ce ștergi apare aici ${TRASH_DAYS} de zile și poate fi restaurat.</p></div>`}
+    </div>
+    <div class="mf"><span class="muted">${lucr ? "Documentele de pe calculator sau server nu sunt atinse niciodată." : "Ștergerea din aplicație nu atinge fișierele de pe calculator sau de pe server."}</span>
+      ${list.length ? `<button class="btn g" id="trEmpty">Golește coșul</button>` : ""}<button class="btn" id="trClose">Închide</button></div>
+  </div>`;
+  $("#intake").classList.add("on");
+  const box = $("#intake"), close = () => { box.classList.remove("on"); box.innerHTML=""; render(); };
+  $("#trClose").onclick = close;
+  box.querySelectorAll("[data-trr]").forEach(b=>b.onclick=()=>{ if(lucr) restoreLucrare(b.dataset.trr); else restoreTrash(b.dataset.trr); autosave(); openTrash(); });
+  box.querySelectorAll("[data-trd]").forEach(b=>b.onclick=()=>{ if(!confirm("Ștergi definitiv? Nu mai poate fi restaurat.")) return; if(lucr) deleteForever(b.dataset.trd); else S.trash = S.trash.filter(t=>t.id!==b.dataset.trd); autosave(); openTrash(); });
+  const te = $("#trEmpty"); if(te) te.onclick = () => { if(!confirm(`Golești coșul? ${pl(list.length,"element se șterge","elemente se șterg")} definitiv.`)) return; if(lucr) readCos().forEach(x=>deleteForever(x.id)); else S.trash = []; autosave(); openTrash(); };
+}
+
+/* ---- SALVAREA ÎN AFARA BROWSERULUI ----
+   Copia automată: în folderul legat al lucrării se scrie „Schela - <lucrare>.json” (și ultimele 5 versiuni
+   în „Schela - copii”), la câteva minute cât lucrezi și când ieși din pagină. Merge în Chrome și Edge. */
+const backupName = () => safeName("Schela - " + (S.meta.proiect || "lucrare")) + ".json";
+let BK_LAST = "", BK_BUSY = false;
+async function backupHandle(ask){
+  const h = await folderHandle(false); if(!h) return null;
+  try{
+    let p = await h.queryPermission({mode:"readwrite"});
+    if(p!=="granted" && ask) p = await h.requestPermission({mode:"readwrite"});
+    return p==="granted" ? h : null;
+  }catch(e){ return null; }
+}
+async function doBackup(ask){
+  if(!CUR || !S.autoBackup || BK_BUSY) return false;
+  const js = JSON.stringify(S); if(js===BK_LAST && !ask) return true;
+  BK_BUSY = true;
+  try{
+    const h = await backupHandle(ask); if(!h){ S.backupOff = true; return false; }
+    S.backupOff = false; S.backupAt = new Date().toISOString(); S.savedAt = S.backupAt;
+    const data = JSON.stringify(S, null, 1);
+    const w = await (await h.getFileHandle(backupName(), {create:true})).createWritable(); await w.write(data); await w.close();
+    const dir = await h.getDirectoryHandle("Schela - copii", {create:true});
+    const stamp = S.backupAt.slice(0,16).replace(/[:T]/g,"-");
+    const w2 = await (await dir.getFileHandle(safeName((S.meta.proiect||"lucrare")+" "+stamp)+".json", {create:true})).createWritable(); await w2.write(data); await w2.close();
+    const vers = []; for await (const [n, e] of dir.entries()) if(e.kind==="file" && n.startsWith(safeName(S.meta.proiect||"lucrare")+" ")) vers.push(n);
+    vers.sort(); for(const n of vers.slice(0, Math.max(0, vers.length-5))) try{ await dir.removeEntry(n); }catch(e){}
+    BK_LAST = JSON.stringify(S);
+    return true;
+  }catch(e){ S.backupOff = true; return false; }
+  finally{ BK_BUSY = false; }
+}
+setInterval(()=>{ if(CUR && S.autoBackup) doBackup(false).then(ok=>{ if(!ok) renderBanner(); }); }, 3*60*1000);
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden" && CUR && S.autoBackup) doBackup(false); });
+// banda de sus: copia automată oprită sau lucrare nesalvată de 7 zile
+function bannerHtml(){
+  if(!CUR || !S.docs.length || /^demo/.test(S.id)) return "";
+  if(S.autoBackup && S.backupOff) return `<div class="note warn bnr">Copia automată în folderul lucrării e oprită (browserul cere din nou permisiunea). <button class="btn sm" id="bkResume">Reia salvarea automată</button></div>`;
+  if(S.autoBackup) return "";
+  const last = S.savedAt ? new Date(S.savedAt).getTime() : 0, d = last ? Math.floor((Date.now()-last)/86400000) : null;
+  if(last && d < 7) return "";
+  return `<div class="note warn bnr"><b>${last ? `Lucrarea n-a mai fost salvată în afara browserului de ${d} zile.` : "Lucrarea e salvată doar în acest browser."}</b> Dacă browserul e curățat sau schimbi calculatorul, se pierde.
+    <span style="display:inline-flex;gap:8px;flex-wrap:wrap;margin-left:6px"><button class="btn sm" id="bnSave">Salvează acum (.json)</button>${canLink() ? `<button class="btn g sm" id="bnAuto">Salvare automată în folderul lucrării</button>` : ""}</span></div>`;
+}
+function renderBanner(){ const b = $("#banner"); if(b){ b.innerHTML = bannerHtml(); bindBanner(); } }
+function bindBanner(){
+  const s1 = $("#bnSave"); if(s1) s1.onclick = () => $("#btnSave").click();
+  const s2 = $("#bnAuto"); if(s2) s2.onclick = enableAutoBackup;
+  const s3 = $("#bkResume"); if(s3) s3.onclick = async () => { const ok = await doBackup(true); if(!ok) alert("Nu am primit permisiunea de scriere în folder. Leagă din nou folderul lucrării."); render(); };
+}
+async function enableAutoBackup(){
+  if(!S.folder){ alert("Leagă întâi folderul lucrării (Inventar → Leagă folderul lucrării). Copia automată se scrie acolo, lângă documente."); VIEW = "inventar"; return render(); }
+  S.autoBackup = true;
+  const ok = await doBackup(true);
+  if(!ok){ S.autoBackup = false; alert("Nu am primit permisiunea de scriere în folder."); }
+  else toast(`Copia lucrării se salvează automat în „${S.folder.name}”, ca „${backupName()}”.`);
+  render();
+}
+
 /* ---- CONFORMITATE ----
    Verificare orientativă a dosarului față de actele normative. Detectarea se face după
    denumirea fișierelor; utilizatorul poate confirma manual („am documentul”) sau marca „nu se aplică”.
@@ -4012,6 +4166,8 @@ function viewConformitate(){
 const go = (v, t) => `<button class="btn g sm" data-bgo="${v}">${t}</button>`;
 const BB_KB = [
   // --- folosirea aplicației ---
+  {k:["cos de gunoi","cosul de gunoi","am sters","sters din greseala","sters gresit","restaurez","restaurare","recuperez","anulez stergerea","sters definitiv"], a:()=>`Ce ștergi din aplicație (documente, lucrări, lipsuri, cereri, persoane, materiale, faze, dispoziții) ajunge în <b>Coșul de gunoi</b> și stă acolo <b>${TRASH_DAYS} de zile</b>. Imediat după ștergere apare jos butonul <b>Anulează</b>. Mai târziu: din lucrare, <b>Coș de gunoi</b> în meniul din stânga → <b>Restaurează</b>; o lucrare ștearsă o găsești pe pagina de intrare. Fișierele de pe calculator sau de pe server nu sunt atinse niciodată. ${CUR && (S.trash||[]).length ? `Acum ai <b>${pl(S.trash.length,"ștergere","ștergeri")}</b> în coșul acestei lucrări.` : ""}`},
+  {k:["salvare automata","backup","copie de siguranta","se pierde","se sterge daca","golesc browserul","alt calculator","schimb calculatorul","unde se salveaza","se salveaza"], a:()=>`Lucrarea se salvează singură în browser la fiecare modificare. Ca să nu depindă de browser: leagă folderul lucrării (<b>Inventar → Leagă folderul lucrării</b>) și bifează <b>Salvează automat copia lucrării în acest folder</b>. Aplicația scrie acolo „${CUR?esc(backupName()):"Schela - &lt;lucrare&gt;.json"}” la câteva minute și când închizi pagina, plus ultimele 5 versiuni în „Schela - copii”. Dacă e pe server, copia intră în backup-ul firmei. Pe alt calculator: <b>Deschide proiect (.json)</b>. Fără folder legat, folosește <b>Salvează proiect</b>; dacă trec 7 zile, aplicația îți amintește.`},
   {k:["incarc documente","adaug documente","adaug folder","incarc folder","cum incep","cum adaug","drag and drop","trag fisierele","trag folderul","word","documente word"], a:()=>`Cu lucrarea deschisă, <b>trage</b> fișierele sau un folder întreg oriunde în pagină, sau mergi la <b>Inventar → Adaugă folder</b>. Merg PDF-uri, documente Word, scanuri. Din PDF-uri și din Word (.docx) aplicația citește singură numărul și data (de exemplu „PV nr. 12 din 03.11.2026”), iar din certificate denumirea produsului și producătorul. Înainte să intre în inventar, fiecare fișier trece prin verificarea la intrare, unde aprobi ce se adaugă. ${go("inventar","Deschide Inventarul")}`},
   {k:["verificare intrare","copie identica","de ce nu s-a adaugat","respins","debifat"], a:()=>`La intrare, aplicația compară fiecare fișier cu ce există: <b>copiile identice</b> se resping, <b>versiunile noi</b> îți cer o decizie, fișierele care <b>completează o lipsă</b> o rezolvă automat, iar <b>documentele noi necerute</b> vin debifate după prima încărcare, ca să nu intre din greșeală.`},
   {k:["duplicate","versiune vigoare","care versiune","versiuni"], a:()=>{ const g = dupGroups(), nev = g.filter(x=>!x.docs.some(d=>d.viz)).length; return `Grupurile de duplicate reunesc fișiere cu același conținut sau cu aceeași denumire de bază (rev1, rev2, final). Pentru fiecare grup alegi versiunea <b>în vigoare</b>; celelalte rămân ca istoric și nu apar în opis. ${g.length?`Acum ai <b>${g.length}</b> ${g.length===1?"grup":"grupuri"}, din care <b>${nev}</b> fără versiune aleasă.`:""} ${go("duplicate","Deschide Duplicate")}`; }},
@@ -4324,14 +4480,14 @@ function bind(){
     }catch(e){ alert("Exemplul nu a putut fi încărcat."); }
   };
   const bc=$("#btnClear");
-  if(bc) bc.onclick=()=>{ if(confirm(`Ștergi lucrarea „${S.meta.proiect||"fără nume"}” din acest browser?`)){ deleteLucrare(S.id); render(); } };
+  if(bc) bc.onclick=()=>{ if(confirm(`Ștergi lucrarea „${S.meta.proiect||"fără nume"}”? Rămâne 30 de zile în coșul de gunoi de pe pagina de intrare.`)){ deleteLucrare(S.id); render(); } };
 
   // pagina de intrare și pagina domeniului
   v.querySelectorAll("[data-dom-open]").forEach(b=>b.onclick=()=>{ DSEL=b.dataset.domOpen; VIEW="domeniu"; render(); v.scrollTop=0; });
   v.querySelectorAll("[data-lopen]").forEach(b=>b.onclick=()=>openLucrare(b.dataset.lopen));
   v.querySelectorAll("[data-ldel]").forEach(b=>b.onclick=()=>{
     const l = IDX.find(x=>x.id===b.dataset.ldel); if(!l) return;
-    if(confirm(`Ștergi lucrarea „${l.proiect||"fără nume"}” din acest browser? Dacă ai salvat-o în fișier, o poți redeschide de acolo.`)){ deleteLucrare(l.id); render(); }
+    if(confirm(`Ștergi lucrarea „${l.proiect||"fără nume"}”? Rămâne 30 de zile în coșul de gunoi de pe pagina de intrare.`)){ deleteLucrare(l.id); render(); }
   });
   const bnl=$("#btnNewL"); if(bnl) bnl.onclick=()=>newLucrare(DSEL);
 
@@ -4372,7 +4528,7 @@ function bind(){
     p.dom = el.checked ? S.dom.filter(x=>x===d || p.dom.includes(x)) : p.dom.filter(x=>x!==d);
     render();
   });
-  v.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>{ S.pers.splice(+b.dataset.pdel,1); render(); });
+  v.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>{ toTrash("pers", S.pers.splice(+b.dataset.pdel,1)); render(); });
   v.querySelectorAll("[data-paut]").forEach(el=>el.onchange=()=>{
     const [i, c] = el.dataset.paut.split(":"); const p = S.pers[+i]; if(!p) return;
     p.aut = el.checked ? AUT_DIR.map(a=>a.c).filter(x=>x===c || (p.aut||[]).includes(x)) : (p.aut||[]).filter(x=>x!==c);
@@ -4402,6 +4558,9 @@ function bind(){
   const ccp=$("#ctCop"); if(ccp) ccp.onclick=async()=>{ if(!await downloadModel("coperta", null)){ $("#print").innerHTML = buildCoperta(); setTimeout(()=>window.print(), 60); } };
   const cpd=$("#ctPdf"); if(cpd) cpd.onclick=openCartePdf;
   v.querySelectorAll("#btnFirma,#btnFirma2").forEach(b=>b.onclick=openFirma);
+  const bcl=$("#btnCosL"); if(bcl) bcl.onclick=openTrash;
+  const bab = v.querySelector("[data-autobk]"); if(bab) bab.onchange=async()=>{ if(bab.checked) await enableAutoBackup(); else { S.autoBackup=false; render(); } };
+  const bbn=$("#bkNow"); if(bbn) bbn.onclick=async()=>{ const ok = await doBackup(true); toast(ok ? "Copia lucrării a fost salvată în folder." : "Nu am putut scrie în folder."); render(); };
   const dbk=$("#dosBack"); if(dbk) dbk.onclick=()=>{ CTSEL=null; render(); v.scrollTop=0; };
   const ctMan = () => { const ct = ctState(); return ct.man = ct.man || {}; };
   v.querySelectorAll("[data-ctman]").forEach(el=>el.onchange=()=>{ const m = ctMan(); if(el.value) m[el.dataset.ctman]=el.value; else delete m[el.dataset.ctman]; render(); });
@@ -4430,7 +4589,7 @@ function bind(){
   const ba=$("#btnSelAll"); if(ba) ba.onclick=()=>{ const ids=new Set(filtered().map(d=>d.id)); S.docs.forEach(d=>{ if(ids.has(d.id)) d.sel=true; }); render(); };
   const bn=$("#btnSelNone"); if(bn) bn.onclick=()=>{ S.docs.forEach(d=>d.sel=false); render(); };
   const bsrc=$("#bulkSrc"); if(bsrc) bsrc.onchange=()=>{ if(!bsrc.value) return; S.docs.forEach(d=>{ if(d.sel) d.sursa=bsrc.value; }); render(); };
-  const bdel=$("#btnDel"); if(bdel) bdel.onclick=()=>{ const n=S.docs.filter(d=>d.sel).length; if(!n) return alert("Nu ai selectat nimic."); if(!confirm("Scoți "+n+" documente din inventar?")) return; S.docs=S.docs.filter(d=>!d.sel); markDups(); render(); };
+  const bdel=$("#btnDel"); if(bdel) bdel.onclick=()=>{ const n=S.docs.filter(d=>d.sel).length; if(!n) return alert("Nu ai selectat nimic."); if(!confirm("Scoți "+n+" documente din inventar? Rămân 30 de zile în coșul de gunoi; fișierele de pe calculator nu sunt atinse.")) return; toTrash("doc", S.docs.filter(d=>d.sel)); S.docs=S.docs.filter(d=>!d.sel); markDups(); render(); };
 
   const brc=$("#btnReclass"); if(brc) brc.onclick=()=>{
     let n=0;
@@ -4456,6 +4615,7 @@ function bind(){
   };
   v.querySelectorAll("[data-dell]").forEach(b=>b.onclick=()=>{
     const [l] = S.lipsuri.splice(+b.dataset.dell,1);
+    if(l) toTrash("lipsa", l, S.cereri.filter(c=>c.items.includes(l.id)));
     if(l) S.cereri.forEach(c=>{ c.items = c.items.filter(id=>id!==l.id); });
     S.cereri = S.cereri.filter(c=>c.items.length);
     render();
@@ -4522,7 +4682,7 @@ function bind(){
   v.querySelectorAll("[data-cdel]").forEach(b=>b.onclick=()=>{
     const c=cById(b.dataset.cdel); if(!c) return;
     if(!confirm(`Ștergi cererea către ${c.catre}? Documentele lipsă rămân în listă și pot fi cerute din nou.`)) return;
-    S.cereri = S.cereri.filter(x=>x!==c); render();
+    toTrash("cerere", c); S.cereri = S.cereri.filter(x=>x!==c); render();
   });
 
   // materiale
@@ -4536,7 +4696,7 @@ function bind(){
   v.querySelectorAll("[data-mf]").forEach(el=>{ const [i,k] = el.dataset.mf.split(":"); el.onchange=()=>{ if(S.mat[+i]){ S.mat[+i][k]=el.value.trim(); if(k!=="furn") S.mat[+i].ok=false; render(); } }; });
   v.querySelectorAll("[data-mdoc]").forEach(el=>el.onchange=()=>{ const m=S.mat[+el.dataset.mdoc]; if(m){ m.docId=el.value; m.ok=false; render(); } });
   v.querySelectorAll("[data-mok]").forEach(el=>el.onchange=()=>{ const m=S.mat[+el.dataset.mok]; if(m){ m.ok=el.checked; render(); } });
-  v.querySelectorAll("[data-mdel]").forEach(b=>b.onclick=()=>{ S.mat.splice(+b.dataset.mdel,1); render(); });
+  v.querySelectorAll("[data-mdel]").forEach(b=>b.onclick=()=>{ toTrash("mat", S.mat.splice(+b.dataset.mdel,1)); render(); });
   const mtl=$("#matToLips"); if(mtl) mtl.onclick=()=>{
     const have = new Set(S.lipsuri.map(l=>norm(lden(l)))); let n = 0;
     for(const m of S.mat.filter(m=>matStatus(m).st==="lipsa")){
@@ -4557,7 +4717,7 @@ function bind(){
   const fad=$("#fAdd"); if(fad) fad.onclick=()=>{ S.faze.push({id:newId("f"), den:"", dom:"", data:"", conv:"", pv:false}); render(); const ins=v.querySelectorAll('[data-ff$=":den"]'); if(ins.length) ins[ins.length-1].focus(); };
   v.querySelectorAll("[data-ff]").forEach(el=>{ const [i,k] = el.dataset.ff.split(":"); el.onchange=()=>{ const f=S.faze[+i]; if(f){ f[k]=el.value; render(); } }; });
   v.querySelectorAll("[data-fpv]").forEach(el=>el.onchange=()=>{ const f=S.faze[+el.dataset.fpv]; if(f){ f.pv=el.checked; render(); } });
-  v.querySelectorAll("[data-fdel]").forEach(b=>b.onclick=()=>{ S.faze.splice(+b.dataset.fdel,1); render(); });
+  v.querySelectorAll("[data-fdel]").forEach(b=>b.onclick=()=>{ toTrash("faza", S.faze.splice(+b.dataset.fdel,1)); render(); });
   v.querySelectorAll("[data-fconv]").forEach(b=>b.onclick=()=>{ const f=S.faze[+b.dataset.fconv]; if(f) openTextModal("Convocare ISC – model", convocareText(f), "Model de pornire: completează ora, persoana de contact și antetul firmei; verifică forma cerută de inspectoratul județean."); });
   v.querySelectorAll("[data-sg]").forEach(el=>el.onchange=()=>{ const [id,k] = el.dataset.sg.split(":"); (S.sem[id] = S.sem[id] || {})[k] = el.checked; render(); });
   const stl=$("#semToLips"); if(stl) stl.onclick=()=>{
@@ -4582,7 +4742,7 @@ function bind(){
   const dad=$("#dispAdd"); if(dad) dad.onclick=()=>{ S.disp.push({id:newId("s"), nr:"", data:"", desc:"", desen:false, asbuilt:false, docId:""}); render(); };
   v.querySelectorAll("[data-df]").forEach(el=>{ const [i,k] = el.dataset.df.split(":"); el.onchange=()=>{ const x=S.disp[+i]; if(x){ x[k]=el.value; render(); } }; });
   v.querySelectorAll("[data-dck]").forEach(el=>el.onchange=()=>{ const [i,k] = el.dataset.dck.split(":"); const x=S.disp[+i]; if(x){ x[k]=el.checked; render(); } });
-  v.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{ S.disp.splice(+b.dataset.ddel,1); render(); });
+  v.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{ toTrash("disp", S.disp.splice(+b.dataset.ddel,1)); render(); });
 
   v.querySelectorAll("[data-addfiles]").forEach(b=>b.onclick=()=>$("#inGlobal").click());
   const csa=$("#csugAdd"); if(csa) csa.onclick=()=>{
@@ -4627,6 +4787,7 @@ $("#bbFab").onclick = () => { const b = $("#bb"); b.classList.toggle("on"); if(b
 /* top bar */
 $("#btnSave").onclick=()=>{
   if(!CUR) return;
+  S.savedAt = new Date().toISOString(); autosave(); renderBanner();
   const name=(S.meta.proiect||"proiect").replace(/[^\w\-]+/g,"_")+"_schela.json";
   download(name, JSON.stringify(S,null,2));
 };

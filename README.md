@@ -42,3 +42,9 @@ Bibliotecile pdf.js și Tesseract se încarcă de pe cdnjs / jsDelivr la prima f
 - **Firma mea** (pe pagina de intrare): siglă, denumire, CUI, adresă și cine întocmește — apar pe copertă, opisuri, borderouri și cereri, pentru toate lucrările.
 - **Modelele firmei**: copertă, opis și borderou în Word, cu câmpuri între acolade ({lucrare}, {beneficiar}, {dosar}…) și un rând de tabel cu {poz} {document} {nr} {data_doc}; aplicația le completează și descarcă fișierul Word. Coperta poate fi și un PDF gata făcut. Fără model, aplicația folosește forma ei, cu antetul firmei.
 - **Cartea tehnică într-un PDF**: coperta, apoi pentru fiecare dosar opisul și documentele găsite (PDF și poze), în ordine, cu numărul filei pe fiecare pagină. Documentele primite rămân neschimbate; fișierele Word se salvează întâi ca PDF. Bibliotecile pdf-lib și fontul DejaVu se încarcă de pe jsDelivr la prima folosire.
+
+## Coș de gunoi și copii de siguranță
+
+- **Coș de gunoi**: documentele, lucrările, lipsurile, cererile, persoanele, materialele, fazele și dispozițiile șterse stau **30 de zile** în coș și se pot restaura; imediat după ștergere apare butonul **Anulează**. Coșul lucrării e în meniul din stânga; lucrările șterse sunt pe pagina de intrare. Ștergerea din aplicație nu atinge fișierele de pe calculator sau de pe server.
+- **Salvare automată în folderul lucrării** (Chrome și Edge): după ce legi folderul, bifezi „Salvează automat copia lucrării în acest folder”. Aplicația scrie `Schela - <lucrare>.json` la câteva minute și la închiderea paginii, plus ultimele 5 versiuni în `Schela - copii`. Pe server, copia intră în backup-ul firmei.
+- Dacă lucrarea n-a fost salvată în afara browserului de **7 zile**, apare o bandă de reamintire cu „Salvează acum”.
