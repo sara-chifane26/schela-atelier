@@ -241,6 +241,23 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 .dropzone{border:2px dashed var(--line);border-radius:6px;padding:14px 16px;color:var(--muted);font-size:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--surface-3);margin-bottom:14px}
 .dropzone b{color:var(--ink)}
 
+.tiles.rub .tile{min-height:128px;gap:10px;padding:16px 10px}
+.tiles.rub .tile svg{width:36px;height:36px}
+.tiles.rub .tile b{font-size:16px}
+.tile.empty{opacity:.45}
+.crumb{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 12px}
+.crumb h2{margin:0;font-size:20px;letter-spacing:-.01em}
+.dtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin:6px 0 16px}
+.dtile{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;padding:14px 16px;border:1px solid var(--line-soft);border-left:5px solid var(--red);border-radius:6px;background:var(--surface);cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+.dtile:hover,.dtile:focus-visible{transform:translateY(-2px);box-shadow:0 8px 20px rgba(20,33,43,.12)}
+.dtile.ok{border-left-color:var(--green)} .dtile.later{border-left-color:var(--faint)}
+.dtile .dt-id{font-size:22px;font-weight:800;color:var(--blue);letter-spacing:-.02em}
+.dtile .dt-name{font-size:14px;font-weight:600;line-height:1.3;min-height:36px}
+.dtile .bar{width:100%}
+.dtile .dt-n{font-size:13px;color:var(--muted)}
+.dtile .dt-n b{color:var(--ink)}
+.lsec{font-size:13px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 4px}
+
 /* print */
 #print{display:none}
 @media print{
@@ -521,7 +538,11 @@ function newId(p){ return p + Math.random().toString(36).slice(2,10); }
 /* ---------------- persistence ---------------- */
 /* Fiecare lucrare se păstrează separat în browser; lista lucrărilor ține doar rezumatul. */
 function saveIdx(){ try{ localStorage.setItem(KEY_IDX, JSON.stringify(IDX)); }catch(e){} }
-function idxEntry(){ return {id:S.id, proiect:S.meta.proiect||"", dom:S.dom.slice(), n:S.docs.length, upd:Date.now()}; }
+function idxEntry(){
+  let prog = null;
+  try{ const dos = activeTpls().length ? ctMatch() : null; if(dos){ const ab = dos.filter(d=>!d.later); prog = {got:ab.reduce((a,d)=>a+d.got,0), tot:ab.reduce((a,d)=>a+d.total,0)}; } }catch(e){}
+  return {id:S.id, proiect:S.meta.proiect||"", benef:S.meta.beneficiar||"", dom:S.dom.slice(), n:S.docs.length, upd:Date.now(), stare:S.stare||"derulare", receptie:S.receptie||"", prog};
+}
 function autosave(){
   if(!CUR) return;
   const js = JSON.stringify(S);
@@ -560,7 +581,7 @@ function newLucrare(domId){
 function closeLucrare(){ autosave(); CUR = null; S = blank(); VIEW = "acasa"; }
 function deleteLucrare(id){
   try{ localStorage.removeItem(KEY_L(id)); }catch(e){}
-  try{ IDB.del(id); }catch(e){}
+  try{ IDB.del(id); IDB.del("ben:"+id); }catch(e){}
   IDX = IDX.filter(x=>x.id!==id); saveIdx();
   if(CUR===id) closeLucrare();
 }
@@ -657,13 +678,18 @@ function render(){
 function lucrariHtml(list, emptyText){
   if(!list.length) return `<p class="muted" style="margin:0">${emptyText}</p>`;
   const fmt = t => t ? new Date(t).toLocaleDateString("ro-RO") : "";
-  return [...list].sort((a,b)=>(b.upd||0)-(a.upd||0)).map(l=>`<div class="lrow">
+  const row = l => `<div class="lrow">
     <div class="ln"><b>${esc(l.proiect||"Lucrare fără nume")}</b>
-      <span class="chips">${domNames(l.dom||[]).map(n=>`<span class="chip">${esc(n)}</span>`).join("") || `<span class="muted">fără domeniu ales</span>`}</span></div>
-    <span class="muted">${pl(l.n||0,"document","documente")} · ${fmt(l.upd)}</span>
+      ${l.benef?`<span class="muted">${esc(l.benef)}</span> `:""}<span class="chips">${domNames(l.dom||[]).map(n=>`<span class="chip">${esc(n)}</span>`).join("") || `<span class="muted">fără domeniu ales</span>`}</span></div>
+    ${l.prog && l.prog.tot ? `<span class="muted" title="Capitolele A și B ale cărții tehnice">carte tehnică ${l.prog.got}/${l.prog.tot}</span>` : ""}
+    <span class="muted">${l.stare==="finalizata" && l.receptie ? "recepție "+esc(roDate(l.receptie)) : pl(l.n||0,"document","documente")+" · "+fmt(l.upd)}</span>
     <button class="btn sm" data-lopen="${esc(l.id)}">Deschide</button>
     <button class="btn g sm" data-ldel="${esc(l.id)}">Șterge</button>
-  </div>`).join("");
+  </div>`;
+  const sorted = [...list].sort((a,b)=>(b.upd||0)-(a.upd||0));
+  const run = sorted.filter(l=>l.stare!=="finalizata"), fin = sorted.filter(l=>l.stare==="finalizata");
+  return `<div class="lsec">În derulare · ${run.length}</div>${run.length ? run.map(row).join("") : `<p class="muted" style="margin:4px 0 8px">Nicio lucrare în derulare.</p>`}
+    <div class="lsec">Finalizate (recepționate) · ${fin.length}</div>${fin.length ? fin.map(row).join("") : `<p class="muted" style="margin:4px 0 0">Nicio lucrare finalizată încă.</p>`}`;
 }
 function viewAcasa(){
   return `
@@ -755,6 +781,20 @@ function viewPersoane(){
     }).join("")}</div>` : ""}
   </div>`;
 }
+// lucrarea trece la „Finalizate” după recepția la terminarea lucrărilor
+function pvReceptieDoc(){ return live().find(d=>{ const w = new Set(words(d.name+" "+(d.txt||"").slice(0,120))); return (w.has("recep") && w.has("termi")) || w.has("pvrtl"); }); }
+function viewStadiu(){
+  const st = S.stare || "derulare", pvr = pvReceptieDoc();
+  return `<div class="card">
+    <h3>Stadiul lucrării</h3>
+    <div class="grid2">
+      <div><span class="lbl">Stadiu</span><select data-stare><option value="derulare" ${st!=="finalizata"?"selected":""}>În derulare</option><option value="finalizata" ${st==="finalizata"?"selected":""}>Finalizată — recepția la terminare făcută</option></select></div>
+      <div><span class="lbl">Data recepției la terminarea lucrărilor</span><input type="date" data-recdate value="${esc(S.receptie||"")}"></div>
+    </div>
+    ${st!=="finalizata" && pvr ? `<div class="note" style="margin:12px 0 0">Am găsit în inventar procesul-verbal de recepție: <b>${esc(pvr.name)}</b>${pvr.dataSrc!=="estimat"&&pvr.data?` din ${esc(roDate(pvr.data))}`:""}. <button class="btn sm" id="stFin" style="margin-left:8px">Marchează lucrarea finalizată</button></div>` : ""}
+    <p class="muted" style="margin:10px 0 0">În pagina domeniului, lucrările apar la „În derulare” sau la „Finalizate”.</p>
+  </div>`;
+}
 function viewProiect(){
   const m = S.meta;
   // câmpurile de text cresc pe mai multe rânduri, ca numele lungi să se vadă complet
@@ -765,6 +805,7 @@ function viewProiect(){
   <div class="note"><b>Unealtă de lucru pentru dosarele de proiect.</b> Toate datele stau în această pagină, pe calculatorul tău. Nimic nu se încarcă pe internet. Salvează proiectul într-un fișier la finalul fiecărei sesiuni.</div>
 
   ${viewSpecialitati()}
+  ${viewStadiu()}
 
   <div class="card">
     <h3>Datele proiectului</h3>
@@ -804,56 +845,6 @@ function viewProiect(){
 /* ---- INVENTAR ---- */
 let FILTER = {q:"", cap:"", stare:""};
 
-function viewInventar(){
-  if(!S.docs.length){
-    return `<div class="card"><div class="empty">
-      <h3>Niciun document încă</h3>
-      <p>Trage aici folderul cu documentele lucrării (sau fișiere Word și PDF), ori alege-l cu butonul, exact așa cum ți l-au dat. Fișierele sunt citite local, în pagină, doar ca să li se calculeze amprenta (pentru copii identice) — nu se încarcă nicăieri și nu se modifică.</p>
-      <div style="display:flex;gap:9px;justify-content:center;flex-wrap:wrap">
-        <button class="btn" id="btnPickDir">Alege folderul</button>
-        <button class="btn g" id="btnPickFiles">Alege fișiere</button>
-      </div>
-      <input type="file" id="inDir" webkitdirectory directory multiple hidden>
-      <input type="file" id="inFiles" multiple hidden>
-    </div></div>`;
-  }
-  const rows = filtered();
-  return `
-  ${canLink() ? `<div class="dropzone"><b>Folderul lucrării${S.folder?` „${esc(S.folder.name)}”`:""}:</b> ${S.folder ? `<button class="btn sm" id="btnCheckF">Verifică folderul</button> <span>aduce doar fișierele noi${S.folder.at?` · ultima verificare ${esc(new Date(S.folder.at).toLocaleString("ro-RO",{dateStyle:"short",timeStyle:"short"}))}`:""}</span> <button class="btn g sm" id="btnLinkF">Schimbă folderul</button>` : `<button class="btn g sm" id="btnLinkF">Leagă folderul lucrării</button> <span>(și de pe server, mapat ca disc) — apoi „Verifică folderul” aduce doar ce e nou, fără să-l mai alegi de fiecare dată.</span>`}</div>` : ""}
-  <div class="fbar">
-    <button class="btn" id="btnPickDir">Adaugă folder</button>
-    <button class="btn g" id="btnPickFiles">Adaugă fișiere</button>
-    <input type="file" id="inDir" webkitdirectory directory multiple hidden>
-    <input type="file" id="inFiles" multiple hidden>
-    <input type="text" id="fq" placeholder="Caută în denumire…" value="${esc(FILTER.q)}">
-    <select id="fcap"><option value="">Toate capitolele</option>${CAPS.map(c=>`<option ${FILTER.cap===c?"selected":""}>${c}</option>`).join("")}</select>
-    <select id="fstare"><option value="">Toate</option><option value="viz" ${FILTER.stare==="viz"?"selected":""}>În vigoare</option><option value="dup" ${FILTER.stare==="dup"?"selected":""}>În grup de duplicate</option><option value="ncl" ${FILTER.stare==="ncl"?"selected":""}>Neclasificate</option><option value="est" ${FILTER.stare==="est"?"selected":""}>Date estimate</option></select>
-    <span class="count">${rows.length} din ${S.docs.length}</span>
-  </div>
-
-  <div class="fbar" style="margin-bottom:10px">
-    <span class="lbl" style="margin:0">Selecție:</span>
-    <select id="bulkCap"><option value="">Pune în capitolul…</option>${CAPS.map(c=>`<option>${c}</option>`).join("")}</select>
-    <select id="bulkSrc"><option value="">Sursa…</option><option value="propriu">Propriu</option><option value="primit">Primit</option></select>
-    <button class="btn g sm" id="btnSelAll">Selectează tot ce e afișat</button>
-    <button class="btn g sm" id="btnSelNone">Deselectează</button>
-    <button class="btn g sm" id="btnDel">Șterge selecția</button>
-    <button class="btn g sm" id="btnReclass" title="Aplică regulile actualizate doar documentelor încă neclasificate; ce ai încadrat manual nu se schimbă.">Reîncadrează neclasificatele</button>
-    ${S.docs.some(needsText) ? `<button class="btn g sm" id="btnPdfTxt" title="Aplicația citește local începutul textului din PDF și Word, ia numărul și data, recunoaște fișierele cu nume neclar și semnăturile electronice.">Citește textul din PDF și Word</button>` : ""}
-    ${S.docs.some(needsOcr) ? `<button class="btn g sm" id="btnOcr" title="Citește local scanurile și pozele (OCR, limba română). Durează câteva secunde pe pagină.">Citește scanurile (OCR) · ${S.docs.filter(needsOcr).length}</button>` : ""}
-    <input type="file" id="inSrc" webkitdirectory directory multiple hidden>
-  </div>
-
-  <div class="tw"><table>
-    <thead><tr>
-      <th style="width:26px"></th><th>Denumire</th><th style="width:150px">Capitol</th>
-      <th style="width:105px">Data doc.</th><th style="width:96px">Sursă</th>
-      <th style="width:120px">De la cine</th><th style="width:70px">Stare</th><th style="width:66px">Mărime</th>
-    </tr></thead>
-    <tbody>${rows.map(d=>rowDoc(d)).join("")}</tbody>
-  </table></div>`;
-}
-
 function rowDoc(d){
   const dup = d.viz ? `<span class="tag t-viz">în vigoare</span>`
     : d.dup ? `<span class="tag t-dup">înlocuit</span>`
@@ -862,7 +853,7 @@ function rowDoc(d){
   return `<tr class="${d.sel?"sel":""}" data-id="${d.id}">
     <td><input type="checkbox" class="chk" data-sel="${d.id}" ${d.sel?"checked":""}></td>
     <td class="fn">${esc(d.name)}${(()=>{ const q = qualType(d); return q ? `<span class="path" style="color:var(--blue)">${esc(q.tip)}${q.l!=="ro"?` · în ${esc(q.limba)}`:""}</span>` : ""; })()}${d.nr?`<span class="path">Nr. ${esc(d.nr)}</span>`:""}${d.path?`<span class="path">${esc(d.path)}</span>`:""}</td>
-    <td><select data-f="cap" data-id="${d.id}">${CAPS.map(c=>`<option ${d.cap===c?"selected":""}>${c}</option>`).join("")}</select></td>
+    <td><select data-rubset="${d.id}">${RUBRICI.map(r=>`<option value="${r.id}" ${rubOf(d)===r.id?"selected":""}>${esc(r.name)}</option>`).join("")}</select></td>
     <td><input type="date" data-f="data" data-id="${d.id}" value="${esc(d.data)}" class="${d.dataSrc==="estimat"?"isest":""}">${d.dataSrc==="estimat"?`<span class="est" title="Nu am găsit data în denumire; e data ultimei modificări a fișierului, de obicei data copierii. Corecteaz-o din document.">estimată · de verificat</span>`:d.dataSrc==="text"?`<span class="path" title="Data a fost luată din textul documentului.">din text</span>`:""}</td>
     <td><select data-f="sursa" data-id="${d.id}"><option value="">—</option><option value="propriu" ${d.sursa==="propriu"?"selected":""}>Propriu</option><option value="primit" ${d.sursa==="primit"?"selected":""}>Primit</option></select></td>
     <td><input type="text" data-f="dela" data-id="${d.id}" value="${esc(d.dela)}" placeholder="…"></td>
@@ -871,17 +862,11 @@ function rowDoc(d){
   </tr>`;
 }
 
+// documentele afișate acum în Inventar (rubrica deschisă + căutare + filtru)
 function filtered(){
-  const q = norm(FILTER.q);
-  return S.docs.filter(d=>{
-    if(q && !norm(d.name+" "+d.path).includes(q)) return false;
-    if(FILTER.cap && d.cap!==FILTER.cap) return false;
-    if(FILTER.stare==="viz" && !d.viz) return false;
-    if(FILTER.stare==="dup" && !d.grp) return false;
-    if(FILTER.stare==="ncl" && d.cap!=="Neclasificat") return false;
-    if(FILTER.stare==="est" && d.dataSrc!=="estimat") return false;
-    return true;
-  });
+  const r = INVRUB && INVRUB!=="toate" ? rubById(INVRUB) : null, q = norm(FILTER.q);
+  return S.docs.filter(d=>(!r || rubOf(d)===r.id) && (!q || norm(d.name+" "+d.path+" "+(d.txt||"")).includes(q)))
+    .filter(d=> !FILTER.stare || (FILTER.stare==="viz" && d.viz) || (FILTER.stare==="dup" && d.grp) || (FILTER.stare==="est" && d.dataSrc==="estimat"));
 }
 
 function busy(on, text){
@@ -2010,7 +1995,15 @@ function ctMatch(){
   const dos = ctDosare(); if(!dos) return null;
   const liveD = S.docs.filter(d=>!d.dup);
   const used = new Set();
-  const all = dos.flatMap(d=>d.items.filter(i=>!i.group).map(i=>({i, d})));
+  const every = dos.flatMap(d=>d.items.filter(i=>!i.group).map(i=>({i, d, key: d.id+"|"+norm(i.den)})));
+  // 0. ce ai ales tu: fișierul potrivit sau „nu se aplică”
+  const man = (S.ct && S.ct.man) || {};
+  for(const x of every){
+    const v = man[x.key];
+    if(v==="na"){ x.na = true; continue; }
+    if(v){ const f = liveD.find(d=>d.id===v); if(f && !used.has(f.id)){ x.doc = f; x.manual = true; used.add(f.id); } }
+  }
+  const all = every.filter(x=>!x.na);
   // 1. după cod exact
   for(const x of all){ if(!x.i.cod) continue; const f = liveD.find(d=>!used.has(d.id) && codeIn(d.name, x.i.cod)); if(f){ x.doc=f; used.add(f.id); } }
   // 2. după cuvinte cheie / denumire (un document general poate acoperi o singură poziție).
@@ -2070,99 +2063,27 @@ function ctMatch(){
   tp.sort((a,b)=>b.sc-a.sc);
   for(const pr of tp){ if(pr.x.doc || used.has(pr.d.id)) continue; pr.x.doc = pr.d; pr.x.byText = true; used.add(pr.d.id); }
   for(const d of dos){
-    const xs = all.filter(x=>x.d===d);
-    d.total = xs.length; d.got = xs.filter(x=>x.doc).length;
-    d.items.forEach(i=>{ const x = xs.find(x=>x.i===i); if(x) i.doc = x.doc; });
+    const xs = every.filter(x=>x.d===d), on = xs.filter(x=>!x.na);
+    d.total = on.length; d.got = on.filter(x=>x.doc).length; d.na = xs.length - on.length;
+    d.items.forEach(i=>{ const x = xs.find(x=>x.i===i); if(x){ i.doc = x.doc; i.na = !!x.na; i.manual = !!x.manual; i.key = x.key; i.byText = !!x.byText; } });
   }
   return dos;
 }
 function ctMissing(includeLater){
   const dos = ctMatch(); if(!dos) return [];
-  return dos.filter(d=>includeLater || !d.later).flatMap(d=>d.items.filter(i=>!i.group && !i.doc));
+  return dos.filter(d=>includeLater || !d.later).flatMap(d=>d.items.filter(i=>!i.group && !i.doc && !i.na));
 }
 
 const P_NR   = {k:"nr",  label:"Lucrare nr.", ph:"5.2/2026"};
 const P_COD  = {k:"cod", label:"Cod pentru numerotarea PV-urilor (opțional)", ph:"26L05.2"};
 const P_EXTRA= {k:"extra", label:"Documente suplimentare cerute de beneficiar — câte unul pe rând", type:"area", ph:"Fișă tehnică echipament\nBuletin verificare protecții conform specificației beneficiarului", wide:true};
 
-function viewCarte(){
-  const ts = activeTpls();
-  if(!ts.length) return `<div class="card"><div class="empty">
-    <h3>Alege întâi domeniile lucrării</h3>
-    <p>Lista-tip a cărții tehnice se generează din domeniile bifate la Proiect${S.dom.includes("electrice")?" și, la instalații electrice, din tipurile de lucrări alese":""}.</p>
-    <button class="btn" data-v-go="proiect">Mergi la Proiect</button></div></div>`;
-  const ct = ctState(), p = ct.p;
-  const dos = ctMatch();
-  const inLips = new Set(S.lipsuri.map(l=>norm(lden(l))));
-  const miss = ctMissing(false).filter(i=>!inLips.has(norm(lden(i))));
-  const tot = dos.filter(d=>!d.later).reduce((a,d)=>a+d.total,0), got = dos.filter(d=>!d.later).reduce((a,d)=>a+d.got,0);
-  const inB = dos.filter(d=>d.ch==="B").flatMap(d=>d.items).filter(i=>!i.group);
-  const nPV = inB.filter(i=>/^PV/.test(i.den)).length;
-  const nBul = inB.filter(i=>/^(Buletin|Rapoarte de încercare|Raport de)/.test(i.den)).length;
-  const field = (f, t) => {
-    const src = t ? (ct.pp[t]||{}) : p, v = src[f.k] ?? "";
-    const at = t ? `data-ctp="${t}|${f.k}"` : `data-ctc="${f.k}"`;
-    const inner = f.type==="select" ? `<select ${at}>${f.opts.map(o=>`<option ${String(v||f.opts[0])===o?"selected":""}>${o}</option>`).join("")}</select>`
-      : f.type==="area" ? `<textarea rows="5" ${at} placeholder="${esc(f.ph||"")}">${esc(v)}</textarea>`
-      : `<input type="text" ${at} value="${esc(v)}" placeholder="${esc(f.ph||"")}">`;
-    return `<div${f.wide?' class="wide"':""}><span class="lbl">${f.label}</span>${inner}</div>`;
-  };
-  const bar = (g,t,muted) => `<div class="bar ${muted?"mut":""}"><i style="width:${t?Math.round(g/t*100):0}%"></i></div>`;
-  return `
-  <div class="note"><b>Cartea tehnică.</b> Lista-tip se generează din domeniile lucrării (${esc(domNames(S.dom).join(", "))}); completezi parametrii fiecărei specialități, iar aplicația pune documentele așteptate pe dosare, după HG 343/2017 (Anexa 6), le caută în inventar și îți arată situația pe fiecare dosar. Piesele comune apar o singură dată.</div>
-
-  <div class="card">
-    <h3>Date comune</h3>
-    <div class="grid2">${[P_NR, P_COD].map(f=>field(f)).join("")}</div>
-    <div class="grid2" style="margin-top:12px">${field(P_EXTRA)}</div>
-  </div>
-
-  ${ts.map(t=>{ const T = CT_TPL[t]; return `<div class="card">
-    <h3>${esc(T.name)}</h3>
-    ${T.params.filter(f=>f.type!=="area").length ? `<div class="grid2">${T.params.filter(f=>f.type!=="area").map(f=>field(f,t)).join("")}</div>` : ""}
-    <div class="grid2" style="margin-top:12px">${T.params.filter(f=>f.type==="area").map(f=>field(f,t)).join("")}</div>
-    <p class="muted" style="margin:10px 0 0">Repere normative: ${esc(T.norme)}.</p>
-  </div>`; }).join("")}
-
-  <p class="muted" style="margin:-4px 0 14px">Din parametri rezultă <b>${nPV}</b> procese-verbale și <b>${nBul}</b> buletine și rapoarte de încercare în capitolul B.</p>
-
-  <div class="card">
-    <h3>Situația <span class="muted">· capitolele A și B: ${got} din ${tot} documente găsite în inventar</span></h3>
-    ${["A","B","C","D"].map(ch=>{
-      const ds = dos.filter(d=>d.ch===ch);
-      return `<div class="ct-ch"><div class="ct-cht">${CT_CH[ch]}</div>
-        ${ds.map(d=>`<div class="ct-row">
-          <b>Dosar ${d.id}</b>
-          ${bar(d.got,d.total,d.later)}
-          <span class="num">${d.got} / ${d.total}</span>
-          ${d.later && d.got<d.total ? `<span class="tag t-none">de completat ${d.later}</span>` : d.got===d.total ? `<span class="tag t-viz">complet</span>` : `<span class="tag t-late">${d.total-d.got} lipsă</span>`}
-        </div>`).join("")}</div>`;
-    }).join("")}
-    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px">
-      <button class="btn" id="ctToLips" ${miss.length?"":"disabled"}>Trimite ${miss.length} ${miss.length===1?"lipsă":"lipsuri"} la Lipsuri</button>
-      <button class="btn o" id="ctPrint">Tipărește borderourile</button>
-      <button class="btn g" id="ctArrange" ${got?"":"disabled"}>Aranjează dosarul pe calculator</button>
-    </div>
-    <p class="muted" style="margin:8px 0 0">Lipsurile din capitolele A și B ajung la <b>Lipsuri</b>, cu „de la cine” completat, ca să le poți cere la <b>Cereri</b>. Capitolele C și D nu se trimit: se completează la recepție și în exploatare.</p>
-  </div>
-
-  ${dos.map(d=>`<details class="card ct-det" ${d.got<d.total && !d.later ? "open":""}>
-    <summary><b>Dosar ${d.id}</b> <span class="muted">· ${CT_CH[d.ch].split(" – ")[1]}</span> <span class="num" style="margin-left:auto">${d.got} / ${d.total}</span></summary>
-    <div class="tw" style="max-height:none;margin-top:10px"><table>
-      <thead><tr><th style="width:150px">Cod</th><th>Document</th><th style="width:130px">Stare</th><th style="width:34%">Fișier din inventar</th></tr></thead>
-      <tbody>${d.items.map(i=> i.group ? `<tr class="grp-row${i.spec?" spec":""}"><td colspan="4">${esc(i.group)}</td></tr>` : `<tr>
-        <td class="num">${esc(i.cod||"")}</td><td>${esc(i.den)}</td>
-        <td>${i.doc ? `<span class="tag t-viz">găsit</span>` : d.later ? `<span class="tag t-none">de completat</span>` : `<span class="tag t-late">lipsă</span>`}</td>
-        <td class="fn">${i.doc ? esc(i.doc.name) : ""}</td></tr>`).join("")}</tbody>
-    </table></div>
-  </details>`).join("")}`;
-}
-
 function buildBorderouri(){
   const dos = ctMatch(); const m = S.meta, p = ctState().p;
   return dos.map(d=>{
     let n = 0;
     const rows = d.items.map(i=>{
+      if(i.na) return "";
       if(i.group){ n++; return `<div class="bd-i">${String(n).padStart(2,"0")}. ${esc(i.group)}</div>`; }
       if(i.cod) return `<div class="bd-s">${esc(i.cod)} – ${esc(i.den.replace(/^PV /,"PV "))}${i.doc?"":` <span class="bd-miss">${d.later?"de completat":"LIPSĂ"}</span>`}</div>`;
       n++; return `<div class="bd-i">${String(n).padStart(2,"0")}. ${esc(i.den)}${i.doc?"":` <span class="bd-miss">${d.later?"de completat":"LIPSĂ"}</span>`}</div>`;
@@ -2422,6 +2343,7 @@ function arrangePlan(){
   for(const d of dos){
     let n = 0;
     for(const i of d.items){
+      if(i.na) continue;
       if(i.group){ n++; continue; }
       if(!i.cod) n++;
       if(!i.doc) continue;
@@ -2734,7 +2656,7 @@ function autoSig(d){
 /* ---- WORD VECHI (.doc) ----
    Fișierul e un „compound file”; textul stă în fluxul WordDocument. Îl găsim și scoatem
    primele rânduri lizibile (Unicode sau cp1252) — suficient pentru titlu, număr și dată. */
-async function docText(file){
+async function docText(file, raw){
   try{
     const b = new Uint8Array(await file.arrayBuffer()), dv = new DataView(b.buffer);
     if(dv.getUint32(0,true)!==0xE011CFD0) return null;
@@ -2778,7 +2700,7 @@ async function docText(file){
     if(t[q]!==0x02) return null;
     const lcb = tv.getUint32(q+1,true), pl0 = q+5, n = (lcb-4)/12;
     let txt = "";
-    for(let i=0; i<n && txt.length<1500; i++){
+    for(let i=0; i<n && txt.length<(raw?40000:1500); i++){
       const cp0 = tv.getUint32(pl0+i*4,true), cp1 = tv.getUint32(pl0+(i+1)*4,true);
       const pcd = pl0 + (n+1)*4 + i*8, fcv = tv.getUint32(pcd+2,true);
       const comp = (fcv & 0x40000000) !== 0, len = cp1-cp0;
@@ -2786,7 +2708,9 @@ async function docText(file){
       else { txt += new TextDecoder("utf-16le").decode(w.subarray(fcv, fcv+len*2)); }
     }
     // codurile de câmp (0x13 … 0x14 rezultat 0x15) și caracterele de control
-    txt = txt.replace(/\x13[^\x14\x15]*\x14?/g,"").replace(/[\x00-\x1f]/g," ");
+    txt = txt.replace(/\x13[^\x14\x15]*\x14?/g,"");
+    if(raw) return txt.replace(/\x07\x07/g,"\n").replace(/\x07\r?/g," | ").replace(/\r/g,"\n").replace(/[\x00-\x09\x0b-\x1f]/g," ");
+    txt = txt.replace(/[\x00-\x1f]/g," ");
     return norm(txt).replace(/\s+/g," ").trim().slice(0,800);
   }catch(e){ return null; }
 }
@@ -2916,6 +2840,356 @@ async function sourceFilesMap(){
   const fl = await folderFiles(h); busy(false);
   const m = new Map(); for(const {f, path} of fl){ m.set(path+"|"+f.name+"|"+f.size, f); m.set("|"+f.name+"|"+f.size, f); }
   return m;
+}
+
+/* ---- RUBRICILE INVENTARULUI ----
+   Fiecare document intră automat într-o rubrică (după denumire și începutul textului); îl poți muta.
+   Ordinea contează: prima rubrică potrivită câștigă (ex. „PV probă la rece” e la Probe, nu la PV-uri de execuție). */
+const IC = p => `<svg viewBox="0 0 24 24" ${SVG_A}><path d="${p}"/></svg>`;
+const RUBRICI = [
+  {id:"aprov",   name:"Aprovizionare",              cap:"Aprovizionare", icon:IC("M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a2 2 0 1 0 0-.1M17 19a2 2 0 1 0 0-.1"), k:["aviz de insotire","aviz insotire","avize de insotire","aviz marfa","nir","bon de consum","bon consum","fisa de magazie","dispozitie de livrare"]},
+  {id:"receptie",name:"Recepție",                   cap:"Execuție", icon:IC("M5 12l4 4 10-10M4 20h16"), k:["receptie la terminare","receptie terminare","receptia la terminarea","receptie finala","receptia finala","comisie de receptie","comisie receptie","pvrtl","pvrf","receptie tehnica"]},
+  {id:"pvfaze",  name:"PV faze determinante",       cap:"Execuție", icon:IC("M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4"), k:["faza determinanta","faze determinante proces verbal","pv faza determinanta","natura terenului","teren de fundare"], need:["proce","verba"]},
+  {id:"probe",   name:"Probe și buletine",          cap:"Calitate", icon:IC("M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3M7 15h10"), k:["buletin","buletine","proba","probe","raport de incercare","rapoarte de incercare","incercari","masuratori","masurare","pram","priza de pamant buletin","inspectie video","cctv","analiza apei","potabilitate"]},
+  {id:"disp",    name:"Dispoziții de șantier",      cap:"Corespondență", icon:IC("M4 20l4-1 11-11-3-3L5 16zM14 6l3 3"), k:["dispozitie de santier","dispozitie santier","dispozitii de santier","registru dispozitii"]},
+  {id:"program", name:"Programe de control",        cap:"Calitate", icon:IC("M8 4h11v16H8zM5 8h3M5 12h3M5 16h3M11 9h5M11 13h5"), k:["program de control","program control","program faze determinante","pccvi","plan calitate","planul calitatii","plan de control"]},
+  {id:"pv",      name:"PV-uri de execuție",         cap:"Execuție", icon:IC("M6 3h9l4 4v14H6zM9 12h7M9 16h5"), k:["proces verbal","procese verbale","lucrari ascunse","pvla","pv"]},
+  {id:"calitate",name:"Documente de calitate",      cap:"Calitate", icon:IC("M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"), k:["certificat de calitate","certificat calitate","certificat de conformitate","declaratie de conformitate","declaratie de performanta","declaratie performanta","dop","agrement","agrement tehnic","certificat de garantie","fisa tehnica"], q:true},
+  {id:"avize",   name:"Avize și autorizații",       cap:"Proiectare", icon:IC("M4 4h16v12H8l-4 4zM9 9h6M9 12h4"), k:["certificat de urbanism","certificat urbanism","autorizatie de construire","autorizatie construire","aviz","avize","acord de mediu","acord unic","atr","aviz tehnic de racordare","autorizatie de infiintare"]},
+  {id:"proiect", name:"Proiect și verificări",      cap:"Proiectare", icon:IC("M3 21h18M5 21V8l7-5 7 5v13M9 13h6M9 17h6"), k:["proiect tehnic","proiect","pt","pth","pte","dde","detalii de executie","memoriu","caiet de sarcini","caiete de sarcini","breviar","plansa","planse","referat","verificator","studiu geotehnic","expertiza","audit energetic","releveu"]},
+  {id:"contracte",name:"Contracte și numiri",       cap:"Contracte", icon:IC("M7 3h10v18H7zM10 8h4M10 12h4M10 16h2"), k:["contract","act aditional","acte aditionale","acord cadru","comanda","oferta","deviz","factura","garantie de buna executie","decizie de numire","decizie numire","numire","ordin de incepere","ordin incepere","atestat anre","atestate anre","autorizatie anre","autorizatii anre","legitimatie anre","legitimatii","licenta","autorizatie igsu","autorizatie iscir"]},
+  {id:"coresp",  name:"Corespondență",              cap:"Corespondență", icon:IC("M3 6h18v12H3zM3 6l9 7 9-7"), k:["adresa","adrese","notificare","solicitare","raspuns","minuta","convocare","comunicare","email","mail","corespondenta","instiintare","cerere"]},
+  {id:"ssm",     name:"SSM și situații de urgență",  cap:"SSM și SU", icon:IC("M12 3a6 6 0 0 0-6 6v2H4v3h16v-3h-2V9a6 6 0 0 0-6-6zM8 18h8"), k:["ssm","instruire","instructaj","plan propriu","securitate si sanatate","psi","situatii de urgenta","evaluare riscuri","evaluarea riscurilor","fisa individuala","echipament de protectie"]},
+  {id:"asbuilt", name:"As built și carte tehnică",  cap:"As-built", icon:IC("M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 1 2-2h13"), k:["as built","asbuilt","carte tehnica","cartea tehnica","plan final","documentatie finala","fisa sintetica","jurnal de santier","jurnal santier","jurnalul evenimentelor"]},
+  {id:"alte",    name:"Neclasificate",              cap:"Neclasificat", icon:IC("M12 8v5M12 16v.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"), k:[]}
+];
+const RUB_N = RUBRICI.map(r=>({r, k:r.k.map(toks)}));
+const rubById = id => RUBRICI.find(r=>r.id===id);
+const CAP_RUB = {"Proiectare":"proiect","Execuție":"pv","SSM și SU":"ssm","Calitate":"calitate","Contracte":"contracte","Aprovizionare":"aprov","Corespondență":"coresp","As-built":"asbuilt","Neclasificat":"alte"};
+function rubOf(d){
+  if(d.rub && rubById(d.rub)) return d.rub;
+  const base = d.name.replace(/\.[a-z0-9]{1,6}$/i,"");
+  const head = (d.txt||"").slice(0,120);
+  for(const src of [base, base+" "+head]){
+    const t = toks(src), w = new Set(words(src));
+    for(const {r, k} of RUB_N){
+      if(r.need && !r.need.every(x=>w.has(x)) && !k.some(p=>t.includes(p))) continue;
+      if(k.some(p=>t.includes(p))) return r.id;
+      if(r.q && qualType({name:base, txt:head})) return r.id;
+    }
+  }
+  return CAP_RUB[d.cap] || "alte";
+}
+let INVRUB = null;     // null = chenarele rubricilor; „toate” = lista completă
+function viewInventar(){
+  if(!S.docs.length){
+    return `<div class="card"><div class="empty">
+      <h3>Niciun document încă</h3>
+      <p>Trage aici folderul cu documentele lucrării (sau fișiere Word și PDF), ori alege-l cu butonul, exact așa cum ți l-au dat. Fișierele sunt citite local, în pagină — nu se încarcă nicăieri și nu se modifică. Aplicația le împarte singură pe rubrici.</p>
+      <div style="display:flex;gap:9px;justify-content:center;flex-wrap:wrap">
+        <button class="btn" id="btnPickDir">Alege folderul</button>
+        <button class="btn g" id="btnPickFiles">Alege fișiere</button>
+        ${canLink() ? `<button class="btn g" id="btnLinkF">Leagă folderul lucrării</button>` : ""}
+      </div>
+      <input type="file" id="inDir" webkitdirectory directory multiple hidden>
+      <input type="file" id="inFiles" multiple hidden>
+    </div></div>`;
+  }
+  const counts = {}; S.docs.forEach(d=>{ const r = rubOf(d); counts[r] = (counts[r]||0) + 1; });
+  const top = `
+  ${canLink() ? `<div class="dropzone"><b>Folderul lucrării${S.folder?` „${esc(S.folder.name)}”`:""}:</b> ${S.folder ? `<button class="btn sm" id="btnCheckF">Verifică folderul</button> <span>aduce doar fișierele noi${S.folder.at?` · ultima verificare ${esc(new Date(S.folder.at).toLocaleString("ro-RO",{dateStyle:"short",timeStyle:"short"}))}`:""}</span> <button class="btn g sm" id="btnLinkF">Schimbă folderul</button>` : `<button class="btn g sm" id="btnLinkF">Leagă folderul lucrării</button> <span>(și de pe server, mapat ca disc) — apoi „Verifică folderul” aduce doar ce e nou.</span>`}</div>` : ""}
+  <div class="fbar">
+    <button class="btn" id="btnPickDir">Adaugă folder</button>
+    <button class="btn g" id="btnPickFiles">Adaugă fișiere</button>
+    <input type="file" id="inDir" webkitdirectory directory multiple hidden>
+    <input type="file" id="inFiles" multiple hidden>
+    <input type="text" id="fq" placeholder="Caută în toate documentele…" value="${esc(FILTER.q)}">
+    ${S.docs.some(needsText) ? `<button class="btn g sm" id="btnPdfTxt" title="Citește local începutul textului din PDF și Word: numărul, data, semnăturile electronice.">Citește textul din PDF și Word</button>` : ""}
+    ${S.docs.some(needsOcr) ? `<button class="btn g sm" id="btnOcr" title="Citește local scanurile și pozele (OCR). Durează câteva secunde pe pagină.">Citește scanurile (OCR) · ${S.docs.filter(needsOcr).length}</button>` : ""}
+    <input type="file" id="inSrc" webkitdirectory directory multiple hidden>
+    <span class="count">${S.docs.length} documente</span>
+  </div>`;
+  // fără rubrică aleasă și fără căutare: chenarele
+  if(!INVRUB && !FILTER.q){
+    return top + `
+    <p class="muted" style="margin:0 0 10px">Apasă pe o rubrică ca să vezi documentele din ea.</p>
+    <div class="tiles rub">
+      <button class="tile" data-rub="toate">${IC("M4 5h16M4 10h16M4 15h16M4 20h16")}<b>Toate documentele</b><small>${S.docs.length}</small></button>
+      ${RUBRICI.map((r,i)=>`<button class="tile ${(Math.floor((i+1)/4)+i+1)%2?"dk":""} ${counts[r.id]?"":"empty"}" data-rub="${r.id}">${r.icon}<b>${esc(r.name)}</b><small>${counts[r.id]? pl(counts[r.id],"document","documente") : "gol"}</small></button>`).join("")}
+    </div>`;
+  }
+  const r = INVRUB && INVRUB!=="toate" ? rubById(INVRUB) : null;
+  const q = norm(FILTER.q);
+  const rows = S.docs.filter(d=>(!r || rubOf(d)===r.id) && (!q || norm(d.name+" "+d.path+" "+(d.txt||"")).includes(q)))
+    .filter(d=> !FILTER.stare || (FILTER.stare==="viz" && d.viz) || (FILTER.stare==="dup" && d.grp) || (FILTER.stare==="est" && d.dataSrc==="estimat"));
+  return top + `
+  <div class="crumb"><button class="btn g" id="rubBack">← Înapoi la rubrici</button>
+    <h2>${r ? esc(r.name) : FILTER.q ? `Rezultatele căutării „${esc(FILTER.q)}”` : "Toate documentele"}</h2>
+    <span class="muted">${pl(rows.length,"document","documente")}</span></div>
+  <div class="fbar" style="margin-bottom:10px">
+    <span class="lbl" style="margin:0">Selecție:</span>
+    <select id="bulkRub"><option value="">Mută în rubrica…</option>${RUBRICI.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>
+    <select id="bulkSrc"><option value="">Sursa…</option><option value="propriu">Propriu</option><option value="primit">Primit</option></select>
+    <button class="btn g sm" id="btnSelAll">Selectează tot ce e afișat</button>
+    <button class="btn g sm" id="btnSelNone">Deselectează</button>
+    <button class="btn g sm" id="btnDel">Șterge selecția</button>
+    <select id="fstare"><option value="">Toate</option><option value="viz" ${FILTER.stare==="viz"?"selected":""}>În vigoare</option><option value="dup" ${FILTER.stare==="dup"?"selected":""}>În grup de duplicate</option><option value="est" ${FILTER.stare==="est"?"selected":""}>Date estimate</option></select>
+  </div>
+  ${rows.length ? `<div class="tw"><table>
+    <thead><tr>
+      <th style="width:26px"></th><th>Denumire</th><th style="width:190px">Rubrica</th>
+      <th style="width:105px">Data doc.</th><th style="width:96px">Sursă</th>
+      <th style="width:120px">De la cine</th><th style="width:70px">Stare</th><th style="width:66px">Mărime</th>
+    </tr></thead>
+    <tbody>${rows.map(d=>rowDoc(d)).join("")}</tbody>
+  </table></div>` : `<div class="card"><div class="empty"><h3>Niciun document aici</h3><p>${r ? "Rubrica e goală. Dacă un document e în altă rubrică, îl muți de acolo cu „Rubrica”." : "Nimic nu se potrivește cu căutarea."}</p></div></div>`}`;
+}
+
+/* ---- CARTEA TEHNICĂ PE DOSARE ---- */
+let CTSEL = null;      // dosarul deschis
+let CTTAB = "dosare";  // „dosare” sau „parametri”
+const DOS_T = {A1:"Avize, autorizații, fișa sintetică", A2:"Proiectul, verificările și as built", B1:"Începerea lucrărilor și numirile", B2:"Controlul calității și PV-urile de execuție", B3:"Încercări, probe și măsurători", B4:"Documentele de calitate ale materialelor", C1:"Recepția", D1:"Exploatarea și urmărirea în timp"};
+const dosTitle = d => DOS_T[d.id] || (d.items.some(i=>i.group==="Documente suplimentare cerute de beneficiar") ? "Documente cerute de beneficiar" : (d.items.find(i=>i.group)||{}).group || "Documente suplimentare");
+function ctParamsHtml(){
+  const ts = activeTpls(), ct = ctState(), p = ct.p;
+  const field = (f, t) => {
+    const src = t ? (ct.pp[t]||{}) : p, v = src[f.k] ?? "";
+    const at = t ? `data-ctp="${t}|${f.k}"` : `data-ctc="${f.k}"`;
+    const inner = f.type==="select" ? `<select ${at}>${f.opts.map(o=>`<option ${String(v||f.opts[0])===o?"selected":""}>${o}</option>`).join("")}</select>`
+      : f.type==="area" ? `<textarea rows="5" ${at} placeholder="${esc(f.ph||"")}">${esc(v)}</textarea>`
+      : `<input type="text" ${at} value="${esc(v)}" placeholder="${esc(f.ph||"")}">`;
+    return `<div${f.wide?' class="wide"':""}><span class="lbl">${f.label}</span>${inner}</div>`;
+  };
+  return `
+  <div class="card">
+    <h3>Date comune</h3>
+    <div class="grid2">${[P_NR, P_COD].map(f=>field(f)).join("")}</div>
+  </div>
+  <div class="card">
+    <h3>Documente suplimentare cerute de beneficiar</h3>
+    <div class="dropzone" style="margin-bottom:12px"><b>Lista beneficiarului:</b> <button class="btn sm" id="benUp">Încarcă lista (PDF, Word, Excel sau poză)</button> <span>Aplicația scoate documentele din listă și ți le arată să le confirmi.</span>
+      ${ct.ben ? `<span style="flex-basis:100%">Lista încărcată: <b>${esc(ct.ben.name)}</b> · ${esc(roDate(ct.ben.at))} <button class="btn g sm" id="benOpen">Deschide originalul</button></span>` : ""}
+      <input type="file" id="inBen" accept=".pdf,.doc,.docx,.xlsx,.xlsm,.csv,.txt,.jpg,.jpeg,.png,.tif,.tiff,.webp" hidden></div>
+    <div class="grid2">${field(P_EXTRA)}</div>
+  </div>
+  ${ts.map(t=>{ const T = CT_TPL[t]; return `<div class="card">
+    <h3>${esc(T.name)}</h3>
+    ${T.params.filter(f=>f.type!=="area").length ? `<div class="grid2">${T.params.filter(f=>f.type!=="area").map(f=>field(f,t)).join("")}</div>` : ""}
+    <div class="grid2" style="margin-top:12px">${T.params.filter(f=>f.type==="area").map(f=>field(f,t)).join("")}</div>
+    <p class="muted" style="margin:10px 0 0">Repere normative: ${esc(T.norme)}.</p>
+  </div>`; }).join("")}`;
+}
+function viewCarte(){
+  const ts = activeTpls();
+  if(!ts.length) return `<div class="card"><div class="empty">
+    <h3>Alege întâi domeniile lucrării</h3>
+    <p>Lista-tip a cărții tehnice se generează din domeniile bifate la Proiect${S.dom.includes("electrice")?" și, la instalații electrice, din tipurile de lucrări alese":""}.</p>
+    <button class="btn" data-v-go="proiect">Mergi la Proiect</button></div></div>`;
+  const dos = ctMatch();
+  const inLips = new Set(S.lipsuri.map(l=>norm(lden(l))));
+  const miss = ctMissing(false).filter(i=>!inLips.has(norm(lden(i))));
+  const tot = dos.filter(d=>!d.later).reduce((a,d)=>a+d.total,0), got = dos.filter(d=>!d.later).reduce((a,d)=>a+d.got,0);
+  const tabs = `<div class="fbar"><button class="btn ${CTTAB==="dosare"?"":"g"} sm" data-cttab="dosare">Dosarele cărții tehnice</button><button class="btn ${CTTAB==="parametri"?"":"g"} sm" data-cttab="parametri">Parametrii lucrării și lista beneficiarului</button></div>`;
+  if(CTTAB==="parametri") return tabs + `<div class="note">Parametrii fiecărei specialități (tronsoane, tablouri, zone…) hotărăsc ce PV-uri și buletine apar în dosare. Documentele cerute în plus de beneficiar intră într-un dosar separat.</div>` + ctParamsHtml();
+  const d = CTSEL && dos.find(x=>x.id===CTSEL);
+  if(!d){
+    const tile = (x, i) => {
+      const pct = x.total ? Math.round(x.got/x.total*100) : 100;
+      const st = x.later ? (x.got<x.total ? `de completat ${x.later}` : "complet") : x.got===x.total ? "complet" : `${x.total-x.got} lipsă`;
+      return `<button class="dtile ${x.later?"later":x.got===x.total?"ok":"miss"}" data-dos="${x.id}">
+        <span class="dt-id">${x.id}</span><span class="dt-name">${esc(dosTitle(x))}</span>
+        <span class="bar"><i style="width:${pct}%"></i></span>
+        <span class="dt-n"><b>${x.got} din ${x.total}</b> · ${st}</span></button>`;
+    };
+    return tabs + `
+    <div class="note"><b>Cartea tehnică pe dosare.</b> Apasă pe un dosar ca să vezi documentele necesare și starea lor. Lista vine din domeniile lucrării (${esc(domNames(S.dom).join(", "))}), după HG 343/2017, Anexa 6. Capitolele A și B: <b>${got} din ${tot}</b> documente găsite.</div>
+    ${["A","B","C","D"].map(ch=>`<div class="ct-cht">${CT_CH[ch]}</div><div class="dtiles">${dos.filter(x=>x.ch===ch).map(tile).join("")}</div>`).join("")}
+    <div class="card" style="margin-top:6px">
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn" id="ctToLips" ${miss.length?"":"disabled"}>Trimite ${miss.length} ${miss.length===1?"lipsă":"lipsuri"} la Lipsuri</button>
+        <button class="btn o" id="ctPrint">Tipărește borderourile</button>
+        <button class="btn g" id="ctArrange" ${got?"":"disabled"}>Aranjează dosarul pe calculator</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Lipsurile din capitolele A și B ajung la Lipsuri, cu „de la cine” completat. Capitolele C și D se completează la recepție și în exploatare.</p>
+    </div>`;
+  }
+  const docs = live().slice().sort((a,b)=>a.name.localeCompare(b.name));
+  const dMiss = d.items.filter(i=>!i.group && !i.doc && !i.na && !inLips.has(norm(lden(i))));
+  return tabs + `
+  <div class="crumb"><button class="btn g" id="dosBack">← Înapoi la dosare</button>
+    <h2>Dosar ${d.id} · ${esc(dosTitle(d))}</h2>
+    <span class="muted">${d.got} din ${d.total} găsite${d.na?` · ${d.na} nu se aplică`:""}</span></div>
+  <div class="tw" style="max-height:none"><table>
+    <thead><tr><th style="width:120px">Cod</th><th>Document necesar</th><th style="width:120px">Stare</th><th style="width:34%">Fișier din inventar</th><th style="width:150px"></th></tr></thead>
+    <tbody>${d.items.map(i=> i.group ? `<tr class="grp-row${i.spec?" spec":""}"><td colspan="5">${esc(i.group)}</td></tr>` : `<tr class="${i.na?"off":""}">
+      <td class="num">${esc(i.cod||"")}</td>
+      <td>${esc(i.den)}${i.dela?`<span class="path">de la: ${esc(i.dela)}</span>`:""}</td>
+      <td>${i.na ? `<span class="tag t-none">nu se aplică</span>` : i.doc ? `<span class="tag t-viz">găsit${i.manual?" · ales":""}</span>` : d.later ? `<span class="tag t-none">de completat</span>` : inLips.has(norm(lden(i))) ? `<span class="tag t-dup">în Lipsuri</span>` : `<span class="tag t-late">lipsă</span>`}</td>
+      <td>${i.na ? "" : `<select data-ctman="${esc(i.key)}"><option value="">${i.doc && !i.manual ? "automat: "+esc(i.doc.name) : "automat — negăsit"}</option>${docs.map(x=>`<option value="${x.id}" ${i.manual && i.doc && i.doc.id===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select>`}</td>
+      <td style="white-space:nowrap">${i.na ? `<button class="btn g sm" data-ctna="${esc(i.key)}">Se aplică</button>` : `${!i.doc && !d.later && !inLips.has(norm(lden(i))) ? `<button class="btn g sm" data-ctask="${esc(i.key)}">Cere</button> ` : ""}<button class="btn g sm" data-ctna="${esc(i.key)}">Nu se aplică</button>`}</td>
+    </tr>`).join("")}</tbody>
+  </table></div>
+  ${dMiss.length && !d.later ? `<div style="margin-top:12px"><button class="btn" id="dosToLips">Cere toate cele ${dMiss.length} lipsă din dosarul ${d.id}</button></div>` : ""}`;
+}
+
+/* ---- LISTA BENEFICIARULUI ----
+   Lista documentelor cerute în plus de beneficiar, încărcată ca PDF, Word, Excel, text sau poză.
+   Aplicația scoate documentele (rânduri numerotate, cu liniuță sau coloana cu denumiri dintr-un tabel)
+   și ți le arată să le confirmi; fișierul original se păstrează în browser, la lucrare. */
+async function zipTexts(file, want){
+  const buf = new Uint8Array(await file.arrayBuffer()), dv = new DataView(buf.buffer);
+  let e = -1;
+  for(let i=buf.length-22; i>=Math.max(0, buf.length-66000); i--){ if(dv.getUint32(i,true)===0x06054b50){ e=i; break; } }
+  if(e<0) return {};
+  let p = dv.getUint32(e+16,true); const n = dv.getUint16(e+10,true), out = {};
+  for(let k=0; k<n; k++){
+    if(dv.getUint32(p,true)!==0x02014b50) break;
+    const meth = dv.getUint16(p+10,true), csize = dv.getUint32(p+20,true);
+    const fl = dv.getUint16(p+28,true), xl = dv.getUint16(p+30,true), cl = dv.getUint16(p+32,true), off = dv.getUint32(p+42,true);
+    const name = new TextDecoder().decode(buf.subarray(p+46, p+46+fl));
+    if(want(name)){
+      const ds = off + 30 + dv.getUint16(off+26,true) + dv.getUint16(off+28,true), raw = buf.subarray(ds, ds+csize);
+      out[name] = meth===0 ? new TextDecoder().decode(raw) : meth===8 ? await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text() : "";
+    }
+    p += 46 + fl + xl + cl;
+  }
+  return out;
+}
+const xmlDec = s => s.replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#(\d+);/g,(a,c)=>String.fromCharCode(+c)).replace(/&amp;/g,"&");
+// primul tabel din primul sheet al unui .xlsx, ca rânduri de celule
+async function xlsxRows(file){
+  const z = await zipTexts(file, n => n==="xl/sharedStrings.xml" || /^xl\/worksheets\/sheet\d+\.xml$/.test(n));
+  const shared = []; (z["xl/sharedStrings.xml"]||"").replace(/<si>([\s\S]*?)<\/si>/g, (a, si) => { shared.push(xmlDec((si.match(/<t[^>]*>([\s\S]*?)<\/t>/g)||[]).map(t=>t.replace(/<[^>]+>/g,"")).join(""))); return ""; });
+  const sheet = Object.keys(z).filter(n=>n.startsWith("xl/worksheets/")).sort((a,b)=>parseInt(a.match(/\d+/))-parseInt(b.match(/\d+/)))[0];
+  if(!sheet) return [];
+  const rows = [];
+  z[sheet].replace(/<row[^>]*>([\s\S]*?)<\/row>/g, (a, r) => {
+    const row = [];
+    r.replace(/<c ([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, (m, attrs, inner) => {
+      const ref = (attrs.match(/r="([A-Z]+)\d+"/)||[])[1] || "", t = (attrs.match(/t="(\w+)"/)||[])[1];
+      let col = 0; for(const ch of ref) col = col*26 + ch.charCodeAt(0)-64; col = Math.max(0, col-1);
+      let v = "";
+      if(t==="inlineStr") v = xmlDec(((inner||"").match(/<t[^>]*>([\s\S]*?)<\/t>/)||[])[1]||"");
+      else { const x = ((inner||"").match(/<v>([\s\S]*?)<\/v>/)||[])[1]; v = x===undefined ? "" : t==="s" ? (shared[+x]||"") : xmlDec(x); }
+      row[col] = v.trim(); return "";
+    });
+    rows.push(row); return "";
+  });
+  return rows;
+}
+async function docxLines(file){
+  const z = await zipTexts(file, n => n==="word/document.xml");
+  const x = z["word/document.xml"] || "";
+  // rândurile de tabel: celulele separate prin „ | ”, paragrafele din celulă lipite
+  const rowsX = x.replace(/<w:tr[ >][\s\S]*?<\/w:tr>/g, tr => tr.replace(/<\/w:p>/g," ").replace(/<\/w:tc>/g," | ").replace(/<[^>]+>/g,"").replace(/\s*\|\s*$/,"") + "\n");
+  return xmlDec(rowsX.replace(/<\/w:p>/g,"\n").replace(/<w:tab\/>/g," ").replace(/<w:br\/>/g,"\n").replace(/<[^>]+>/g,"")).split("\n");
+}
+async function pdfLines(file){
+  const lib = await loadPdfJs(); if(!lib) return null;
+  const doc = await lib.getDocument({data: await file.arrayBuffer()}).promise, out = [];
+  for(let i=1; i<=Math.min(15, doc.numPages); i++){
+    const c = await (await doc.getPage(i)).getTextContent();
+    let line = "", y = null;
+    for(const it of c.items){
+      const iy = it.transform ? Math.round(it.transform[5]) : y;
+      if(y!==null && Math.abs(iy-y)>2){ out.push(line); line = ""; }
+      line += (line && !/\s$/.test(line) ? " " : "") + it.str; y = iy;
+      if(it.hasEOL){ out.push(line); line = ""; y = null; }
+    }
+    if(line) out.push(line);
+  }
+  return out;
+}
+async function ocrLines(file){
+  const T = await loadOcr(); if(!T) return null;
+  const src = extOf(file.name)==="pdf" ? await pdfFirstPageImage(file) : file;
+  const w = await T.createWorker(OCR_LANGS.split("+"), 1, OCR_OPT);
+  const r = await w.recognize(src); await w.terminate();
+  return (r.data.text||"").split("\n");
+}
+// din rânduri de tabel: coloana cu denumirile documentelor
+function listFromRows(rows){
+  rows = rows.filter(r=>r && r.some(c=>c && c.trim()));
+  if(!rows.length) return [];
+  const HEAD = /denumire|document|descriere|description|titlu|title|bezeichnung|designation|denominacion|aciklama|belge/;
+  // antetul tabelului: un rând cu cel puțin două celule, dintre care una „denumire / document / nr. crt.”
+  const filled = r => r.filter(c=>c && c.trim()).length;
+  let hi = rows.findIndex(r=>filled(r)>=2 && (r.some(c=>c && HEAD.test(norm(c))) || r.some(c=>c && /^(nr\.?\s*crt\.?|nr\.?|no\.?|crt\.?)$/.test(norm(c).trim()))));
+  let col = -1;
+  if(hi>=0) col = rows[hi].findIndex(c=>c && HEAD.test(norm(c)) && !/^(nr|no|crt)/.test(norm(c).trim()));
+  const body = rows.slice(hi+1);
+  const letters = k => body.reduce((a,r)=>a + ((r[k]||"").match(/[a-zA-ZăâîșțĂÂÎȘȚ]/g)||[]).length, 0);
+  if(col>=0 && letters(col) < body.length*3) col = -1;
+  if(col<0){
+    const w = Math.max(...body.map(r=>r.length));
+    let best = 0;
+    for(let k=0;k<w;k++){ const sc = body.reduce((a,r)=>a + ((r[k]||"").match(/[a-zA-ZăâîșțĂÂÎȘȚ]/g)||[]).length, 0); if(sc>best){ best=sc; col=k; } }
+  }
+  return body.map(r=>(r[col]||"").trim());
+}
+// din rânduri de text: cele numerotate sau cu liniuță; dacă nu sunt, toate rândurile cu text
+function listFromLines(lines){
+  lines = lines.map(l=>String(l||"").replace(/\s+/g," ").trim()).filter(Boolean);
+  const tab = lines.filter(l=>l.includes(" | "));
+  if(tab.length >= 3) return listFromRows(tab.map(l=>l.split(" | ").map(c=>c.trim())));
+  const BUL = /^\s*(?:\(?\d{1,3}[.)]|\d{1,3}\s*[-–]|[a-z][.)]|[-–•*·▪►✓])\s+/i;
+  const bul = lines.filter(l=>BUL.test(l)).map(l=>l.replace(BUL,""));
+  return bul.length >= 2 ? bul : lines;
+}
+function cleanList(items){
+  const seen = new Set(), out = [];
+  for(let x of items){
+    x = String(x||"").replace(/^[\s\-–•*·:;.,|]+|[\s\-–•*:;,|]+$/g,"").trim();
+    if(x.length<4 || !/[a-zA-ZăâîșțĂÂÎȘȚ]{3}/.test(x)) continue;
+    const n = norm(x);
+    if(/:\s*$/.test(x) || /^(lista (documentelor|documente)|documente(le)? (necesare|solicitate|cerute|suplimentare)|nr\.? ?crt|denumire( document)?$|document$|observatii|responsabil$|semnatura|intocmit|verificat|aprobat|pagina \d)/.test(n)) continue;
+    if(seen.has(n)) continue; seen.add(n); out.push(x.slice(0,200));
+  }
+  return out.slice(0,200);
+}
+async function readBenList(file){
+  const x = extOf(file.name);
+  try{
+    if(x==="xlsx" || x==="xlsm") return cleanList(listFromRows(await xlsxRows(file)));
+    if(x==="docx") return cleanList(listFromLines(await docxLines(file)));
+    if(x==="doc"){ const t = await docText(file, true); return t ? cleanList(listFromLines(t.split("\n"))) : []; }
+    if(x==="csv") return cleanList(listFromRows((await file.text()).split(/\r?\n/).map(l=>l.split(/[;,\t]/))));
+    if(x==="txt") return cleanList(listFromLines((await file.text()).split(/\r?\n/)));
+    if(x==="pdf"){
+      const l = await pdfLines(file);
+      if(l && l.join("").replace(/\s/g,"").length > 30) return cleanList(listFromLines(l));
+      const o = await ocrLines(file); return o ? cleanList(listFromLines(o)) : null;
+    }
+    if(["jpg","jpeg","png","tif","tiff","webp","bmp"].includes(x)){ const o = await ocrLines(file); return o ? cleanList(listFromLines(o)) : null; }
+  }catch(e){ return null; }
+  return [];
+}
+async function importBenList(file){
+  busy(true, "Se citește lista beneficiarului…");
+  const items = await readBenList(file);
+  busy(false);
+  if(items===null) return alert("Nu am putut citi fișierul. Pentru PDF-uri scanate și poze e nevoie de internet la prima folosire a cititorului.");
+  if(!items.length) return alert("Nu am găsit o listă de documente în fișier. Le poți scrie în câmpul de mai jos, câte unul pe rând.");
+  const have = new Set(parseLines(ctState().p.extra).map(norm));
+  $("#intake").innerHTML = `<div class="mbox" style="width:min(820px,100%)">
+    <div class="mh"><h2>Documentele din lista beneficiarului</h2><span class="muted">${esc(file.name)} · ${pl(items.length,"document găsit","documente găsite")}</span></div>
+    <div style="padding:0 18px"><p class="muted" style="margin:0 0 10px">Bifează ce intră în cartea tehnică; poți corecta denumirea direct în câmp.</p>
+    <div class="tw" style="max-height:52vh"><table><tbody>${items.map((x,i)=>`<tr class="${have.has(norm(x))?"off":""}"><td style="width:34px"><input type="checkbox" class="chk" data-bi="${i}" ${have.has(norm(x))?"":"checked"}></td><td><input type="text" data-bt="${i}" value="${esc(x)}"></td><td style="width:110px">${have.has(norm(x))?`<span class="muted">deja în listă</span>`:""}</td></tr>`).join("")}</tbody></table></div></div>
+    <div class="mf"><span class="muted">Fișierul original se păstrează la lucrare, în acest browser.</span><button class="btn g" id="biCancel">Renunță</button><button class="btn" id="biOk">Adaugă în cartea tehnică</button></div>
+  </div>`;
+  $("#intake").classList.add("on");
+  const close = () => { $("#intake").classList.remove("on"); $("#intake").innerHTML=""; };
+  $("#biCancel").onclick = close;
+  $("#biOk").onclick = async () => {
+    const add = [...$("#intake").querySelectorAll("[data-bi]")].filter(c=>c.checked).map(c=>$("#intake").querySelector(`[data-bt="${c.dataset.bi}"]`).value.trim()).filter(Boolean);
+    const ct = ctState(), cur = parseLines(ct.p.extra), seen = new Set(cur.map(norm));
+    for(const a of add) if(!seen.has(norm(a))){ cur.push(a); seen.add(norm(a)); }
+    ct.p.extra = cur.join("\n");
+    ct.ben = {name:file.name, at:todayIso()};
+    try{ await IDB.set("ben:"+S.id, file); }catch(e){}
+    close(); render();
+    alert(`${pl(add.length,"document adăugat","documente adăugate")} în cartea tehnică, în dosarul „Documente cerute de beneficiar”.`);
+  };
 }
 
 /* ---- CONFORMITATE ----
@@ -3249,7 +3523,10 @@ const BB_KB = [
   {k:["verificare intrare","copie identica","de ce nu s-a adaugat","respins","debifat"], a:()=>`La intrare, aplicația compară fiecare fișier cu ce există: <b>copiile identice</b> se resping, <b>versiunile noi</b> îți cer o decizie, fișierele care <b>completează o lipsă</b> o rezolvă automat, iar <b>documentele noi necerute</b> vin debifate după prima încărcare, ca să nu intre din greșeală.`},
   {k:["duplicate","versiune vigoare","care versiune","versiuni"], a:()=>{ const g = dupGroups(), nev = g.filter(x=>!x.docs.some(d=>d.viz)).length; return `Grupurile de duplicate reunesc fișiere cu același conținut sau cu aceeași denumire de bază (rev1, rev2, final). Pentru fiecare grup alegi versiunea <b>în vigoare</b>; celelalte rămân ca istoric și nu apar în opis. ${g.length?`Acum ai <b>${g.length}</b> ${g.length===1?"grup":"grupuri"}, din care <b>${nev}</b> fără versiune aleasă.`:""} ${go("duplicate","Deschide Duplicate")}`; }},
   {k:["data portocalie","data estimata","estimata","de verificat data"], a:()=>{ const n = S.docs.filter(d=>d.dataSrc==="estimat").length; return `Data e portocalie când aplicația n-a găsit-o în denumirea fișierului și a pus data ultimei modificări a fișierului, care de obicei e data copierii, nu data actului. Corecteaz-o din document; în opis, datele estimate nu se tipăresc. ${n?`Ai <b>${n}</b> date estimate.`:""} ${go("inventar","Deschide Inventarul")}`; }},
-  {k:["carte tehnica parametri","tronsoane","balize","cod pv","numerotare pv","lista tip","tip lucrare","tipuri lucrari","ce tipuri"], a:()=>`Lista-tip a cărții tehnice vine din <b>domeniile lucrării</b>, bifate la Proiect: construcții civile, drumuri, instalații electrice, termice, sanitare, gaze, rețele edilitare, HVAC. La instalații electrice alegi și tipurile: în clădiri, rețele LEA/LES, LEA cu fibră optică, fotovoltaic, paratrăsnet, IDSAI, supraveghere video, antiefracție, control acces. La <b>Carte tehnică</b> completezi parametrii fiecărei specialități; aplicația pune PV-urile, probele și buletinele pe dosare, după Anexa 6 din HG 343/2017, iar piesele comune apar o singură dată. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
+  {k:["carte tehnica parametri","tronsoane","balize","cod pv","numerotare pv","lista tip","tip lucrare","tipuri lucrari","ce tipuri"], a:()=>`Lista-tip a cărții tehnice vine din <b>domeniile lucrării</b>, bifate la Proiect: construcții civile, drumuri, instalații electrice, termice, sanitare, gaze, rețele edilitare, HVAC. La instalații electrice alegi și tipurile: în clădiri, rețele LEA/LES, LEA cu fibră optică, fotovoltaic, paratrăsnet, IDSAI, supraveghere video, antiefracție, control acces. La <b>Carte tehnică → Parametrii lucrării</b> completezi parametrii fiecărei specialități; aplicația pune PV-urile, probele și buletinele pe dosare, după Anexa 6 din HG 343/2017, iar piesele comune apar o singură dată. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
+  {k:["rubrici","rubrica","unde gasesc","unde e documentul","muta documentul","alta rubrica"], a:()=>`La <b>Inventar</b> documentele sunt împărțite pe rubrici (avize, PV-uri de execuție, probe, documente de calitate, dispoziții etc.). Apeși pe chenarul rubricii ca să vezi documentele, iar sus ai <b>← Înapoi la rubrici</b>. Căutarea caută în toate. Dacă un document e în rubrica greșită, îl muți din coloana <b>Rubrica</b>. ${CUR?go("inventar","Deschide Inventarul"):""}`},
+  {k:["finalizata","lucrare finalizata","in derulare","stadiul lucrarii","receptionata"], a:()=>`O lucrare trece la <b>Finalizate</b> după recepția la terminarea lucrărilor: la <b>Proiect → Stadiul lucrării</b> pui data recepției (sau, dacă aplicația găsește PV-ul de recepție în inventar, apeși „Marchează lucrarea finalizată”). În pagina domeniului lucrările apar la „În derulare” sau la „Finalizate”. ${CUR?go("proiect","Deschide Proiect"):""}`},
+  {k:["dosar a1","dosarele","deschid dosarul","nu se aplica document","aleg fisierul","fisier gresit"], a:()=>`La <b>Carte tehnică</b> fiecare dosar (A1 … D1) are chenarul lui, cu „găsite din necesare”. Apeși pe el și vezi documentele necesare și starea lor. Pe fiecare rând poți <b>alege fișierul</b> de mână, marca <b>Nu se aplică</b> sau <b>Cere</b> documentul lipsă. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
   {k:["domenii","mai multe domenii","mai multe specialitati","specialitati","lucrare cu mai multe","categorii","pagina de intrare","chenare"], a:()=>`Pe pagina de intrare alegi domeniul și pornești o <b>lucrare nouă</b>. O lucrare poate avea <b>mai multe domenii</b> (de exemplu o școală: construcții, electrice, termice, sanitare): le bifezi la <b>Proiect → Domeniile lucrării</b>. Cartea tehnică, verificările și cererile țin cont de toate. ${CUR?go("proiect","Deschide Proiect"):""}`},
   {k:["persoane","ce domenii are dirigintele","domeniile dirigintelui","domenii diriginte","diriginte mai multe domenii","autorizat pe mai multe","cine acopera","rte pentru fiecare","domeniu autorizare"], a:()=>`La <b>Proiect → Persoane și specialități</b> treci fiecare persoană o singură dată și bifezi domeniile pe care le acoperă. Aplicația îți arată ce domeniu nu are diriginte sau RTE. Domeniile de autorizare ale dirigintelui: <b>2</b> construcții civile, <b>3</b> drumuri, <b>6.1</b> apă și canalizare, <b>8.1</b> instalații electrice, <b>8.2</b> sanitare și termoventilații, <b>8.3</b> gaze, <b>9.1–9.4</b> rețele (electrice, termice și sanitare, telecomunicații, gaze). La 8.1, 8.3, 9.1 și 9.4 e nevoie și de legitimație ANRE. ${CUR?go("proiect","Deschide Proiect"):""}`},
   {k:["probe termice","proba la rece","proba la cald","proba de eficacitate","probe incalzire"], a:()=>`La încălzire se fac trei probe: <b>la rece</b> (rezistență și etanșeitate, la 1,5 × presiunea maximă de regim, minimum 5 bar, 3 ore, înainte de izolare), <b>la cald</b> (etanșeitate, dilatare, circulație) și <b>de eficacitate</b> (12 ore, în perioada rece, cu clădirea terminată). Înainte de proba la rece instalația se spală. Probele se consemnează în procese-verbale, în prezența dirigintelui și a proiectantului. <span class="bb-law">I 13-2015, cap. 10</span>`},
@@ -3261,7 +3538,7 @@ const BB_KB = [
   {k:["idsai","detectie incendiu","semnalizare incendiu","registru de control"], a:()=>`La <b>IDSAI</b>, firma trebuie autorizată de IGSU pentru instalarea și întreținerea sistemelor de semnalizare la incendiu. După montaj urmează o perioadă de funcționare preliminară, apoi o comisie verifică documentația și face probe funcționale. Executantul predă <b>registrul de control</b>, instrucțiunile și documentul de configurare, iar mentenanța începe imediat după recepție. <span class="bb-law">P 118/3-2015, cap. 5</span>`},
   {k:["supraveghere video","camere","antiefractie","control acces","licenta igpr","sisteme securitate"], a:()=>`Sistemele de <b>supraveghere video, antiefracție și control acces</b> se proiectează și se instalează doar de societăți cu <b>licență IGPR</b>. La obiectivele din HG 301/2012, art. 68 (bănci, benzinării, instituții publice, depozite cu valori peste 10.000 euro etc.) proiectul se avizează de poliție înainte de execuție. La predare, beneficiarul primește codurile, programele și documentația pe bază de proces-verbal. <span class="bb-law">Legea 333/2003; HG 301/2012, art. 68–69, 76, 86</span>`},
   {k:["paratrasnet","ipt","trasnet","priza paratrasnet"], a:()=>`Pentru <b>paratrăsnet</b> păstrezi proiectul cu nivelul de protecție, PV-ul de lucrări ascunse pentru fiecare priză de pământ, PV-ul de montaj (captare, coborâri) și buletinele de măsurare a rezistenței de dispersie și a continuității. <span class="bb-law">I 7-2011 (modificat în 2023); SR EN 62305</span>`},
-  {k:["cerinte beneficiar","documente suplimentare","operator retea cere","beneficiarul cere"], a:()=>`Documentele cerute în plus de beneficiar sau de operatorul de rețea le adaugi la <b>Carte tehnică → Documente suplimentare cerute de beneficiar</b>, câte unul pe rând. Apar într-un dosar separat, sunt căutate în inventar ca toate celelalte și pot fi trimise la Lipsuri și cerute. ${go("carte","Deschide Cartea tehnică")}`},
+  {k:["cerinte beneficiar","documente suplimentare","operator retea cere","beneficiarul cere","lista beneficiar","lista de la beneficiar","excel beneficiar"], a:()=>`Lista primită de la beneficiar o încarci la <b>Carte tehnică → Parametrii lucrării și lista beneficiarului → Încarcă lista</b>: PDF, Word, <b>Excel</b> sau poză. Aplicația scoate documentele (rânduri numerotate, cu liniuță sau coloana cu denumiri din tabel), ți le arată să le confirmi și le pune într-un dosar separat; originalul rămâne la lucrare. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
   {k:["borderou","borderouri","tiparesc borderou"], a:()=>`Borderourile se tipăresc de la <b>Carte tehnică → Tipărește borderourile</b>: câte unul pe dosar, cu numerotarea calculată; documentele lipsă apar marcate LIPSĂ. Ca să obții PDF, alege „Salvare ca PDF” în fereastra de tipărire. ${go("carte","Deschide Cartea tehnică")}`},
   {k:["opis","pdf opis","tiparesc opis"], a:()=>`Opisul se generează de la <b>Rezultate → Generează opisul</b>. Conține documentele în vigoare, grupate pe capitole, plus lipsurile marcate LIPSĂ. Pentru PDF, alege „Salvare ca PDF” la tipărire. ${go("rezultate","Deschide Rezultate")}`},
   {k:["cerere","cer documente","trimit cerere","email cerere","adresa cerere"], a:()=>`La <b>Cereri</b>, lipsurile sunt grupate pe „de la cine se recuperează”. Alegi termenul și apeși <b>Pregătește cererea</b>: poți copia textul, îl poți deschide în email sau poți tipări o adresă formală. După <b>Marchează ca trimisă</b>, aplicația urmărește termenul și bifează singură documentele care sosesc. ${go("cereri","Deschide Cereri")}`},
@@ -3576,6 +3853,10 @@ function bind(){
     render();
   });
 
+  // stadiul lucrării
+  const sst = v.querySelector("[data-stare]"); if(sst) sst.onchange=()=>{ S.stare = sst.value; if(S.stare==="finalizata" && !S.receptie){ const d = pvReceptieDoc(); if(d && d.dataSrc!=="estimat") S.receptie = d.data; } render(); };
+  const srd = v.querySelector("[data-recdate]"); if(srd) srd.onchange=()=>{ S.receptie = srd.value; if(srd.value) S.stare = "finalizata"; render(); };
+  const sfn=$("#stFin"); if(sfn) sfn.onclick=()=>{ const d = pvReceptieDoc(); S.stare = "finalizata"; if(d && d.dataSrc!=="estimat" && d.data) S.receptie = d.data; render(); };
   // persoane
   const bap=$("#btnAddPers"); if(bap) bap.onclick=()=>{
     S.pers.push({id:newId("p"), nume:"", rol: S.pers.some(p=>p.rol===ROLURI[0]) ? ROLURI[1] : ROLURI[0], dom: S.dom.length===1 ? [S.dom[0]] : []});
@@ -3600,7 +3881,21 @@ function bind(){
 
   // filters
   const fq=$("#fq"); if(fq) fq.oninput=()=>{ FILTER.q=fq.value; const p=fq.selectionStart; render(); const n=$("#fq"); if(n){n.focus(); n.setSelectionRange(p,p);} };
-  const fc=$("#fcap"); if(fc) fc.onchange=()=>{ FILTER.cap=fc.value; render(); };
+  // rubricile inventarului
+  v.querySelectorAll("[data-rub]").forEach(b=>b.onclick=()=>{ INVRUB=b.dataset.rub; FILTER.stare=""; render(); v.scrollTop=0; });
+  const rb=$("#rubBack"); if(rb) rb.onclick=()=>{ INVRUB=null; FILTER.q=""; FILTER.stare=""; render(); v.scrollTop=0; };
+  v.querySelectorAll("[data-rubset]").forEach(el=>el.onchange=()=>{ const d=S.docs.find(x=>x.id===el.dataset.rubset); if(d){ d.rub=el.value; d.cap=rubById(el.value).cap; markDups(); render(); } });
+  const brb=$("#bulkRub"); if(brb) brb.onchange=()=>{ if(!brb.value) return; let n=0; S.docs.forEach(d=>{ if(d.sel){ d.rub=brb.value; d.cap=rubById(brb.value).cap; d.sel=false; n++; } }); markDups(); render(); if(!n) alert("Nu ai selectat niciun document."); };
+  // cartea tehnică pe dosare
+  v.querySelectorAll("[data-cttab]").forEach(b=>b.onclick=()=>{ CTTAB=b.dataset.cttab; render(); v.scrollTop=0; });
+  v.querySelectorAll("[data-dos]").forEach(b=>b.onclick=()=>{ CTSEL=b.dataset.dos; render(); v.scrollTop=0; });
+  const dbk=$("#dosBack"); if(dbk) dbk.onclick=()=>{ CTSEL=null; render(); v.scrollTop=0; };
+  const ctMan = () => { const ct = ctState(); return ct.man = ct.man || {}; };
+  v.querySelectorAll("[data-ctman]").forEach(el=>el.onchange=()=>{ const m = ctMan(); if(el.value) m[el.dataset.ctman]=el.value; else delete m[el.dataset.ctman]; render(); });
+  v.querySelectorAll("[data-ctna]").forEach(b=>b.onclick=()=>{ const m = ctMan(), k = b.dataset.ctna; if(m[k]==="na") delete m[k]; else m[k]="na"; render(); });
+  const askItems = items => { const have = new Set(S.lipsuri.map(l=>norm(lden(l)))); let n = 0; for(const i of items){ if(have.has(norm(lden(i)))) continue; S.lipsuri.push({id:newId("l"), cod:i.cod||"", den:i.den, cap:i.cap, dela:i.dela||""}); n++; } return n; };
+  v.querySelectorAll("[data-ctask]").forEach(b=>b.onclick=()=>{ const i = (ctMatch()||[]).flatMap(d=>d.items).find(i=>i.key===b.dataset.ctask); if(i){ askItems([i]); render(); } });
+  const dtl=$("#dosToLips"); if(dtl) dtl.onclick=()=>{ const d = (ctMatch()||[]).find(d=>d.id===CTSEL); if(!d) return; const n = askItems(d.items.filter(i=>!i.group && !i.doc && !i.na)); render(); alert(`${pl(n,"document adăugat","documente adăugate")} la Lipsuri; le ceri de la Cereri, grupate pe cine trebuie să le trimită.`); };
   const fs=$("#fstare"); if(fs) fs.onchange=()=>{ FILTER.stare=fs.value; render(); };
 
   // row edits
@@ -3621,7 +3916,6 @@ function bind(){
   // bulk
   const ba=$("#btnSelAll"); if(ba) ba.onclick=()=>{ const ids=new Set(filtered().map(d=>d.id)); S.docs.forEach(d=>{ if(ids.has(d.id)) d.sel=true; }); render(); };
   const bn=$("#btnSelNone"); if(bn) bn.onclick=()=>{ S.docs.forEach(d=>d.sel=false); render(); };
-  const bcap=$("#bulkCap"); if(bcap) bcap.onchange=()=>{ if(!bcap.value) return; let n=0; S.docs.forEach(d=>{ if(d.sel){ d.cap=bcap.value; n++; } }); markDups(); render(); if(!n) alert("Nu ai selectat niciun document."); };
   const bsrc=$("#bulkSrc"); if(bsrc) bsrc.onchange=()=>{ if(!bsrc.value) return; S.docs.forEach(d=>{ if(d.sel) d.sursa=bsrc.value; }); render(); };
   const bdel=$("#btnDel"); if(bdel) bdel.onclick=()=>{ const n=S.docs.filter(d=>d.sel).length; if(!n) return alert("Nu ai selectat nimic."); if(!confirm("Scoți "+n+" documente din inventar?")) return; S.docs=S.docs.filter(d=>!d.sel); markDups(); render(); };
 
@@ -3783,6 +4077,9 @@ function bind(){
     v.querySelectorAll("[data-csug]").forEach(el=>{ if(!el.checked) return; const x = sg[+el.dataset.csug]; if(!x) return; S.mat.push({id:newId("m"), den:x.i.den, furn:x.i.furn, kw:"", docId:x.d.id, ok:false}); n++; });
     render(); if(n) alert(`${pl(n,"material adăugat","materiale adăugate")}, fiecare legat de certificatul lui. Verifică dacă documentul corespunde și bifează „Corespunde”.`);
   };
+  // lista beneficiarului
+  const bu=$("#benUp"), ib=$("#inBen"); if(bu&&ib){ bu.onclick=()=>ib.click(); ib.onchange=()=>{ const f = ib.files[0]; ib.value=""; if(f) importBenList(f); }; }
+  const bop=$("#benOpen"); if(bop) bop.onclick=async()=>{ let f=null; try{ f = await IDB.get("ben:"+S.id); }catch(e){} if(!f) return alert("Originalul nu mai e în acest browser (poate a fost încărcat pe alt calculator)."); const u = URL.createObjectURL(f); window.open(u, "_blank"); setTimeout(()=>URL.revokeObjectURL(u), 60000); };
   // aranjarea dosarului și textul din PDF-uri
   const car=$("#ctArrange"); if(car) car.onclick=openArrange;
   // sursa fișierelor: folderul legat sau alegerea folderului acum
