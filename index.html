@@ -658,7 +658,7 @@ const HOME_ICON = "M3 11l9-7 9 7M5 9.5V20h14V9.5";
 function renderNav(){
   const home = `<button data-v="acasa" class="${VIEW==="acasa"||VIEW==="domeniu"?"on":""}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${HOME_ICON}"/></svg>
-      <span>Toate lucrările</span><span class="n">${IDX.length||""}</span></button>`;
+      <span>Acasă</span><span class="n">${IDX.length||""}</span></button>`;
   if(!CUR){
     $("#nav").innerHTML = home;
     $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{ VIEW="acasa"; render(); });
@@ -691,7 +691,7 @@ function render(){
   if(!CUR && VIEW!=="acasa" && VIEW!=="domeniu") VIEW = "acasa";
   renderNav();
   const home = VIEW==="acasa" || VIEW==="domeniu";
-  $("#vtitle").textContent = VIEW==="acasa" ? "Toate lucrările" : VIEW==="domeniu" ? (domById(DSEL)||{}).name||"" : (VIEWS.find(v=>v.id===VIEW)||{}).name;
+  $("#vtitle").textContent = VIEW==="acasa" ? "Acasă" : VIEW==="domeniu" ? (domById(DSEL)||{}).name||"" : (VIEWS.find(v=>v.id===VIEW)||{}).name;
   $("#vsub").textContent = home ? "" : subTitle();
   $("#btnSave").style.display = CUR ? "" : "none";
   const v = $("#view");
@@ -736,17 +736,14 @@ function viewAcasa(){
     <p>Fiecare domeniu are aceeași structură, de la proiect până la cartea tehnică, cu listele-tip și verificările lui. Intră în domeniul tău ca să vezi lucrările în derulare și finalizate sau să pornești una nouă.</p>
   </div>
   <div class="tiles">${DOM.map((d,i)=>`<button class="tile ${(Math.floor(i/4)+i)%2?"dk":""}" data-dom-open="${d.id}" aria-label="${esc(d.name)}">${d.icon}<b>${esc(d.name)}</b>${IDX.filter(l=>(l.dom||[]).includes(d.id)).length?`<small>${pl(IDX.filter(l=>(l.dom||[]).includes(d.id)).length,"lucrare","lucrări")}</small>`:""}</button>`).join("")}</div>
-  <div class="card">
-    <h3>Lucrările tale</h3>
-    ${lucrariHtml(IDX, "Încă nu ai nicio lucrare. Alege un domeniu de mai sus și apasă „Lucrare nouă”.")}
-  </div>
+  ${IDX.some(l=>!(l.dom||[]).length) ? `<div class="card"><h3>Lucrări fără domeniu</h3><p class="muted" style="margin:0 0 6px">Deschide-le și alege domeniul, ca să apară în chenarul lui.</p>${lucrariHtml(IDX.filter(l=>!(l.dom||[]).length), "")}</div>` : ""}
   <div class="card"><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
     ${FIRMA.logo?`<img src="${FIRMA.logo}" alt="" style="max-height:44px;max-width:160px">`:""}
     <div style="flex:1;min-width:220px"><h3 style="margin:0 0 2px">Firma mea</h3><span class="muted">${FIRMA.nume ? esc(FIRMA.nume)+" · antetul apare pe copertă, opisuri, borderouri și cereri"+(Object.values(MODEL_INFO).some(Boolean)?" · modele proprii încărcate":"") : "Completează antetul firmei (siglă, denumire, CUI) și, dacă ai, modelele tale Word — apar pe tot ce tipărește aplicația."}</span></div>
     <button class="btn ${FIRMA.nume?"g":""} sm" id="btnFirma">${FIRMA.nume?"Modifică":"Completează"}</button></div></div>
   ${/^https?:$/.test(location.protocol) ? `<div class="card">
     <h3>Vrei să vezi cum arată?</h3>
-    <p style="margin:0 0 12px;font-size:14px;color:var(--muted)">Deschide o lucrare demonstrativă cu date fictive: fibră optică pe LEA 110 kV, la Instalații electrice, cu documentele și cartea tehnică pe dosare. Apare în listă ca o lucrare separată.</p>
+    <p style="margin:0 0 12px;font-size:14px;color:var(--muted)">Deschide o lucrare demonstrativă cu date fictive: fibră optică pe LEA 110 kV, la Instalații electrice, cu documentele și cartea tehnică pe dosare. O găsești apoi în chenarul Instalații electrice, ca lucrare separată.</p>
     <button class="btn g sm" id="btnDemo">Deschide exemplul</button>
   </div>` : ""}
   <p class="muted" style="line-height:1.5">Lucrările se păstrează în acest browser. Ca să le muți pe alt calculator sau să le păstrezi în siguranță, deschide lucrarea și apasă <b>Salvează proiect</b>.</p>`;
