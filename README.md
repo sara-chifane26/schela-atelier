@@ -18,9 +18,13 @@ Pagina de intrare are opt chenare, câte unul pe domeniu: **construcții civile,
 
 1. **Inventar** — încarci folderul lucrării; fiecare fișier trece prin verificarea la intrare (copii identice respinse, versiuni noi semnalate, lipsuri rezolvate automat).
 2. **Duplicate** — alegi versiunea în vigoare.
-3. **Carte tehnică** — completezi parametrii fiecărei specialități; aplicația reunește documentele așteptate pe dosare A–D după HG 343/2017 (Anexa 6), cu piesele comune o singură dată, le caută în inventar și tipărește borderourile. Documentele cerute în plus de beneficiar se adaugă într-un câmp separat.
-4. **Conformitate** — verifică dosarul față de legislație (HG 343/2017, Legea 10/1995, Ordinul MDRAP 1370/2014 pentru controlul ISC) și față de normativele fiecărui domeniu (I 7, I 9, I 13, I 5, NTPEE, NP 133, P 118/3, HG 301/2012 etc.) și semnalează, pe faze, documentele lipsă cu temeiul legal.
-5. **Lipsuri** și **Cereri** — ce lipsește, de la cine, cu termene și reamintiri.
-6. **Rezultate** — statistici, opis (tipărire / PDF), exporturi CSV.
+3. **Carte tehnică** — completezi parametrii fiecărei specialități; aplicația reunește documentele așteptate pe dosare A–D după HG 343/2017 (Anexa 6), cu piesele comune o singură dată, le caută în inventar și tipărește borderourile. Documentele cerute în plus de beneficiar se adaugă într-un câmp separat. În Chrome sau Edge, aplicația poate aranja copiile fișierelor în foldere Dosar A1 … D1, numerotate ca în borderou.
+4. **Materiale** — lista materialelor principale, cu documentul de calitate al fiecăruia și confirmarea că acesta corespunde materialului livrat.
+5. **Execuție** — fazele determinante cu termenul de convocare ISC și model de convocare, semnăturile pe PV-uri, registrul dispozițiilor de șantier.
+6. **Conformitate** — verifică dosarul față de legislație (HG 343/2017, Legea 10/1995, Ordinul MDRAP 1370/2014 pentru controlul ISC) și față de normativele fiecărui domeniu (I 7, I 9, I 13, I 5, NTPEE, NP 133, P 118/3, HG 301/2012 etc.) și semnalează, pe faze, documentele lipsă cu temeiul legal.
+7. **Lipsuri** și **Cereri** — ce lipsește, de la cine, cu termene și reamintiri.
+8. **Rezultate** — statistici, opis (tipărire / PDF), exporturi CSV.
 
 **Boloboc** — butonul din colțul din dreapta jos: răspunde la întrebări despre dosar („ce lipsește?”, „cine întârzie?”, „ce fac acum?”), despre folosirea aplicației și despre noțiunile de specialitate (faze determinante, lucrări ascunse, as built, recepție), cu temeiul legal. Funcționează fără AI și fără internet: nimic nu pleacă din pagină.
+
+Din PDF-uri aplicația citește local începutul textului, ca să recunoască și fișierele cu nume neclar (cititorul pdf.js se încarcă de pe cdnjs; documentele nu pleacă din calculator). Scanurile fără text nu sunt citite.

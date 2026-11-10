@@ -356,7 +356,7 @@ let LAST_JS = "";
 function blank(){
   return {
     id: newId("w"),
-    dom:[], sub:[], pers:[],
+    dom:[], sub:[], pers:[], mat:[], faze:[], disp:[], sem:{},
     meta:{firma:"",proiect:"",beneficiar:"",contract:"",amplasament:"",perioada:"",inceput:new Date().toISOString().slice(0,10),semnatar:"",emitent:""},
     docs:[],
     lipsuri:[],
@@ -390,7 +390,7 @@ const RULES = [
   ["Aprovizionare", ["aviz de insotire","aviz insotire","avize de insotire","aviz marfa","aviz","avize","nir","bon de consum","bon consum","bonuri de consum","fisa de magazie","livrare","dispozitie de livrare"]],
   ["Execuție", ["proces verbal","procese verbale","pv","receptie","atasament","atasamente","situatie de lucrari","situatie lucrari","situatii de lucrari","jurnal de santier","jurnal santier","ordin de incepere","trasare","faza determinanta","faze determinante","fd","comanda de lucru","condica"]],
   ["SSM și SU", ["ssm","instruire","instruiri","securitate si sanatate","plan propriu","coordonare","interventii ulterioare","psi","situatii de urgenta","evaluare riscuri","evaluarea riscurilor","fisa individuala","fise individuale","instructaj","echipament individual"]],
-  ["Calitate", ["buletin","buletine","incercari","incercare","raport de incercare","rapoarte de incercare","certificat","certificate","certificat de calitate","declaratie de conformitate","declaratie conformitate","declaratie de performanta","dop","agrement","agrement tehnic","pram","priza de pamant","prize de pamant","proba","probe","verificare metrologica"]],
+  ["Calitate", ["program de control","program control","pccvi","plan calitate","buletin","buletine","incercari","incercare","raport de incercare","rapoarte de incercare","certificat","certificate","certificat de calitate","declaratie de conformitate","declaratie conformitate","declaratie de performanta","dop","agrement","agrement tehnic","pram","priza de pamant","prize de pamant","proba","probe","verificare metrologica"]],
   ["Proiectare", ["proiect tehnic","memoriu","memoriu tehnic","caiet de sarcini","caiete de sarcini","breviar","breviar de calcul","plansa","planse","plan de situatie","referat","verificator","studiu","studiu geotehnic","detalii de executie","dde","dtac","releveu proiectare"]],
   ["Contracte", ["contract","contracte","act aditional","acte aditionale","oferta","oferte","comanda","comenzi","garantie","garantii","factura","facturi","deviz","devize","antemasuratoare","proces de licitatie","acord cadru","scrisoare de garantie"]],
   ["Corespondență", ["adresa","adrese","notificare","notificari","dispozitie de santier","dispozitie","solicitare","solicitari","raspuns","raspunsuri","minuta","convocare","email","mail","corespondenta","instiintare"]],
@@ -465,6 +465,10 @@ function migrate(){
   if(!Array.isArray(S.dom)) S.dom = [];
   if(!Array.isArray(S.sub)) S.sub = [];
   if(!Array.isArray(S.pers)) S.pers = [];
+  if(!Array.isArray(S.mat)) S.mat = [];
+  if(!Array.isArray(S.faze)) S.faze = [];
+  if(!Array.isArray(S.disp)) S.disp = [];
+  if(!S.sem || typeof S.sem!=="object") S.sem = {};
   S.pers.forEach(p=>{ if(!p.id) p.id = newId("p"); if(!Array.isArray(p.dom)) p.dom = []; });
   // cartea tehnică veche avea un singur tip de lucrare: îl transformăm în domeniu + subtip
   if(S.ct && S.ct.tpl!==undefined){
@@ -549,6 +553,8 @@ const VIEWS = [
   {id:"inventar", name:"Inventar", icon:"M4 5h16v14H4z"},
   {id:"duplicate", name:"Duplicate", icon:"M8 8h12v12H8z"},
   {id:"carte", name:"Carte tehnică", icon:"M6 3h9l4 4v14H6zM9 11h7M9 15h7"},
+  {id:"materiale", name:"Materiale", icon:"M3 8l9-5 9 5-9 5zM3 8v8l9 5 9-5V8"},
+  {id:"executie", name:"Execuție", icon:"M4 4h16v16H4zM4 9h16M9 4v5M8 13h3M8 16h6"},
   {id:"conformitate", name:"Conformitate", icon:"M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM8.5 12l2.5 2.5 4.5-5"},
   {id:"lipsuri", name:"Lipsuri", icon:"M12 3 2 20h20z"},
   {id:"cereri", name:"Cereri", icon:"M3 6h18v12H3zM3 6l9 7 9-7"},
@@ -572,6 +578,8 @@ function renderNav(){
     if(v.id==="lipsuri") n = openLipsuri().length || "";
     if(v.id==="carte" && activeTpls().length && S.docs.length) n = ctMissing(false).length || "✓";
     if(v.id==="conformitate" && S.docs.length){ const b = cfEval().filter(x=>x.st==="miss" && x.r.grav!=="recom").length; n = b ? `<b class="late">${b}</b>` : "✓"; }
+    if(v.id==="materiale" && S.mat.length){ const b = S.mat.filter(m=>matStatus(m).st==="lipsa").length; n = b ? `<b class="late">${b}</b>` : (S.mat.filter(m=>matStatus(m).st==="verif").length || "✓"); }
+    if(v.id==="executie"){ const u = fazeUrgente().length; n = u ? `<b class="late">${u}</b>` : (pvNesemnate().length || ""); }
     if(v.id==="cereri"){ const late = S.cereri.filter(c=>cerStatus(c).late).length; n = late ? `<b class="late">${late}</b>` : (S.cereri.filter(c=>!cerStatus(c).done).length || ""); }
     return `<button data-v="${v.id}" class="${VIEW===v.id?"on":""}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${v.icon}"/></svg>
@@ -602,6 +610,8 @@ function render(){
   if(VIEW==="lipsuri") v.innerHTML = viewLipsuri();
   if(VIEW==="cereri") v.innerHTML = viewCereri();
   if(VIEW==="carte") v.innerHTML = viewCarte();
+  if(VIEW==="materiale") v.innerHTML = viewMateriale();
+  if(VIEW==="executie") v.innerHTML = viewExecutie();
   if(VIEW==="conformitate") v.innerHTML = viewConformitate();
   if($("#bb") && $("#bb").classList.contains("on")) bbRender();
   if(VIEW==="rezultate") v.innerHTML = viewRezultate();
@@ -794,6 +804,7 @@ function viewInventar(){
     <button class="btn g sm" id="btnSelNone">Deselectează</button>
     <button class="btn g sm" id="btnDel">Șterge selecția</button>
     <button class="btn g sm" id="btnReclass" title="Aplică regulile actualizate doar documentelor încă neclasificate; ce ai încadrat manual nu se schimbă.">Reîncadrează neclasificatele</button>
+    ${S.docs.some(d=>d.ext==="pdf" && d.txt===undefined) ? `<button class="btn g sm" id="btnPdfTxt" title="Alege din nou folderul lucrării; aplicația citește local începutul textului din PDF-uri, ca să recunoască și fișierele cu nume neclar.">Citește textul din PDF-uri</button><input type="file" id="inPdfTxt" webkitdirectory directory multiple hidden>` : ""}
   </div>
 
   <div class="tw"><table>
@@ -906,16 +917,21 @@ async function addFiles(list){
     seen.add(k); todo.push({f, path});
   }
   const cands = [];
+  const anyPdf = todo.some(t=>extOf(t.f.name)==="pdf");
+  if(anyPdf){ busy(true, "Se încarcă cititorul de PDF…"); await loadPdfJs(); }
   for(let i=0; i<todo.length; i++){
     const {f, path} = todo[i];
     if(i % 5 === 0){ busy(true, `Se verifică fișierele… ${i} din ${todo.length}`); await new Promise(r=>setTimeout(r,0)); }
     const fromName = guessDate(f.name);
     const mtime = f.lastModified ? new Date(f.lastModified).toISOString().slice(0,10) : "";
+    const txt = extOf(f.name)==="pdf" && window.pdfjsLib && f.size <= 40*1048576 ? (await pdfText(f) || "") : undefined;
+    let cap = guessCap(f.name, path);
+    if(cap==="Neclasificat" && txt) cap = matchCap(txt.slice(0,200)) || cap;
     cands.push({
       id: "d"+Math.random().toString(36).slice(2,10),
-      name: f.name, path, size: f.size, ext: extOf(f.name), mtime,
+      name: f.name, path, size: f.size, ext: extOf(f.name), mtime, txt,
       hash: await hashFile(f),
-      cap: guessCap(f.name, path),
+      cap,
       data: fromName || mtime,
       dataSrc: fromName ? "nume" : (mtime ? "estimat" : ""),
       sursa:"", dela:"", viz:false, dup:false, grp:false, sel:false, obs:""
@@ -1007,7 +1023,7 @@ function renderIntake(){
         <td>${ctl(x,i)}</td></tr>`).join("")}</tbody>
     </table></div>
     <div class="mf">
-      <span class="muted">Verificarea compară conținutul exact (amprenta fișierului) și denumirile. Nu citește textul din document, deci două scanări diferite ale aceleiași hârtii nu sunt recunoscute ca identice.</span>
+      <span class="muted">Verificarea compară conținutul exact (amprenta fișierului) și denumirile; din PDF-uri citește local și începutul textului. Două scanări diferite ale aceleiași hârtii nu sunt recunoscute ca identice.</span>
       <button class="btn g" id="inCancel">Renunță</button>
       <button class="btn" id="inOk" ${willAdd?"":"disabled"}>Adaugă ${willAdd} ${willAdd===1?"document":"documente"}</button>
     </div>
@@ -1952,11 +1968,11 @@ function ctNameScore(den, fileName){
 // potrivește fiecare document așteptat cu un fișier din inventar
 function ctMatch(){
   const dos = ctDosare(); if(!dos) return null;
-  const live = S.docs.filter(d=>!d.dup);
+  const liveD = S.docs.filter(d=>!d.dup);
   const used = new Set();
   const all = dos.flatMap(d=>d.items.filter(i=>!i.group).map(i=>({i, d})));
   // 1. după cod exact
-  for(const x of all){ if(!x.i.cod) continue; const f = live.find(d=>!used.has(d.id) && codeIn(d.name, x.i.cod)); if(f){ x.doc=f; used.add(f.id); } }
+  for(const x of all){ if(!x.i.cod) continue; const f = liveD.find(d=>!used.has(d.id) && codeIn(d.name, x.i.cod)); if(f){ x.doc=f; used.add(f.id); } }
   // 2. după cuvinte cheie / denumire (un document general poate acoperi o singură poziție).
   //    Întâi frazele specifice (3+ cuvinte, ex. „proiect tehnic instalații sanitare”), apoi cele generale
   //    („proiect tehnic”), ca într-o lucrare cu mai multe specialități fiecare să-și ia proiectul ei.
@@ -1972,7 +1988,7 @@ function ctMatch(){
   //     apoi pe cel cu denumirea cea mai scurtă („Declarația executantului” nu ia locul „Declarației de conformitate a executantului”)
   for(const x of all){
     if(x.doc) continue;
-    const f = live.filter(d=>free(x,d) && kwHit(x,d,1))
+    const f = liveD.filter(d=>free(x,d) && kwHit(x,d,1))
       .sort((a,b)=> inDos(b,x.d.id) - inDos(a,x.d.id) || words(a.name).length - words(b.name).length)[0];
     if(f){ x.doc=f; used.add(f.id); }
   }
@@ -1981,7 +1997,7 @@ function ctMatch(){
   const kp = [];
   for(const x of all){
     if(x.doc) continue;
-    for(const d of live) if(free(x,d) && kwHit(x,d,2)) kp.push({x, d, sc: inDos(d,x.d.id)*10 + ctNameScore(x.i.den, d.name) - words(d.name).length/1000});
+    for(const d of liveD) if(free(x,d) && kwHit(x,d,2)) kp.push({x, d, sc: inDos(d,x.d.id)*10 + ctNameScore(x.i.den, d.name) - words(d.name).length/1000});
   }
   kp.sort((a,b)=>b.sc-a.sc);
   for(const pr of kp){ if(pr.x.doc || used.has(pr.d.id)) continue; pr.x.doc = pr.d; used.add(pr.d.id); }
@@ -1990,7 +2006,7 @@ function ctMatch(){
   const pairs = [];
   for(const x of all){
     if(x.doc) continue;
-    for(const d of live){
+    for(const d of liveD){
       if(used.has(d.id) || (x.i.cod && hasSeriesCode(d.name, x.i.cod))) continue;
       const sc = ctNameScore(x.i.den, d.name);
       if(sc >= 0.75) pairs.push({x, d, sc});
@@ -1998,6 +2014,21 @@ function ctMatch(){
   }
   pairs.sort((a,b)=>b.sc-a.sc);
   for(const pr of pairs){ if(pr.x.doc || used.has(pr.d.id)) continue; pr.x.doc = pr.d; used.add(pr.d.id); }
+  // 4. fișierele rămase cu text citit din PDF (ex. „scan001.pdf”): după frazele specifice și după denumire, în textul de început
+  const tp = [];
+  for(const x of all){
+    if(x.doc) continue;
+    const phrases = (x.i.kws || (x.i.kw ? [x.i.kw] : [])).filter(k=>words(k).length>=2).map(words);
+    for(const d of liveD){
+      if(used.has(d.id) || !d.txt) continue;
+      const h = new Set(words(d.txt));
+      const kw = phrases.some(n=>n.every(w=>h.has(w)));
+      const sc = ctNameScore(x.i.den, d.txt.slice(0,160));
+      if(kw || sc >= 0.75) tp.push({x, d, sc: sc + (kw?1:0)});
+    }
+  }
+  tp.sort((a,b)=>b.sc-a.sc);
+  for(const pr of tp){ if(pr.x.doc || used.has(pr.d.id)) continue; pr.x.doc = pr.d; pr.x.byText = true; used.add(pr.d.id); }
   for(const d of dos){
     const xs = all.filter(x=>x.d===d);
     d.total = xs.length; d.got = xs.filter(x=>x.doc).length;
@@ -2070,6 +2101,7 @@ function viewCarte(){
     <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px">
       <button class="btn" id="ctToLips" ${miss.length?"":"disabled"}>Trimite ${miss.length} ${miss.length===1?"lipsă":"lipsuri"} la Lipsuri</button>
       <button class="btn o" id="ctPrint">Tipărește borderourile</button>
+      <button class="btn g" id="ctArrange" ${got?"":"disabled"}>Aranjează dosarul pe calculator</button>
     </div>
     <p class="muted" style="margin:8px 0 0">Lipsurile din capitolele A și B ajung la <b>Lipsuri</b>, cu „de la cine” completat, ca să le poți cere la <b>Cereri</b>. Capitolele C și D nu se trimit: se completează la recepție și în exploatare.</p>
   </div>
@@ -2110,6 +2142,351 @@ function buildBorderouri(){
       ${rows}
     </div>`;
   }).join("");
+}
+
+/* ---- MATERIALE ----
+   Lista materialelor principale puse în operă și documentul de calitate al fiecăruia.
+   ISC găsește des certificate lipsă sau care nu corespund materialelor (HG 668/2017; Legea 10/1995, art. 23 lit. f). */
+const live = () => S.docs.filter(d=>!d.dup);
+// fișiere care par documente de calitate: certificate, declarații, agremente, fișe tehnice
+const QSTEM = new Set(["certi","decla","agrem","dop","perfo","confo","garan"]);
+function isQualDoc(d){
+  if(d.cap==="Calitate") return true;
+  return words(d.name+" "+d.path).some(w=>QSTEM.has(w));
+}
+// cuvintele după care se caută un material: cele cu litere, de cel puțin 3 caractere (ex. „cablu cyy”, „teava ppr”)
+function matKeys(m){
+  const src = (m.kw||"").trim() || m.den;
+  return [...new Set(words(src).filter(w=>/[a-z]/.test(w) && !/\d/.test(w) && w.length>=3))].slice(0,3);
+}
+function matDoc(m){
+  if(m.docId){ const d = S.docs.find(x=>x.id===m.docId && !x.dup); if(d) return {d, how:"ales"}; }
+  const keys = matKeys(m); if(!keys.length) return null;
+  const c = live().filter(isQualDoc).filter(d=>{ const h = new Set(words(d.name+" "+d.path+" "+(d.txt||""))); return keys.every(k=>h.has(k)); });
+  if(!c.length) return null;
+  c.sort((a,b)=>words(a.name).length-words(b.name).length);
+  return {d:c[0], how:"automat"};
+}
+function matStatus(m){
+  const f = matDoc(m);
+  if(!f) return {st:"lipsa", f};
+  return {st: m.ok ? "ok" : "verif", f};
+}
+function viewMateriale(){
+  const rows = S.mat.map((m,i)=>({m, i, s:matStatus(m)}));
+  const inLips = new Set(S.lipsuri.map(l=>norm(lden(l))));
+  const nL = rows.filter(r=>r.s.st==="lipsa").length, nLn = rows.filter(r=>r.s.st==="lipsa" && !inLips.has(norm(`Certificat de calitate / declarație de performanță – ${r.m.den}`))).length, nV = rows.filter(r=>r.s.st==="verif").length, nO = rows.filter(r=>r.s.st==="ok").length;
+  const qd = live().filter(isQualDoc).sort((a,b)=>a.name.localeCompare(b.name));
+  const tag = r => r.s.st==="lipsa" ? `<span class="tag t-late">lipsă</span>` : r.s.st==="verif" ? `<span class="tag t-dup">de verificat</span>` : `<span class="tag t-viz">verificat</span>`;
+  return `
+  <div class="note"><b>Materiale și documente de calitate.</b> Treci materialele principale puse în operă (din deviz, ofertă sau avize de însoțire). Aplicația caută documentul de calitate al fiecăruia în inventar; tu confirmi că documentul corespunde materialului livrat — tip, dimensiuni, producător. Așa prinzi certificatele lipsă sau greșite înainte de ISC.</div>
+
+  <div class="stats">
+    <div class="stat ${nL?"bad":"ok"}"><div class="v">${nL}</div><div class="l">fără document de calitate</div></div>
+    <div class="stat ${nV?"hot":""}"><div class="v">${nV}</div><div class="l">cu document, de verificat</div></div>
+    <div class="stat ok"><div class="v">${nO}</div><div class="l">verificate</div></div>
+  </div>
+
+  <div class="card">
+    <h3>Adaugă materiale</h3>
+    <textarea rows="4" id="matBulk" placeholder="Câte un material pe rând; după punct și virgulă, opțional, furnizorul:&#10;Cablu CYY-F 3x2,5 ; Electro Distribuție SRL&#10;Țeavă PPR 20 ; Instal Market&#10;Beton C25/30 ; Stație Betoane Nord"></textarea>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn" id="matAdd">Adaugă în listă</button>
+      ${nLn ? `<button class="btn g" id="matToLips">Trimite ${nLn} ${nLn===1?"lipsă":"lipsuri"} la Lipsuri</button>` : nL ? `<span class="muted" style="align-self:center">Lipsurile sunt deja în lista de Lipsuri.</span>` : ""}
+    </div>
+    <p class="muted" style="margin:8px 0 0">Căutarea se face după cuvintele din denumire (ex. „cablu cyy”). Dacă documentul are alt nume, alege-l din listă sau scrie la „Caută după” cuvântul din numele fișierului.</p>
+  </div>
+
+  ${S.mat.length ? `<div class="tw" style="max-height:none"><table>
+    <thead><tr><th>Material</th><th style="width:170px">Furnizor</th><th style="width:140px">Caută după</th><th style="width:30%">Document de calitate</th><th style="width:105px">Stare</th><th style="width:96px">Corespunde</th><th style="width:60px"></th></tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td><input type="text" data-mf="${r.i}:den" value="${esc(r.m.den)}"></td>
+      <td><input type="text" data-mf="${r.i}:furn" value="${esc(r.m.furn||"")}" placeholder="furnizor"></td>
+      <td><input type="text" data-mf="${r.i}:kw" value="${esc(r.m.kw||"")}" placeholder="${esc(matKeys({den:r.m.den}).join(" "))}"></td>
+      <td><select data-mdoc="${r.i}"><option value="">${r.s.f && r.s.f.how==="automat" ? "automat: "+esc(r.s.f.d.name) : "automat — negăsit"}</option>${qd.map(d=>`<option value="${d.id}" ${r.m.docId===d.id?"selected":""}>${esc(d.name)}</option>`).join("")}</select></td>
+      <td>${tag(r)}</td>
+      <td>${r.s.f ? `<label class="ck"><input type="checkbox" class="chk" data-mok="${r.i}" ${r.m.ok?"checked":""}> da</label>` : ""}</td>
+      <td><button class="btn g sm" data-mdel="${r.i}" aria-label="Șterge">×</button></td>
+    </tr>`).join("")}</tbody>
+  </table></div>` : `<div class="card"><div class="empty"><h3>Lista e goală</h3><p>Lipește materialele principale mai sus, câte unul pe rând.</p></div></div>`}`;
+}
+
+/* ---- EXECUȚIE: faze determinante, semnături pe PV-uri, dispoziții de șantier ---- */
+let EXTAB = "faze";
+// sugestii de faze determinante pe domenii — fazele reale sunt cele din programul aprobat de ISC
+const FD_SUG = {
+  constructii:["Verificarea naturii terenului de fundare","Armare fundații, înainte de turnare","Armare elemente de rezistență – fiecare nivel","Terminarea structurii"],
+  drumuri:["Recepția patului drumului (terasamente compactate)","Recepția stratului de fundație","Recepția stratului de bază","Recepția stratului de uzură"],
+  electrice:["Priza de pământ, înainte de acoperire","Trasee de cabluri îngropate / înglobate, înainte de acoperire","Probe și măsurători înainte de punerea sub tensiune"],
+  termice:["Proba la rece (presiune și etanșeitate), înainte de izolare","Proba la cald"],
+  sanitare:["Proba de presiune a conductelor de apă, înainte de acoperire","Proba de etanșeitate a canalizării, înainte de acoperire"],
+  gaze:["Probe de rezistență și etanșeitate, înainte de acoperirea conductei"],
+  edilitare:["Pozarea conductei, înainte de umplerea tranșeei","Proba de presiune / etanșeitate pe tronson"],
+  hvac:["Etanșeitatea tubulaturii, înainte de închiderea plafoanelor","Probe și reglaj înainte de punerea în funcțiune"]
+};
+// convocarea trebuie să ajungă la ISC cu cel puțin 3 zile lucrătoare înainte (Ordinul MDRAP 1370/2014, art. 15)
+function minusWorkDays(iso, n){
+  const d = new Date(iso+"T12:00:00");
+  while(n>0){ d.setDate(d.getDate()-1); const w = d.getDay(); if(w!==0 && w!==6) n--; }
+  return d.toISOString().slice(0,10);
+}
+function fazaStatus(f){
+  if(f.pv) return {k:"done", txt:"PV încheiat", tag:"t-viz"};
+  if(!f.data) return {k:"nodate", txt:"fără dată", tag:"t-none"};
+  const lim = minusWorkDays(f.data, 3), t = todayIso();
+  if(f.conv) return {k:"sent", txt:`convocare trimisă ${roDate(f.conv)}`, tag:"t-new", lim};
+  if(t > lim) return {k:"late", txt:`convocarea trebuia trimisă până la ${roDate(lim)}`, tag:"t-late", lim};
+  const left = daysBetween(t, lim);
+  return left<=3 ? {k:"soon", txt:`convoacă ISC până la ${roDate(lim)}`, tag:"t-dup", lim} : {k:"plan", txt:`convocare până la ${roDate(lim)}`, tag:"t-none", lim};
+}
+const fazeUrgente = () => (S.faze||[]).filter(f=>{ const s = fazaStatus(f).k; return s==="late" || s==="soon"; });
+
+// procesele-verbale din inventar și cine trebuie să le semneze
+const SIGN = [["rte","RTE"],["dir","Diriginte"],["pr","Proiectant"],["isc","ISC"]];
+function isPVdoc(d){ const h = new Set(words(d.name)); return h.has("proce") && h.has("verba"); }
+function pvNeeds(d){
+  const n = norm(d.name);
+  const need = ["rte","dir"];
+  if(/faz\w* determinant|natura terenului|teren\w* de fundare|terminare\w* structur|receptie pe faza/.test(n)) need.push("pr","isc");
+  return need;
+}
+function pvState(d){
+  const s = S.sem[d.id] || {}, need = pvNeeds(d), miss = need.filter(k=>!s[k]);
+  return {s, need, miss};
+}
+const pvNesemnate = () => live().filter(isPVdoc).filter(d=>pvState(d).miss.length);
+
+// dispozițiile de șantier din inventar care nu sunt încă în registru
+const isDispDoc = d => { const h = new Set(words(d.name+" "+d.path)); return h.has("dispo") && h.has("santi"); };
+const dispNeinregistrate = () => live().filter(isDispDoc).filter(d=>!S.disp.some(x=>x.docId===d.id));
+
+function viewExecutie(){
+  const urg = fazeUrgente().length, nes = pvNesemnate().length;
+  const dProb = S.disp.filter(x=>!x.desen || !x.asbuilt).length;
+  const tab = (id, t, n) => `<button class="btn ${EXTAB===id?"":"g"} sm" data-extab="${id}">${t}${n?` · ${n}`:""}</button>`;
+  return `
+  <div class="fbar">${tab("faze","Faze determinante",urg)}${tab("sem","Semnături pe PV-uri",nes)}${tab("disp","Dispoziții de șantier",dProb)}</div>
+  ${EXTAB==="faze" ? viewFaze() : EXTAB==="sem" ? viewSemnaturi() : viewDispozitii()}`;
+}
+function viewFaze(){
+  const sug = S.dom.flatMap(d=>(FD_SUG[d]||[]).map(den=>({den, dom:d}))).filter(x=>!S.faze.some(f=>norm(f.den)===norm(x.den)));
+  return `
+  <div class="note"><b>Fazele determinante și convocările ISC.</b> Pentru fiecare fază din programul de control aprobat treci data estimată; aplicația calculează până când trebuie trimisă convocarea — cu cel puțin 3 zile lucrătoare înainte — și te avertizează. Sărbătorile legale nu sunt scăzute automat. <span class="muted">Temei: Ordinul MDRAP 1370/2014, art. 15.</span></div>
+  ${sug.length ? `<div class="card"><h3>Sugestii pentru domeniile lucrării</h3>
+    <p class="muted" style="margin:0 0 10px">Sunt doar sugestii; fazele valabile sunt cele din programul de control al calității aprobat de ISC.</p>
+    <div class="dom-pick">${sug.map((x,i)=>`<label><input type="checkbox" data-fsug="${i}" checked> ${esc(x.den)} <span class="muted">· ${esc(domById(x.dom).name)}</span></label>`).join("")}</div>
+    <div style="margin-top:10px"><button class="btn g sm" id="fSugAdd">Adaugă fazele bifate</button></div></div>` : ""}
+  <div class="card">
+    <h3>Fazele lucrării</h3>
+    ${S.faze.length ? `<div class="tw" style="max-height:none"><table>
+      <thead><tr><th style="min-width:260px">Faza determinantă</th><th style="width:150px">Data estimată</th><th style="width:150px">Convocare trimisă</th><th style="width:240px">Stare</th><th style="width:110px">PV încheiat</th><th style="width:190px"></th></tr></thead>
+      <tbody>${S.faze.map((f,i)=>{ const s = fazaStatus(f); return `<tr>
+        <td><input type="text" data-ff="${i}:den" value="${esc(f.den)}"></td>
+        <td><input type="date" data-ff="${i}:data" value="${esc(f.data||"")}"></td>
+        <td><input type="date" data-ff="${i}:conv" value="${esc(f.conv||"")}"></td>
+        <td><span class="tag ${s.tag}">${esc(s.txt)}</span></td>
+        <td><label class="ck"><input type="checkbox" class="chk" data-fpv="${i}" ${f.pv?"checked":""}> da</label></td>
+        <td style="white-space:nowrap"><button class="btn g sm" data-fconv="${i}">Text convocare</button> <button class="btn g sm" data-fdel="${i}" aria-label="Șterge">×</button></td>
+      </tr>`; }).join("")}</tbody></table></div>` : `<p class="muted" style="margin:0">Nicio fază încă.</p>`}
+    <div style="margin-top:12px"><button class="btn g sm" id="fAdd">Adaugă fază</button></div>
+  </div>`;
+}
+function viewSemnaturi(){
+  const pvs = live().filter(isPVdoc).sort((a,b)=>a.name.localeCompare(b.name));
+  const nes = pvs.filter(d=>pvState(d).miss.length);
+  return `
+  <div class="note"><b>Semnăturile pe procesele-verbale.</b> Aplicația ia toate PV-urile din inventar. Bifezi cine a semnat; coloanele cerute sunt marcate. RTE și dirigintele semnează orice PV de execuție; la fazele determinante și la natura terenului semnează și proiectantul și ISC. <span class="muted">Temei: HG 343/2017, Anexa 6, pct. 8; Ordinul MDRAP 1370/2014.</span></div>
+  <div class="stats">
+    <div class="stat ${nes.length?"bad":"ok"}"><div class="v">${nes.length}</div><div class="l">PV-uri cu semnături lipsă</div></div>
+    <div class="stat ok"><div class="v">${pvs.length-nes.length}</div><div class="l">PV-uri complete</div></div>
+  </div>
+  ${nes.length ? `<div style="margin:-2px 0 14px;display:flex;gap:9px;flex-wrap:wrap"><button class="btn" id="semToLips">Trimite PV-urile nesemnate la Lipsuri</button></div>` : ""}
+  ${pvs.length ? `<div class="tw" style="max-height:none"><table>
+    <thead><tr><th>Proces-verbal</th>${SIGN.map(([k,t])=>`<th style="width:92px">${t}</th>`).join("")}<th style="width:120px">Stare</th></tr></thead>
+    <tbody>${pvs.map(d=>{ const st = pvState(d); return `<tr>
+      <td class="fn">${esc(d.name)}</td>
+      ${SIGN.map(([k])=>`<td>${st.need.includes(k) ? `<label class="ck"><input type="checkbox" class="chk" data-sg="${d.id}:${k}" ${st.s[k]?"checked":""}> semnat</label>` : `<span class="muted">—</span>`}</td>`).join("")}
+      <td>${st.miss.length ? `<span class="tag t-late">lipsă ${st.miss.length}</span>` : `<span class="tag t-viz">complet</span>`}</td>
+    </tr>`; }).join("")}</tbody></table></div>` : `<div class="card"><div class="empty"><h3>Niciun proces-verbal în inventar</h3><p>PV-urile apar aici după ce le adaugi la Inventar.</p></div></div>`}`;
+}
+function viewDispozitii(){
+  const neinr = dispNeinregistrate();
+  return `
+  <div class="note"><b>Modificările de proiect.</b> Orice modificare se face prin dispoziție de șantier a proiectantului, completă și cu desene, și trebuie să ajungă în proiectul „as built”. Registrul îți arată ce dispoziții nu au desen și ce nu e încă în as built. <span class="muted">Temei: HG 343/2017, Anexa 6, pct. 7 lit. c) și pct. 8 lit. b).</span></div>
+  ${neinr.length ? `<div class="note warn">În inventar sunt <b>${neinr.length}</b> ${neinr.length===1?"dispoziție de șantier care nu e":"dispoziții de șantier care nu sunt"} în registru. <button class="btn g sm" id="dispImport" style="margin-left:8px">Preia-le în registru</button></div>` : ""}
+  <div class="card">
+    <h3>Registrul dispozițiilor de șantier</h3>
+    ${S.disp.length ? `<div class="tw" style="max-height:none"><table>
+      <thead><tr><th style="width:90px">Nr.</th><th style="width:150px">Data</th><th>Ce modifică</th><th style="width:90px">Are desen</th><th style="width:110px">În as built</th><th style="width:24%">Document</th><th style="width:50px"></th></tr></thead>
+      <tbody>${S.disp.map((x,i)=>{ const d = x.docId && S.docs.find(y=>y.id===x.docId); return `<tr>
+        <td><input type="text" data-df="${i}:nr" value="${esc(x.nr||"")}"></td>
+        <td><input type="date" data-df="${i}:data" value="${esc(x.data||"")}"></td>
+        <td><input type="text" data-df="${i}:desc" value="${esc(x.desc||"")}" placeholder="ex. traseu cablu modificat la etajul 1"></td>
+        <td><label class="ck"><input type="checkbox" class="chk" data-dck="${i}:desen" ${x.desen?"checked":""}> da</label></td>
+        <td><label class="ck"><input type="checkbox" class="chk" data-dck="${i}:asbuilt" ${x.asbuilt?"checked":""}> inclusă</label></td>
+        <td class="fn">${d ? esc(d.name) : `<span class="muted">—</span>`}</td>
+        <td><button class="btn g sm" data-ddel="${i}" aria-label="Șterge">×</button></td>
+      </tr>`; }).join("")}</tbody></table></div>
+      <div class="cov">
+        ${S.disp.filter(x=>!x.desen).length ? `<span class="bad">${pl(S.disp.filter(x=>!x.desen).length,"dispoziție fără desen","dispoziții fără desen")} — ISC le constată des ca deficiență.</span>` : ""}
+        ${S.disp.filter(x=>!x.asbuilt).length ? `<span class="bad">${pl(S.disp.filter(x=>!x.asbuilt).length,"dispoziție neinclusă","dispoziții neincluse")} în proiectul as built.</span>` : `<span class="ok">Toate dispozițiile sunt incluse în as built.</span>`}
+      </div>` : `<p class="muted" style="margin:0">Nicio dispoziție de șantier înregistrată.</p>`}
+    <div style="margin-top:12px"><button class="btn g sm" id="dispAdd">Adaugă dispoziție</button></div>
+  </div>`;
+}
+function convocareText(f){
+  const m = S.meta;
+  return `Către: Inspectoratul Județean în Construcții ${m.amplasament ? "("+m.amplasament+")" : ""}
+
+Ref.: Convocare la faza determinantă – ${f.den}
+
+Vă rugăm să participați la verificarea fazei determinante „${f.den}” la lucrarea „${m.proiect||"…"}”${m.amplasament?", amplasament "+m.amplasament:""}${m.beneficiar?", beneficiar "+m.beneficiar:""}, în data de ${f.data?roDate(f.data):"……"}, ora ……, conform programului de control al calității aprobat.
+
+Persoană de contact pe șantier: ……
+
+${m.semnatar||""}
+${m.emitent||""}`.replace(/\n{3,}/g,"\n\n");
+}
+function openTextModal(title, text, hint){
+  $("#intake").innerHTML = `<div class="mbox" style="width:min(760px,100%)">
+    <div class="mh"><h2>${esc(title)}</h2></div>
+    <div style="padding:0 18px"><textarea id="tmText" rows="14" style="width:100%">${esc(text)}</textarea>
+    ${hint?`<p class="muted" style="margin:8px 0 0">${hint}</p>`:""}</div>
+    <div class="mf"><span class="muted"></span><button class="btn g" id="tmClose">Închide</button><button class="btn" id="tmCopy">Copiază textul</button></div>
+  </div>`;
+  $("#intake").classList.add("on");
+  $("#tmClose").onclick = () => { $("#intake").classList.remove("on"); $("#intake").innerHTML=""; };
+  $("#tmCopy").onclick = async () => { const t = $("#tmText"); try{ await navigator.clipboard.writeText(t.value); $("#tmCopy").textContent="Copiat"; }catch(e){ t.select(); document.execCommand("copy"); $("#tmCopy").textContent="Copiat"; } };
+}
+
+/* ---- ARANJAREA DOSARULUI PE CALCULATOR ----
+   Copiază fișierele găsite pentru cartea tehnică în foldere „Dosar A1” … „Dosar D1”, numerotate ca în borderou.
+   Originalele nu se modifică. Scrierea în foldere merge în Chrome și Edge (File System Access API). */
+const safeName = s => String(s).replace(/[\\/:*?"<>|]+/g,"-").replace(/\s+/g," ").trim().slice(0,150);
+function arrangePlan(){
+  const dos = ctMatch() || [];
+  const out = [];
+  for(const d of dos){
+    let n = 0;
+    for(const i of d.items){
+      if(i.group){ n++; continue; }
+      if(!i.cod) n++;
+      if(!i.doc) continue;
+      const pre = i.cod ? i.cod : String(n).padStart(2,"0");
+      out.push({dos:d.id, doc:i.doc, den:i.den, cod:i.cod||"", file: safeName(`${pre} - ${i.doc.name}`)});
+    }
+  }
+  return out;
+}
+let ARR = null;   // {files: Map}
+function openArrange(){
+  const plan = arrangePlan();
+  const canWrite = typeof window.showDirectoryPicker === "function";
+  ARR = {files:null};
+  const draw = () => {
+    const found = ARR.files ? plan.filter(p=>ARR.files.has(p.doc.path+"|"+p.doc.name+"|"+p.doc.size) || ARR.files.has("|"+p.doc.name+"|"+p.doc.size)).length : 0;
+    $("#intake").innerHTML = `<div class="mbox" style="width:min(760px,100%)">
+      <div class="mh"><h2>Aranjează dosarul pe calculator</h2></div>
+      <div style="padding:0 18px;font-size:14.5px;line-height:1.55">
+        <p style="margin:0 0 10px">Aplicația face un folder nou, <b>„Carte tehnică – ${esc(safeName(S.meta.proiect||"lucrare"))}”</b>, cu câte un subfolder pe dosar (Dosar A1 … Dosar D1) și pune în ele <b>copii</b> ale celor <b>${plan.length}</b> fișiere găsite, numerotate ca în borderou. Fișierele originale nu se ating. Alături scrie și lista documentelor (CSV).</p>
+        ${canWrite ? "" : `<div class="note warn">Browserul acesta nu poate scrie foldere. Deschide aplicația în <b>Chrome</b> sau <b>Edge</b> pe calculator.</div>`}
+        <p style="margin:0 0 8px"><b>1.</b> Alege din nou folderul cu documentele lucrării (cel din care ai făcut inventarul).</p>
+        <button class="btn g" id="arrSrcBtn" ${canWrite?"":"disabled"}>Alege folderul cu documente</button>
+        <input type="file" id="arrSrc" webkitdirectory directory multiple hidden>
+        ${ARR.files ? `<p class="muted" style="margin:8px 0 0">Am găsit ${found} din ${plan.length} fișiere.${found<plan.length?" Cele lipsă sunt probabil în alt folder; poți continua cu ce s-a găsit.":""}</p>` : ""}
+        <p style="margin:14px 0 8px"><b>2.</b> Alege unde se creează dosarul (de exemplu Desktop sau un stick).</p>
+        <button class="btn" id="arrGo" ${canWrite && ARR.files && found ? "" : "disabled"}>Alege locul și creează dosarul</button>
+        <p class="muted" id="arrMsg" style="margin:10px 0 0"></p>
+      </div>
+      <div class="mf"><span class="muted">Fișierele sunt citite și scrise doar pe calculatorul tău.</span><button class="btn g" id="arrClose">Închide</button></div>
+    </div>`;
+    $("#intake").classList.add("on");
+    $("#arrClose").onclick = () => { ARR=null; $("#intake").classList.remove("on"); $("#intake").innerHTML=""; };
+    const src = $("#arrSrc");
+    $("#arrSrcBtn").onclick = () => src.click();
+    src.onchange = () => {
+      const m = new Map();
+      for(const f of src.files){ const path = (f.webkitRelativePath||"").split("/").slice(0,-1).join("/"); m.set(path+"|"+f.name+"|"+f.size, f); m.set("|"+f.name+"|"+f.size, f); }
+      ARR.files = m; draw();
+    };
+    $("#arrGo").onclick = async () => {
+      let root;
+      try{ root = await window.showDirectoryPicker({mode:"readwrite"}); }catch(e){ return; }
+      const msg = $("#arrMsg");
+      try{
+        const top = await root.getDirectoryHandle(safeName("Carte tehnică – " + (S.meta.proiect||"lucrare")), {create:true});
+        let ok = 0, miss = [];
+        const dirs = {};
+        for(const p of plan){
+          const f = ARR.files.get(p.doc.path+"|"+p.doc.name+"|"+p.doc.size) || ARR.files.get("|"+p.doc.name+"|"+p.doc.size);
+          if(!f){ miss.push(p.doc.name); continue; }
+          msg.textContent = `Se copiază ${ok+1} din ${plan.length}…`;
+          dirs[p.dos] = dirs[p.dos] || await top.getDirectoryHandle("Dosar " + p.dos, {create:true});
+          const fh = await dirs[p.dos].getFileHandle(p.file, {create:true});
+          const w = await fh.createWritable(); await w.write(f); await w.close(); ok++;
+        }
+        const csv = "﻿" + [["Dosar","Fisier","Cod","Document"].join(";")].concat(plan.map(p=>[ "Dosar "+p.dos, p.file, p.cod, p.den ].map(csvEsc).join(";"))).join("\r\n");
+        const lh = await top.getFileHandle("Lista documentelor.csv", {create:true}); const lw = await lh.createWritable(); await lw.write(csv); await lw.close();
+        msg.innerHTML = `<b style="color:var(--green)">Gata: ${pl(ok,"fișier copiat","fișiere copiate")}</b> în „${esc(top.name)}”.${miss.length?` ${pl(miss.length,"fișier nu a fost găsit","fișiere nu au fost găsite")} în folderul ales.`:""} Borderourile le tipărești de la Carte tehnică.`;
+      }catch(e){ msg.textContent = "Nu am putut scrie în folderul ales: " + (e && e.message || e); }
+    };
+  };
+  draw();
+}
+
+/* ---- TEXTUL DIN PDF ----
+   Pentru fișierele cu nume neclar („scan001.pdf”) aplicația citește local începutul textului din PDF
+   (cititorul pdf.js se încarcă o singură dată de pe cdnjs; documentele nu pleacă din calculator).
+   Scanurile fără strat de text nu pot fi citite (ar trebui OCR). */
+const PDFJS_SRC = window.PDFJS_SRC || "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+const PDFJS_WORKER = window.PDFJS_WORKER || "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+let PDFJS_P = null;
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(PDFJS_P) return PDFJS_P;
+  PDFJS_P = new Promise(res=>{
+    const s = document.createElement("script"); s.src = PDFJS_SRC;
+    const t = setTimeout(()=>res(null), 10000);
+    s.onload = () => { clearTimeout(t); try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER; res(window.pdfjsLib); }catch(e){ res(null); } };
+    s.onerror = () => { clearTimeout(t); res(null); };
+    document.head.appendChild(s);
+  }).then(l=>{ if(!l) PDFJS_P = null; return l; });
+  return PDFJS_P;
+}
+async function pdfText(file){
+  const lib = await loadPdfJs(); if(!lib) return null;
+  try{
+    const job = (async()=>{
+      const doc = await lib.getDocument({data: await file.arrayBuffer()}).promise;
+      let t = "";
+      for(let i=1; i<=Math.min(2, doc.numPages); i++){
+        const c = await (await doc.getPage(i)).getTextContent();
+        t += " " + c.items.map(x=>x.str).join(" ");
+        if(t.length > 900) break;
+      }
+      doc.destroy && doc.destroy();
+      return norm(t).replace(/\s+/g," ").trim().slice(0,600);
+    })();
+    return await Promise.race([job, new Promise(r=>setTimeout(()=>r(null), 15000))]);
+  }catch(e){ return null; }
+}
+// citește textul pentru documentele PDF din inventar care nu îl au încă (după ce alegi din nou folderul)
+async function readPdfTexts(files){
+  const m = new Map(); for(const f of files){ const path = (f.webkitRelativePath||"").split("/").slice(0,-1).join("/"); m.set(path+"|"+f.name+"|"+f.size, f); m.set("|"+f.name+"|"+f.size, f); }
+  const todo = S.docs.filter(d=>d.ext==="pdf" && d.txt===undefined);
+  busy(true, "Se încarcă cititorul de PDF…");
+  const lib = await loadPdfJs();
+  if(!lib){ busy(false); alert("Cititorul de PDF nu s-a putut încărca. E nevoie de internet pentru prima încărcare."); return; }
+  let n = 0, txt = 0;
+  for(const d of todo){
+    const f = m.get(d.path+"|"+d.name+"|"+d.size) || m.get("|"+d.name+"|"+d.size); if(!f) continue;
+    busy(true, `Se citește textul… ${++n} din ${todo.length}`);
+    d.txt = f.size <= 40*1048576 ? (await pdfText(f) || "") : "";
+    if(d.txt) txt++;
+    if(d.cap==="Neclasificat" && d.txt){ const c = matchCap(d.txt.slice(0,200)); if(c) d.cap = c; }
+  }
+  busy(false); render();
+  alert(`Am citit ${pl(n,"PDF","PDF-uri")}; ${txt} au text. ${n-txt ? (n-txt)+" sunt scanuri fără text (ar trebui OCR)." : ""}`);
 }
 
 /* ---- CONFORMITATE ----
@@ -2230,6 +2607,20 @@ const CF_RULES = [
    temei:"HG 343/2017, Anexa 4",
    deCe:"Încheie procesul de recepție; se face în cel mult 10 zile de la expirarea perioadei de garanție (art. 24)."},
 
+  /* evidențe ținute în aplicație */
+  {id:"faze-conv", faza:"executie", grav:"isc", auto:"faze",
+   titlu:"Convocările ISC trimise la timp pentru fazele determinante", cap:"Corespondență", dela:"Executant",
+   temei:"Ordinul MDRAP 1370/2014, art. 15",
+   deCe:"Convocarea trebuie să ajungă la ISC cu cel puțin 3 zile lucrătoare înainte de fază. La Execuție → Faze determinante vezi termenele calculate."},
+  {id:"semnaturi", faza:"receptie", grav:"receptie", auto:"sem",
+   titlu:"Procesele-verbale semnate de toți participanții", cap:"Execuție", dela:"Executant",
+   temei:"HG 343/2017, Anexa 6, pct. 8 lit. b); Ordinul MDRAP 1370/2014, Anexa 3",
+   deCe:"Un PV nesemnat de RTE, diriginte sau, la fazele determinante, de proiectant și ISC nu dovedește nimic la recepție."},
+  {id:"disp-asbuilt", faza:"receptie", grav:"receptie", auto:"disp",
+   titlu:"Dispozițiile de șantier au desene și sunt incluse în as built", cap:"As-built", dela:"Proiectant",
+   temei:"HG 343/2017, Anexa 6, pct. 7 lit. c) și pct. 8 lit. b)",
+   deCe:"Proiectul as built cuprinde modificările față de proiect, cu cauzele lor; ISC constată des dispoziții fără desene sau neintroduse în as built."},
+
   /* persoanele lucrării */
   {id:"persoane", faza:"inainte", grav:"isc", auto:"pers",
    titlu:"Diriginte de șantier și RTE pentru fiecare domeniu al lucrării", cap:"Contracte", dela:"Beneficiar / executant",
@@ -2301,6 +2692,25 @@ function cfState(){
   return S.conf;
 }
 function cfDetect(r){
+  if(r.id==="produse" && S.mat.length){
+    const ms = S.mat.map(matStatus), l = ms.filter(x=>x.st==="lipsa").length, v = ms.filter(x=>x.st==="verif").length;
+    return l ? {state:"nu", info:`${pl(l,"material fără document de calitate","materiale fără document de calitate")} (vezi Materiale)`} : {state:"da", info: v ? `toate materialele au document; ${v} de verificat dacă corespund` : "toate materialele au document verificat"};
+  }
+  if(r.auto==="sem"){
+    const pv = live().filter(isPVdoc); if(!pv.length) return {state:"nu", info:"niciun proces-verbal în inventar"};
+    const n = pvNesemnate().length;
+    return n ? {state:"nu", info:`${pl(n,"PV cu semnături lipsă","PV-uri cu semnături lipsă")} (vezi Execuție)`} : {state:"da", info:`${pl(pv.length,"PV semnat","PV-uri semnate")}`};
+  }
+  if(r.auto==="disp"){
+    if(!S.disp.length) return {state:"da", info: dispNeinregistrate().length ? "există dispoziții în inventar neînregistrate (vezi Execuție)" : "nicio dispoziție de șantier înregistrată"};
+    const fd = S.disp.filter(x=>!x.desen).length, na = S.disp.filter(x=>!x.asbuilt).length;
+    return fd||na ? {state:"nu", info:[fd?`${fd} fără desen`:"", na?`${na} neincluse în as built`:""].filter(Boolean).join(", ")} : {state:"da", info:"toate au desen și sunt în as built"};
+  }
+  if(r.auto==="faze"){
+    if(!S.faze.length) return {state:"nu", info:"treci fazele din program la Execuție"};
+    const late = S.faze.filter(f=>fazaStatus(f).k==="late").length;
+    return late ? {state:"nu", info:`${pl(late,"convocare întârziată","convocări întârziate")}`} : {state:"da", info:"convocările sunt la zi"};
+  }
   if(r.auto==="pers"){
     if(!S.dom.length) return {state:"nu", info:"Bifează domeniile lucrării la Proiect"};
     const lip = acoperire().filter(x=>!x.dir.length || !x.rte.length);
@@ -2311,11 +2721,18 @@ function cfDetect(r){
     const miss = ctMissing(false).length;
     return miss ? {state:"nu", info:`${miss} documente lipsă în capitolele A și B`} : {state:"da", info:"capitolele A și B complete"};
   }
-  const live = S.docs.filter(d=>!d.dup);
-  for(const d of live){
+  const liveD = S.docs.filter(d=>!d.dup);
+  for(const d of liveD){
     const h = new Set(words(d.name+" "+d.path));
     if((r.notKws||[]).some(k=>words(k).every(w=>h.has(w)))) continue;   // ex.: avizele de însoțire nu sunt avize de proiectare
     if((r.kws||[]).some(k=>words(k).every(w=>h.has(w))) || (r.rx && r.rx.test(norm(d.name)))) return {state:"da", doc:d};
+  }
+  // apoi în textul citit din PDF-uri, doar după frazele de 2+ cuvinte
+  for(const d of liveD){
+    if(!d.txt) continue;
+    const h = new Set(words(d.txt));
+    if((r.notKws||[]).some(k=>words(k).every(w=>h.has(w)))) continue;
+    if((r.kws||[]).filter(k=>words(k).length>=2).some(k=>words(k).every(w=>h.has(w)))) return {state:"da", doc:d};
   }
   return {state:"nu"};
 }
@@ -2381,7 +2798,7 @@ function viewConformitate(){
           ${x.det && x.det.doc ? `<div class="cf-doc">Găsit: <span class="fn">${esc(x.det.doc.name)}</span></div>` : x.det && x.det.info ? `<div class="cf-doc">${esc(x.det.info)}</div>` : ""}
         </div>
         <div class="cf-act">
-          ${x.r.auto ? `<button class="btn g sm" data-v-go="${x.r.auto==="pers"?"proiect":"carte"}">${x.r.auto==="pers"?"Vezi persoanele":"Vezi cartea tehnică"}</button>` :
+          ${x.r.auto ? `<button class="btn g sm" data-v-go="${({pers:"proiect",carte:"carte",sem:"executie:sem",disp:"executie:disp",faze:"executie:faze"})[x.r.auto]}">${({pers:"Vezi persoanele",carte:"Vezi cartea tehnică",sem:"Vezi semnăturile",disp:"Vezi dispozițiile",faze:"Vezi fazele"})[x.r.auto]}</button>` : x.r.id==="produse" && S.mat.length ? `<button class="btn g sm" data-v-go="materiale">Vezi materialele</button>` :
             x.st==="miss" || x.st==="later" ? `<button class="btn g sm" data-cfm="${x.r.id}:ok">Am documentul</button><button class="btn g sm" data-cfm="${x.r.id}:na">Nu se aplică</button>` :
             c.marks[x.r.id] ? `<button class="btn g sm" data-cfm="${x.r.id}:">Anulează marcajul</button>` : ""}
         </div>
@@ -2426,6 +2843,12 @@ const BB_KB = [
   {k:["exemplu","demo","cum arata"], a:()=>`Pe site, pe pagina de intrare, butonul <b>Deschide exemplul</b> adaugă în listă o lucrare demonstrativă cu date fictive (fibră optică pe LEA 110 kV, la Instalații electrice).`},
   {k:["export","csv","excel"], a:()=>`La <b>Rezultate</b> ai <b>Export inventar (CSV)</b> și <b>Export statistici (CSV)</b>; se deschid direct în Excel. ${go("rezultate","Deschide Rezultate")}`},
   {k:["conformitate","verificare norme","verificare conformitate","legislatie"], a:()=>`La <b>Conformitate</b>, aplicația verifică dosarul față de HG 343/2017, Legea 10/1995 și procedura ISC (Ordinul MDRAP 1370/2014). Fiecare lipsă are gravitatea (control ISC, blochează recepția, recomandat) și temeiul legal. Alege faza lucrării ca să vezi ce e scadent acum. ${go("conformitate","Deschide Conformitate")}`},
+  {k:["materiale","cum verific certificatele","verific certificatele","verificare certificate","certificate materiale","certificat nu corespunde","documente de calitate materiale","lista materiale"], a:()=>`La <b>Materiale</b> lipești lista materialelor principale (din deviz, ofertă sau avize), câte unul pe rând, opțional cu furnizorul după „;”. Aplicația caută documentul de calitate al fiecăruia în inventar; tu bifezi <b>Corespunde</b> după ce verifici că tipul, dimensiunile și producătorul se potrivesc cu materialul livrat. Ce lipsește trimiți la Lipsuri și ceri de la furnizori. ${CUR?go("materiale","Deschide Materiale"):""}`},
+  {k:["semnaturi","pv nesemnat","pv nesemnate","cine semneaza pv","semnaturi lipsa"], a:()=>`La <b>Execuție → Semnături pe PV-uri</b> apar toate procesele-verbale din inventar. Bifezi cine a semnat: RTE și dirigintele la orice PV, iar la fazele determinante și la natura terenului și proiectantul și ISC. Cele incomplete le trimiți la Lipsuri. ${CUR?go("executie:sem","Vezi semnăturile"):""}`},
+  {k:["convocare isc","cand convoc","calendar faze","termen convocare","3 zile lucratoare"], a:()=>`La <b>Execuție → Faze determinante</b> treci data estimată a fiecărei faze; aplicația calculează până când trebuie trimisă convocarea (cu cel puțin 3 zile lucrătoare înainte, fără sărbătorile legale) și îți pregătește un model de text. ${(()=>{ if(!CUR) return ""; const u = fazeUrgente(); return u.length ? `Acum ai <b>${u.length}</b> ${u.length===1?"convocare urgentă":"convocări urgente"}: ${u.slice(0,3).map(f=>esc(f.den)).join("; ")}.` : ""; })()} ${CUR?go("executie:faze","Vezi fazele"):""} <span class="bb-law">Ordinul MDRAP 1370/2014, art. 15</span>`},
+  {k:["modificari proiect","registru dispozitii","dispozitie fara desen","inclus in as built","modificari de proiect"], a:()=>`Modificările de proiect le ții la <b>Execuție → Dispoziții de șantier</b>: fiecare dispoziție cu numărul, data, ce modifică, dacă are desen și dacă a intrat în as built. Aplicația preia singură dispozițiile găsite în inventar și îți arată ce lipsește înainte de recepție. ${CUR?go("executie:disp","Vezi dispozițiile"):""} <span class="bb-law">HG 343/2017, Anexa 6, pct. 7 lit. c)</span>`},
+  {k:["aranjeaza dosarul","foldere dosare","copiez fisierele","stick","organizez dosarul","dosar pe calculator"], a:()=>`La <b>Carte tehnică → Aranjează dosarul pe calculator</b> aplicația face un folder cu subfolderele Dosar A1 … Dosar D1 și pune în ele copii ale fișierelor găsite, numerotate ca în borderou, plus lista documentelor. Originalele nu se ating. Merge în Chrome și Edge, pe calculator. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
+  {k:["scan","nume neclar","citeste pdf","text pdf","continut pdf","ocr"], a:()=>`Din PDF-uri aplicația citește local începutul textului, ca să recunoască și fișierele cu nume neclar, de exemplu „scan001.pdf”. Pentru documentele deja în inventar apasă <b>Inventar → Citește textul din PDF-uri</b> și alege din nou folderul. Scanurile fără strat de text nu pot fi citite: pentru ele ar trebui OCR; redenumește-le sau leagă-le manual.`},
   // --- noțiuni de specialitate ---
   {k:["faza determinanta","faze determinante"], a:()=>`O <b>fază determinantă</b> e o etapă de execuție hotărâtoare pentru rezistența și stabilitatea construcției. Proiectantul le stabilește în <b>programul de control pe faze determinante</b>, beneficiarul și verificatorul îl acceptă, iar ISC îl aprobă. Executantul convoacă ISC cu <b>cel puțin 3 zile lucrătoare</b> înainte, iar lucrarea continuă doar după acceptul scris, consemnat în procesul-verbal de control. <span class="bb-law">Ordinul MDRAP 1370/2014, art. 9, 15, 18; Legea 10/1995, art. 23 lit. d)</span>`},
   {k:["lucrari ascunse","pv lucrari ascunse"], a:()=>`<b>PV-ul de lucrări ascunse</b> consemnează calitatea lucrărilor care urmează să fie acoperite (fundații, armături, prize de pământ îngropate etc.) și nu mai pot fi verificate ulterior. Se semnează de executant (RTE) și de dirigintele de șantier și intră în capitolul B al cărții tehnice. <span class="bb-law">HG 343/2017, Anexa 6, pct. 8 lit. b)</span>`},
@@ -2465,6 +2888,8 @@ function bbCereri(){
 function bbNext(){
   if(!CUR) return `Alege domeniul lucrării de pe pagina de intrare și apasă <b>Lucrare nouă</b>, sau deschide o lucrare din listă.`;
   if(!S.dom.length) return `Bifează domeniile lucrării la Proiect: de ele depind cartea tehnică și verificările. ${go("proiect","Deschide Proiect")}`;
+  const urgF = fazeUrgente();
+  if(urgF.length){ const f = urgF[0], st = fazaStatus(f); return `Atenție la faza determinantă „${esc(f.den)}”: ${esc(st.txt)}. ${go("executie:faze","Vezi fazele")}`; }
   if(!S.docs.length) return `Primul pas: încarcă documentele lucrării de la <b>Inventar → Adaugă folder</b>. ${go("inventar","Deschide Inventarul")}`;
   const nev = dupGroups().filter(x=>!x.docs.some(d=>d.viz)).length;
   if(nev) return `Ai <b>${nev}</b> ${nev===1?"grup":"grupuri"} de duplicate fără versiunea în vigoare aleasă. Rezolvă-le întâi, ca opisul și verificările să lucreze pe documentele corecte. ${go("duplicate","Deschide Duplicate")}`;
@@ -2504,7 +2929,9 @@ const BB_SUG = {
   proiect:["Ce fac acum?","Cine acoperă fiecare domeniu?","Cum încarc documentele?"],
   inventar:["De ce e data portocalie?","Ce lipsește?","Ce sunt duplicatele?"],
   duplicate:["Ce sunt duplicatele?","Ce fac acum?"],
-  carte:["Ce conține cartea tehnică?","Cum tipăresc borderourile?","Ce lipsește?"],
+  carte:["Ce conține cartea tehnică?","Cum aranjez dosarul pe calculator?","Ce lipsește?"],
+  materiale:["Cum verific certificatele?","Ce lipsește?"],
+  executie:["Când convoc ISC?","Cine semnează PV-urile?","Cum țin modificările de proiect?"],
   conformitate:["Ce este o fază determinantă?","Ce verifică ISC?","Ce este proiectul as built?"],
   lipsuri:["Cum trimit o cerere?","Ce lipsește?"],
   cereri:["Cine întârzie?","Cum trimit o reamintire?"],
@@ -2525,7 +2952,7 @@ function bbRender(){
   const log = $("#bbLog"); log.scrollTop = log.scrollHeight;
   $("#bbClose").onclick = () => { box.classList.remove("on"); };
   box.querySelectorAll("[data-bsug]").forEach(b=>b.onclick=()=>bbAsk(b.dataset.bsug));
-  box.querySelectorAll("[data-bgo]").forEach(b=>b.onclick=()=>{ VIEW=b.dataset.bgo; render(); if(window.innerWidth<760) box.classList.remove("on"); });
+  box.querySelectorAll("[data-bgo]").forEach(b=>b.onclick=()=>{ const [vw,tb]=b.dataset.bgo.split(":"); VIEW=vw; if(tb) EXTAB=tb; render(); if(window.innerWidth<760) box.classList.remove("on"); });
   $("#bbForm").onsubmit = e => { e.preventDefault(); const q = $("#bbQ").value.trim(); if(q) bbAsk(q); };
   setTimeout(()=>{ const i=$("#bbQ"); if(i && window.innerWidth>=760) i.focus(); }, 30);
 }
@@ -2803,7 +3230,7 @@ function bind(){
     if(val) c.marks[id] = val; else delete c.marks[id];
     render();
   });
-  v.querySelectorAll("[data-v-go]").forEach(b=>b.onclick=()=>{ VIEW=b.dataset.vGo; render(); });
+  v.querySelectorAll("[data-v-go]").forEach(b=>b.onclick=()=>{ const [vw, tb] = b.dataset.vGo.split(":"); VIEW=vw; if(tb) EXTAB=tb; render(); });
   const cfl=$("#cfToLips"); if(cfl) cfl.onclick=()=>{
     const have = new Set(S.lipsuri.map(l=>norm(lden(l))));
     let n = 0;
@@ -2858,6 +3285,64 @@ function bind(){
     if(!confirm(`Ștergi cererea către ${c.catre}? Documentele lipsă rămân în listă și pot fi cerute din nou.`)) return;
     S.cereri = S.cereri.filter(x=>x!==c); render();
   });
+
+  // materiale
+  const ma=$("#matAdd"); if(ma) ma.onclick=()=>{
+    const lines = parseLines($("#matBulk").value); if(!lines.length) return alert("Scrie cel puțin un material.");
+    const have = new Set(S.mat.map(m=>norm(m.den)));
+    let n = 0;
+    for(const l of lines){ const [den, furn] = l.split(";").map(x=>(x||"").trim()); if(!den || have.has(norm(den))) continue; S.mat.push({id:newId("m"), den, furn:furn||"", kw:"", docId:"", ok:false}); have.add(norm(den)); n++; }
+    render(); if(!n) alert("Materialele erau deja în listă.");
+  };
+  v.querySelectorAll("[data-mf]").forEach(el=>{ const [i,k] = el.dataset.mf.split(":"); el.onchange=()=>{ if(S.mat[+i]){ S.mat[+i][k]=el.value.trim(); if(k!=="furn") S.mat[+i].ok=false; render(); } }; });
+  v.querySelectorAll("[data-mdoc]").forEach(el=>el.onchange=()=>{ const m=S.mat[+el.dataset.mdoc]; if(m){ m.docId=el.value; m.ok=false; render(); } });
+  v.querySelectorAll("[data-mok]").forEach(el=>el.onchange=()=>{ const m=S.mat[+el.dataset.mok]; if(m){ m.ok=el.checked; render(); } });
+  v.querySelectorAll("[data-mdel]").forEach(b=>b.onclick=()=>{ S.mat.splice(+b.dataset.mdel,1); render(); });
+  const mtl=$("#matToLips"); if(mtl) mtl.onclick=()=>{
+    const have = new Set(S.lipsuri.map(l=>norm(lden(l)))); let n = 0;
+    for(const m of S.mat.filter(m=>matStatus(m).st==="lipsa")){
+      const den = `Certificat de calitate / declarație de performanță – ${m.den}`;
+      if(have.has(norm(den))) continue;
+      S.lipsuri.push({id:newId("l"), cod:"", den, cap:"Calitate", dela:m.furn||"Furnizor"}); n++;
+    }
+    render(); alert(n ? `${pl(n,"document adăugat","documente adăugate")} la Lipsuri; le poți cere de la Cereri, grupate pe furnizori.` : "Toate lipsurile sunt deja în listă.");
+  };
+
+  // execuție
+  v.querySelectorAll("[data-extab]").forEach(b=>b.onclick=()=>{ EXTAB=b.dataset.extab; render(); });
+  const fsa=$("#fSugAdd"); if(fsa) fsa.onclick=()=>{
+    const sug = S.dom.flatMap(d=>(FD_SUG[d]||[]).map(den=>({den, dom:d}))).filter(x=>!S.faze.some(f=>norm(f.den)===norm(x.den)));
+    v.querySelectorAll("[data-fsug]").forEach(el=>{ if(el.checked){ const x = sug[+el.dataset.fsug]; if(x) S.faze.push({id:newId("f"), den:x.den, dom:x.dom, data:"", conv:"", pv:false}); } });
+    render();
+  };
+  const fad=$("#fAdd"); if(fad) fad.onclick=()=>{ S.faze.push({id:newId("f"), den:"", dom:"", data:"", conv:"", pv:false}); render(); const ins=v.querySelectorAll('[data-ff$=":den"]'); if(ins.length) ins[ins.length-1].focus(); };
+  v.querySelectorAll("[data-ff]").forEach(el=>{ const [i,k] = el.dataset.ff.split(":"); el.onchange=()=>{ const f=S.faze[+i]; if(f){ f[k]=el.value; render(); } }; });
+  v.querySelectorAll("[data-fpv]").forEach(el=>el.onchange=()=>{ const f=S.faze[+el.dataset.fpv]; if(f){ f.pv=el.checked; render(); } });
+  v.querySelectorAll("[data-fdel]").forEach(b=>b.onclick=()=>{ S.faze.splice(+b.dataset.fdel,1); render(); });
+  v.querySelectorAll("[data-fconv]").forEach(b=>b.onclick=()=>{ const f=S.faze[+b.dataset.fconv]; if(f) openTextModal("Convocare ISC – model", convocareText(f), "Model de pornire: completează ora, persoana de contact și antetul firmei; verifică forma cerută de inspectoratul județean."); });
+  v.querySelectorAll("[data-sg]").forEach(el=>el.onchange=()=>{ const [id,k] = el.dataset.sg.split(":"); (S.sem[id] = S.sem[id] || {})[k] = el.checked; render(); });
+  const stl=$("#semToLips"); if(stl) stl.onclick=()=>{
+    const have = new Set(S.lipsuri.map(l=>norm(lden(l)))); let n = 0;
+    const nm = Object.fromEntries(SIGN);
+    for(const d of pvNesemnate()){
+      const den = `Semnături lipsă (${pvState(d).miss.map(k=>nm[k]).join(", ")}) – ${d.name.replace(/\.[a-z0-9]{1,5}$/i,"")}`;
+      if(have.has(norm(den))) continue;
+      S.lipsuri.push({id:newId("l"), cod:"", den, cap:"Execuție", dela:"Executant"}); n++;
+    }
+    render(); alert(n ? `${pl(n,"PV adăugat","PV-uri adăugate")} la Lipsuri.` : "Toate sunt deja în listă.");
+  };
+  const dim=$("#dispImport"); if(dim) dim.onclick=()=>{
+    for(const d of dispNeinregistrate()){ const m = d.name.match(/(?:nr\.?|ds)\s*([0-9]+)/i); S.disp.push({id:newId("s"), nr:m?m[1]:"", data: d.dataSrc==="estimat" ? "" : (d.data||""), desc:"", desen:false, asbuilt:false, docId:d.id}); }
+    render();
+  };
+  const dad=$("#dispAdd"); if(dad) dad.onclick=()=>{ S.disp.push({id:newId("s"), nr:"", data:"", desc:"", desen:false, asbuilt:false, docId:""}); render(); };
+  v.querySelectorAll("[data-df]").forEach(el=>{ const [i,k] = el.dataset.df.split(":"); el.onchange=()=>{ const x=S.disp[+i]; if(x){ x[k]=el.value; render(); } }; });
+  v.querySelectorAll("[data-dck]").forEach(el=>el.onchange=()=>{ const [i,k] = el.dataset.dck.split(":"); const x=S.disp[+i]; if(x){ x[k]=el.checked; render(); } });
+  v.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{ S.disp.splice(+b.dataset.ddel,1); render(); });
+
+  // aranjarea dosarului și textul din PDF-uri
+  const car=$("#ctArrange"); if(car) car.onclick=openArrange;
+  const bpt=$("#btnPdfTxt"), ipt=$("#inPdfTxt"); if(bpt&&ipt){ bpt.onclick=()=>ipt.click(); ipt.onchange=()=>{ if(ipt.files.length) readPdfTexts([...ipt.files]); ipt.value=""; }; }
 
   // rezultate
   const bo=$("#btnOpis"); if(bo) bo.onclick=()=>{ $("#print").innerHTML=buildOpis(); setTimeout(()=>window.print(),60); };
