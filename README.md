@@ -36,3 +36,9 @@ Totul se citește local, în browser:
 - din PDF-urile semnate electronic — numele semnatarilor, care bifează singure semnăturile pe PV-uri.
 
 Bibliotecile pdf.js și Tesseract se încarcă de pe cdnjs / jsDelivr la prima folosire; documentele nu pleacă din calculator.
+
+## Firma mea și cartea tehnică finală
+
+- **Firma mea** (pe pagina de intrare): siglă, denumire, CUI, adresă și cine întocmește — apar pe copertă, opisuri, borderouri și cereri, pentru toate lucrările.
+- **Modelele firmei**: copertă, opis și borderou în Word, cu câmpuri între acolade ({lucrare}, {beneficiar}, {dosar}…) și un rând de tabel cu {poz} {document} {nr} {data_doc}; aplicația le completează și descarcă fișierul Word. Coperta poate fi și un PDF gata făcut. Fără model, aplicația folosește forma ei, cu antetul firmei.
+- **Cartea tehnică într-un PDF**: coperta, apoi pentru fiecare dosar opisul și documentele găsite (PDF și poze), în ordine, cu numărul filei pe fiecare pagină. Documentele primite rămân neschimbate; fișierele Word se salvează întâi ca PDF. Bibliotecile pdf-lib și fontul DejaVu se încarcă de pe jsDelivr la prima folosire.

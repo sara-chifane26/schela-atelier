@@ -274,6 +274,11 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 .tiles.tip .tick{position:absolute;top:8px;right:12px;font-size:20px;font-weight:800;color:#fff}
 @media (max-width:760px){ .tiles.tip{grid-template-columns:1fr 1fr} .pcard .prow{grid-template-columns:1fr} }
 
+.antet{display:flex;align-items:center;gap:14px;border-bottom:1.5px solid #14212B;padding-bottom:8px;margin-bottom:14px}
+.antet img{max-height:48px;max-width:170px}
+.antet b{display:block;font-size:13pt}
+.antet span{font-size:8pt;color:#5B6B76}
+
 /* print */
 #print{display:none}
 @media print{
@@ -294,6 +299,14 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
   tr{break-inside:avoid}
   .bd{break-after:page;font-size:10.5pt;line-height:1.45}
   .opd{break-after:page}
+  .cop{min-height:250mm;display:flex;flex-direction:column}
+  .cop-t{margin-top:70mm;text-align:center;font-size:22pt;font-weight:800;color:#235C82;letter-spacing:.02em}
+  .cop-l{text-align:center;font-size:14pt;font-weight:700;margin:14px 20mm 24px}
+  .cop-d{margin:0 auto;border-collapse:collapse;font-size:11pt}
+  .cop-d td{padding:4px 12px;vertical-align:top}
+  .cop-d td:first-child{color:#5B6B76}
+  .cop-c{margin:28px auto 0;font-size:10pt;line-height:1.7;text-align:center}
+  .cop-f{margin-top:auto;font-size:8pt;color:#5B6B76}
   .opd:last-child{break-after:auto}
   .bd:last-child{break-after:auto}
   .bd-h{border-collapse:collapse;margin-bottom:28px}
@@ -594,6 +607,8 @@ function openLucrare(id, view){
 }
 function newLucrare(domId){
   S = blank(); if(domId) S.dom = [domId];
+  if(FIRMA.nume) S.meta.emitent = FIRMA.nume;
+  if(FIRMA.semnatar) S.meta.semnatar = FIRMA.semnatar;
   CUR = S.id; LAST_JS = ""; VIEW = "proiect"; MORE_DOM = false; render();
   if(domId==="electrice" && typeof openTipChooser==="function") openTipChooser(true);
 }
@@ -714,13 +729,17 @@ function viewAcasa(){
   return `
   <div class="home-h">
     <h2>Alege domeniul lucrării</h2>
-    <p>Fiecare domeniu are aceeași structură, de la proiect până la cartea tehnică, cu listele-tip și verificările lui. O lucrare poate avea mai multe domenii; le bifezi la Proiect.</p>
+    <p>Fiecare domeniu are aceeași structură, de la proiect până la cartea tehnică, cu listele-tip și verificările lui. Intră în domeniul tău ca să vezi lucrările în derulare și finalizate sau să pornești una nouă.</p>
   </div>
   <div class="tiles">${DOM.map((d,i)=>`<button class="tile ${(Math.floor(i/4)+i)%2?"dk":""}" data-dom-open="${d.id}" aria-label="${esc(d.name)}">${d.icon}<b>${esc(d.name)}</b>${IDX.filter(l=>(l.dom||[]).includes(d.id)).length?`<small>${pl(IDX.filter(l=>(l.dom||[]).includes(d.id)).length,"lucrare","lucrări")}</small>`:""}</button>`).join("")}</div>
   <div class="card">
     <h3>Lucrările tale</h3>
     ${lucrariHtml(IDX, "Încă nu ai nicio lucrare. Alege un domeniu de mai sus și apasă „Lucrare nouă”.")}
   </div>
+  <div class="card"><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+    ${FIRMA.logo?`<img src="${FIRMA.logo}" alt="" style="max-height:44px;max-width:160px">`:""}
+    <div style="flex:1;min-width:220px"><h3 style="margin:0 0 2px">Firma mea</h3><span class="muted">${FIRMA.nume ? esc(FIRMA.nume)+" · antetul apare pe copertă, opisuri, borderouri și cereri"+(Object.values(MODEL_INFO).some(Boolean)?" · modele proprii încărcate":"") : "Completează antetul firmei (siglă, denumire, CUI) și, dacă ai, modelele tale Word — apar pe tot ce tipărește aplicația."}</span></div>
+    <button class="btn ${FIRMA.nume?"g":""} sm" id="btnFirma">${FIRMA.nume?"Modifică":"Completează"}</button></div></div>
   ${/^https?:$/.test(location.protocol) ? `<div class="card">
     <h3>Vrei să vezi cum arată?</h3>
     <p style="margin:0 0 12px;font-size:14px;color:var(--muted)">Deschide o lucrare demonstrativă cu date fictive: fibră optică pe LEA 110 kV, la Instalații electrice, cu documentele și cartea tehnică pe dosare. Apare în listă ca o lucrare separată.</p>
@@ -906,7 +925,7 @@ function viewProiect(){
       ${f("emitent","Firma care trimite cererile")}
       ${f("semnatar","Semnătura (nume, funcție)")}
     </div>
-    <p style="margin:10px 0 0;font-size:13px;color:var(--muted)">Apar la finalul fiecărei cereri și în antetul adresei tipărite.</p>
+    <p style="margin:10px 0 0;font-size:13px;color:var(--muted)">Apar la finalul fiecărei cereri. Antetul tipărit (siglă, CUI, adresă) vine din <button class="linkbtn" id="btnFirma2">Firma mea</button>.</p>
   </div>
 
   ${viewPersoane()}
@@ -1419,7 +1438,7 @@ function buildAdresa(catre, text, reminder){
   const m = S.meta;
   const body = esc(text).replace(/\n/g,"<br>");
   return `<div class="adr">
-    <div class="adr-h"><b>${esc(m.emitent||"")}</b></div>
+    ${antetHtml() || `<div class="adr-h"><b>${esc(m.emitent||"")}</b></div>`}
     <div class="adr-nr">Nr. ________ / ${roDate(todayIso())}</div>
     <div class="adr-to">Către: <b>${esc(catre)}</b></div>
     <div class="adr-ref">Ref.: ${reminder?"Reamintire – ":""}Solicitare documente${m.proiect?" – "+esc(m.proiect):""}${m.contract?" · Contract "+esc(m.contract):""}</div>
@@ -2170,6 +2189,7 @@ function buildOpisDosar(d){
     return `<tr class="${doc?"":"miss"}"><td>${n}</td><td>${i.cod?esc(i.cod)+" – ":""}${esc(i.den)}${doc?"":` <b>— LIPSĂ</b>`}</td><td>${esc(nr)}</td><td>${esc(dt)}</td></tr>`;
   }).join("");
   return `<div class="opd">
+    ${antetHtml()}
     <div class="opis-h">
       <h2>OPIS — Dosar ${esc(d.id)} · ${esc(dosTitle(d))}</h2>
       <div class="m">${esc(CT_CH[d.ch])}<br>
@@ -2198,6 +2218,7 @@ function buildBorderouri(){
       n++; return `<div class="bd-i">${String(n).padStart(2,"0")}. ${esc(i.den)}${i.doc?"":` <span class="bd-miss">${d.later?"de completat":"LIPSĂ"}</span>`}</div>`;
     }).join("");
     return `<div class="bd">
+      ${antetHtml()}
       <table class="bd-h"><tbody>
         ${p.nr?`<tr><td>Lucrare nr.:</td><td>${esc(p.nr)}</td></tr>`:""}
         <tr><td>Faza:</td><td>Carte tehnică</td></tr>
@@ -2634,7 +2655,7 @@ const LUNI_X = {};
 Object.assign(LUNI_X, {jan:1,feb:2,mar:3,apr:4,jun:6,jul:7,aug:8,sep:9,sept:9,setiembre:9,oct:10,nov:11,dec:12,jänner:1,janner:1});
 const LUNI_RX = Object.keys(LUNI_X).sort((a,b)=>b.length-a.length).join("|");
 function findNr(s){
-  const t = norm(s);
+  const t = norm(String(s||"").replace(/\.(pdf|docx?|xlsx?|jpe?g|png|tiff?|dwg|zip)$/i,""));
   // nr. / no. / n° / nº / number / nummer / numero / sayi
   const m = t.match(/(?:\bnr\.?|\bno\.?|\bn[°º]|\bnumber|\bnummer|\bnumero|\bsayi)\s*(?:de\s+inregistrare\s*)?[:.]?\s*([0-9]{1,6}(?:[./-][0-9a-z]{1,6})?)\b/) || t.match(/\b(?:pv|ds|dop)\s*[-_]?\s*([0-9]{1,5})\b/);
   return m ? m[1].replace(/[./-]$/,"") : "";
@@ -3116,8 +3137,10 @@ function viewCarte(){
     <div class="card" style="margin-top:6px">
       <div style="display:flex;gap:9px;flex-wrap:wrap">
         <button class="btn" id="ctToLips" ${miss.length?"":"disabled"}>Trimite ${miss.length} ${miss.length===1?"lipsă":"lipsuri"} la Lipsuri</button>
-        <button class="btn o" id="ctOpisAll">Tipărește opisurile dosarelor</button>
-        <button class="btn g" id="ctPrint">Tipărește borderourile</button>
+        <button class="btn o" id="ctPdf">Cartea tehnică într-un PDF</button>
+        <button class="btn g" id="ctCop">Coperta${MODEL_INFO.coperta && /\.docx$/i.test(MODEL_INFO.coperta)?" (Word, modelul firmei)":""}</button>
+        <button class="btn g" id="ctOpisAll">Opisurile dosarelor${MODEL_INFO.opis?" (Word, modelul firmei)":""}</button>
+        <button class="btn g" id="ctPrint">Borderourile${MODEL_INFO.borderou?" (Word, modelul firmei)":""}</button>
         <button class="btn g" id="ctArrange" ${got?"":"disabled"}>Aranjează dosarul pe calculator</button>
       </div>
       <p class="muted" style="margin:8px 0 0">Lipsurile din capitolele A și B ajung la Lipsuri, cu „de la cine” completat. Capitolele C și D se completează la recepție și în exploatare.</p>
@@ -3129,7 +3152,7 @@ function viewCarte(){
   <div class="crumb"><button class="btn g" id="dosBack">← Înapoi la dosare</button>
     <h2>Dosar ${d.id} · ${esc(dosTitle(d))}</h2>
     <span class="muted">${d.got} din ${d.total} găsite${d.na?` · ${d.na} nu se aplică`:""}</span>
-    <button class="btn o sm" id="dosOpis" style="margin-left:auto">Opisul dosarului ${d.id}</button></div>
+    <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${MODEL_INFO.opis?`<button class="btn o sm" id="dosOpisW">Opisul ${d.id} în modelul firmei (Word)</button>`:""}<button class="btn ${MODEL_INFO.opis?"g":"o"} sm" id="dosOpis">Opisul dosarului ${d.id}${MODEL_INFO.opis?" (forma aplicației)":""}</button></span></div>
   <div class="tw" style="max-height:none"><table>
     <thead><tr><th style="width:120px">Cod</th><th>Document necesar</th><th style="width:120px">Stare</th><th style="width:34%">Fișier din inventar</th><th style="width:150px"></th></tr></thead>
     <tbody>${d.items.map(i=> i.group ? `<tr class="grp-row${i.spec?" spec":""}"><td colspan="5">${esc(i.group)}</td></tr>` : `<tr class="${i.na?"off":""}">
@@ -3301,6 +3324,343 @@ async function importBenList(file){
     close(); render();
     alert(`${pl(add.length,"document adăugat","documente adăugate")} în cartea tehnică, în dosarul „Documente cerute de beneficiar”.`);
   };
+}
+
+/* ---- FIRMA MEA ----
+   Antetul firmei (siglă, denumire, CUI, adresă) se pune pe tot ce tipărește aplicația: copertă, opisuri,
+   borderouri, cereri. Se completează o singură dată și e valabil pentru toate lucrările din acest browser. */
+const KEY_FIRMA = "schela_firma_v1";
+let FIRMA = (()=>{ try{ return JSON.parse(localStorage.getItem(KEY_FIRMA)||"null") || {}; }catch(e){ return {}; } })();
+function saveFirma(){ try{ localStorage.setItem(KEY_FIRMA, JSON.stringify(FIRMA)); }catch(e){ alert("Sigla e prea mare pentru a fi păstrată în browser. Alege o imagine mai mică."); } }
+const firmaLine = () => [FIRMA.cui?`CUI ${FIRMA.cui}`:"", FIRMA.reg?`Nr. Reg. Com. ${FIRMA.reg}`:"", FIRMA.adresa||"", FIRMA.tel?`Tel. ${FIRMA.tel}`:"", FIRMA.email||""].filter(Boolean).join(" · ");
+function antetHtml(){
+  if(!FIRMA.nume && !FIRMA.logo) return "";
+  return `<div class="antet">${FIRMA.logo?`<img src="${FIRMA.logo}" alt="">`:""}<div><b>${esc(FIRMA.nume||"")}</b><span>${esc(firmaLine())}</span></div></div>`;
+}
+// sigla se micșorează la cel mult 480 px, ca să încapă în browser
+function loadLogo(file){
+  return new Promise(res=>{
+    const img = new Image(), u = URL.createObjectURL(file);
+    img.onload = () => { const k = Math.min(1, 480/Math.max(img.width, img.height)); const c = document.createElement("canvas"); c.width = Math.round(img.width*k); c.height = Math.round(img.height*k); c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(u); res(c.toDataURL("image/png")); };
+    img.onerror = () => { URL.revokeObjectURL(u); res(null); };
+    img.src = u;
+  });
+}
+const MODELE = [
+  {k:"coperta", t:"Coperta cărții tehnice", ext:".docx,.pdf"},
+  {k:"opis",    t:"Opisul unui dosar", ext:".docx"},
+  {k:"borderou",t:"Borderoul unui dosar", ext:".docx"}
+];
+let MODEL_INFO = {};   // ce modele există (numele fișierului), citit din browser
+async function refreshModele(){ for(const m of MODELE){ try{ const f = await IDB.get("model:"+m.k); MODEL_INFO[m.k] = f ? f.name : ""; }catch(e){ MODEL_INFO[m.k] = ""; } } }
+function openFirma(){
+  const f = FIRMA;
+  const fld = (k,l,ph) => `<div><span class="lbl">${l}</span><input type="text" data-fm="${k}" value="${esc(f[k]||"")}" placeholder="${esc(ph||"")}"></div>`;
+  $("#intake").innerHTML = `<div class="mbox" style="width:min(900px,100%)">
+    <div class="mh"><h2>Firma mea</h2><span class="muted">antetul și modelele firmei, pentru toate lucrările</span></div>
+    <div style="padding:0 18px;overflow:auto">
+      <div class="grid2">
+        ${fld("nume","Denumirea firmei","SC Exemplu Construct SRL")}${fld("cui","CUI","RO12345678")}${fld("reg","Nr. Reg. Com.","J08/123/2015")}
+        ${fld("adresa","Adresa","Str. Exemplu nr. 1, Brașov")}${fld("tel","Telefon","0268 000 000")}${fld("email","E-mail","office@exemplu.ro")}
+        ${fld("semnatar","Întocmit de (nume, funcție)","ing. Nume Prenume, diriginte de șantier")}
+      </div>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:14px">
+        <span class="lbl" style="margin:0">Sigla</span>
+        ${f.logo?`<img src="${f.logo}" alt="" style="max-height:56px;max-width:200px;border:1px solid var(--line-soft);padding:4px;background:#fff">`:`<span class="muted">fără siglă</span>`}
+        <button class="btn g sm" id="fmLogo">${f.logo?"Schimbă sigla":"Încarcă sigla"}</button>${f.logo?`<button class="btn g sm" id="fmLogoDel">Scoate sigla</button>`:""}
+        <input type="file" id="inLogo" accept="image/*" hidden>
+      </div>
+      <h3 style="margin:22px 0 6px;font-size:15px">Modelele firmei (opțional)</h3>
+      <p class="muted" style="margin:0 0 10px">Dacă firma are formularele ei în Word, încarcă-le aici: aplicația le completează singură. Fără model, folosește forma ei, cu antetul firmei.</p>
+      ${MODELE.map(m=>`<div class="lrow"><div class="ln"><b>${m.t}</b><span class="muted">${MODEL_INFO[m.k] ? "model încărcat: "+esc(MODEL_INFO[m.k]) : "forma aplicației"}</span></div>
+        <button class="btn g sm" data-mup="${m.k}">${MODEL_INFO[m.k]?"Schimbă modelul":"Încarcă modelul"}</button>${MODEL_INFO[m.k]?`<button class="btn g sm" data-mdel2="${m.k}">Folosește forma aplicației</button>`:""}
+        <input type="file" data-min="${m.k}" accept="${m.ext}" hidden></div>`).join("")}
+      <details style="margin:12px 0 4px"><summary style="cursor:pointer;font-weight:600;font-size:14px">Ce câmpuri pot pune în model</summary>
+        <div class="muted" style="line-height:1.7;margin-top:8px">Scrie-le în documentul Word între acolade, exact așa; aplicația le înlocuiește:<br>
+        <b>{firma} {cui} {adresa} {lucrare} {nr_lucrare} {beneficiar} {amplasament} {contract} {executant} {domenii} {semnatar} {data}</b><br>
+        La opis și borderou, și: <b>{dosar} {titlu_dosar} {capitol} {total} {lipsa}</b>.<br>
+        Pentru lista documentelor fă un tabel cu un singur rând în care pui <b>{poz} {cod} {document} {nr} {data_doc} {stare}</b> — rândul se repetă pentru fiecare document.<br>
+        Coperta poate fi și un PDF gata făcut (fără câmpuri): intră ca atare în cartea tehnică.</div></details>
+    </div>
+    <div class="mf"><span class="muted">Se păstrează în acest browser, pentru toate lucrările.</span><button class="btn" id="fmClose">Gata</button></div>
+  </div>`;
+  $("#intake").classList.add("on");
+  const box = $("#intake");
+  box.querySelectorAll("[data-fm]").forEach(el=>el.oninput=()=>{ FIRMA[el.dataset.fm] = el.value; saveFirma(); });
+  const lg = $("#inLogo");
+  $("#fmLogo").onclick = () => lg.click();
+  lg.onchange = async () => { const fl = lg.files[0]; lg.value=""; if(!fl) return; const d = await loadLogo(fl); if(!d) return alert("Imaginea nu a putut fi citită."); FIRMA.logo = d; saveFirma(); openFirma(); };
+  const ld = $("#fmLogoDel"); if(ld) ld.onclick = () => { delete FIRMA.logo; saveFirma(); openFirma(); };
+  box.querySelectorAll("[data-mup]").forEach(b=>b.onclick=()=>box.querySelector(`[data-min="${b.dataset.mup}"]`).click());
+  box.querySelectorAll("[data-min]").forEach(inp=>inp.onchange=async()=>{
+    const fl = inp.files[0]; inp.value=""; if(!fl) return;
+    if(extOf(fl.name)==="docx"){ const xml = (await zipTexts(fl, n=>n==="word/document.xml"))["word/document.xml"]||""; const txt = xml.replace(/<[^>]+>/g,""); if(!/\{[a-z_]+\}/.test(txt)) alert("Modelul nu are niciun câmp între acolade (de ex. {lucrare}). Îl păstrez, dar va ieși exact cum e. Vezi „Ce câmpuri pot pune în model”."); }
+    try{ await IDB.set("model:"+inp.dataset.min, fl); MODEL_INFO[inp.dataset.min] = fl.name; }catch(e){ alert("Modelul nu a putut fi păstrat în browser."); }
+    openFirma();
+  });
+  box.querySelectorAll("[data-mdel2]").forEach(b=>b.onclick=async()=>{ try{ await IDB.del("model:"+b.dataset.mdel2); }catch(e){} MODEL_INFO[b.dataset.mdel2] = ""; openFirma(); });
+  $("#fmClose").onclick = () => { box.classList.remove("on"); box.innerHTML=""; render(); };
+}
+
+/* ---- COMPLETAREA MODELELOR WORD ---- */
+// toate fișierele dintr-un .docx (zip), despachetate
+async function zipAll(file){
+  const buf = new Uint8Array(await file.arrayBuffer()), dv = new DataView(buf.buffer);
+  let e = -1; for(let i=buf.length-22; i>=Math.max(0, buf.length-66000); i--){ if(dv.getUint32(i,true)===0x06054b50){ e=i; break; } }
+  if(e<0) throw new Error("nu e un fișier Word .docx");
+  let p = dv.getUint32(e+16,true); const n = dv.getUint16(e+10,true), out = [];
+  for(let k=0; k<n; k++){
+    const meth = dv.getUint16(p+10,true), csize = dv.getUint32(p+20,true), fl = dv.getUint16(p+28,true), xl = dv.getUint16(p+30,true), cl = dv.getUint16(p+32,true), off = dv.getUint32(p+42,true);
+    const name = new TextDecoder().decode(buf.subarray(p+46, p+46+fl));
+    const ds = off + 30 + dv.getUint16(off+26,true) + dv.getUint16(off+28,true), raw = buf.subarray(ds, ds+csize);
+    const data = meth===0 ? raw.slice() : new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+    out.push({name, data});
+    p += 46 + fl + xl + cl;
+  }
+  return out;
+}
+const CRC_T = (()=>{ const t = new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
+const crc32 = b => { let c = 0xFFFFFFFF; for(let i=0;i<b.length;i++) c = CRC_T[(c^b[i])&0xFF]^(c>>>8); return (c^0xFFFFFFFF)>>>0; };
+// arhivă zip fără compresie (Word o deschide fără probleme)
+function zipStore(files){
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  for(const f of files){
+    const nm = enc.encode(f.name), crc = crc32(f.data), h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true); h.setUint16(4,20,true); h.setUint16(6,0x0800,true); h.setUint16(8,0,true);
+    h.setUint32(14,crc,true); h.setUint32(18,f.data.length,true); h.setUint32(22,f.data.length,true); h.setUint16(26,nm.length,true);
+    parts.push(new Uint8Array(h.buffer), nm, f.data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0,0x02014b50,true); c.setUint16(4,20,true); c.setUint16(6,20,true); c.setUint16(8,0x0800,true);
+    c.setUint32(16,crc,true); c.setUint32(20,f.data.length,true); c.setUint32(24,f.data.length,true); c.setUint16(28,nm.length,true); c.setUint32(42,off,true);
+    central.push(new Uint8Array(c.buffer), nm);
+    off += 30 + nm.length + f.data.length;
+  }
+  const csize = central.reduce((a,x)=>a+x.length,0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true); end.setUint32(12,csize,true); end.setUint32(16,off,true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], {type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+}
+const xmlEsc = s => String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+// Word împarte uneori „{lucrare}” în mai multe bucăți de text; le unim în paragrafele care au acolade
+function mergeRuns(xml){
+  return xml.replace(/<w:p[ >][\s\S]*?<\/w:p>/g, p => {
+    const ts = p.match(/<w:t(?: [^>]*)?>[\s\S]*?<\/w:t>/g) || [];
+    const txt = ts.map(t=>t.replace(/<[^>]+>/g,"")).join("");
+    if(!/\{[a-z_]*\}?/.test(txt) || ts.length<2) return p;
+    const head = p.match(/^<w:p[^>]*>(?:<w:pPr>[\s\S]*?<\/w:pPr>)?/)[0];
+    const rpr = (p.match(/<w:r[ >][\s\S]*?(<w:rPr>[\s\S]*?<\/w:rPr>)/)||[])[1] || "";
+    return `${head}<w:r>${rpr}<w:t xml:space="preserve">${txt}</w:t></w:r></w:p>`;
+  });
+}
+const fillFields = (xml, f) => xml.replace(/\{([a-z_]+)\}/g, (a,k) => f[k]!==undefined ? xmlEsc(f[k]) : a);
+function fillBody(body, fields, rows){
+  body = mergeRuns(body);
+  if(rows) body = body.replace(/<w:tr[ >][\s\S]*?<\/w:tr>/g, tr => /\{(document|poz)\}/.test(tr) ? rows.map(r=>fillFields(tr, r)).join("") : tr);
+  return fillFields(body, fields);
+}
+// completează modelul o dată sau de mai multe ori (ex. un opis pe fiecare dosar), cu pagină nouă între ele
+async function fillModel(file, sets){
+  const files = await zipAll(file), doc = files.find(f=>f.name==="word/document.xml");
+  const xml = new TextDecoder().decode(doc.data);
+  const b0 = xml.indexOf("<w:body>")+8, sp = xml.lastIndexOf("<w:sectPr"), b1 = sp>b0 ? sp : xml.lastIndexOf("</w:body>");
+  const body = xml.slice(b0, b1);
+  const BR = `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
+  const out = xml.slice(0,b0) + sets.map(s=>fillBody(body, s.fields, s.rows)).join(BR) + xml.slice(b1);
+  // antetul și subsolul paginii pot avea și ele câmpuri
+  for(const f of files){
+    if(f===doc) f.data = new TextEncoder().encode(out);
+    else if(/^word\/(header|footer)\d*\.xml$/.test(f.name)) f.data = new TextEncoder().encode(fillBody(new TextDecoder().decode(f.data), sets[0].fields));
+  }
+  return zipStore(files);
+}
+function modelFields(){
+  const m = S.meta, p = ctState().p;
+  return {firma:FIRMA.nume||m.emitent||"", cui:FIRMA.cui||"", adresa:FIRMA.adresa||"", lucrare:m.proiect||"", nr_lucrare:p.nr||"", beneficiar:m.beneficiar||"",
+    amplasament:m.amplasament||"", contract:m.contract||"", executant:m.emitent||FIRMA.nume||"", domenii:domNames(S.dom).join(", "), semnatar:m.semnatar||FIRMA.semnatar||"", data:roDate(todayIso())};
+}
+function dosarSet(d){
+  let n = 0;
+  const rows = d.items.filter(i=>!i.group && !i.na).map(i=>{ n++; const doc = i.doc;
+    return {poz:String(n), cod:i.cod||"", document:i.den, nr: doc ? (doc.nr||findNr(doc.name)||"") : "", data_doc: doc && doc.dataSrc!=="estimat" ? roDate(doc.data) : "", stare: doc ? "atașat" : "LIPSĂ"}; });
+  return {fields:Object.assign(modelFields(), {dosar:d.id, titlu_dosar:dosTitle(d), capitol:CT_CH[d.ch], total:String(d.total), lipsa:String(d.total-d.got)}), rows};
+}
+async function downloadModel(kind, ids){
+  let f = null; try{ f = await IDB.get("model:"+kind); }catch(e){}
+  if(!f) return false;
+  if(extOf(f.name)!=="docx") return false;
+  try{
+    const sets = kind==="coperta" ? [{fields:modelFields()}] : (ctMatch()||[]).filter(d=>!ids || ids.includes(d.id)).map(dosarSet);
+    const blob = await fillModel(f, sets);
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = safeName(`${({coperta:"Coperta",opis:"Opis",borderou:"Borderou"})[kind]}${ids&&ids.length===1?" "+ids[0]:""} - ${S.meta.proiect||"lucrare"}`) + ".docx";
+    document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    return true;
+  }catch(e){ alert("Modelul nu a putut fi completat: " + (e && e.message || e)); return true; }
+}
+
+/* ---- COPERTA ---- */
+function buildCoperta(){
+  const m = S.meta, p = ctState().p;
+  return `<div class="cop">
+    ${antetHtml()}
+    <div class="cop-t">CARTEA TEHNICĂ A CONSTRUCȚIEI</div>
+    <div class="cop-l">${esc(m.proiect||"")}</div>
+    <table class="cop-d"><tbody>
+      ${p.nr?`<tr><td>Lucrare nr.</td><td>${esc(p.nr)}</td></tr>`:""}
+      ${m.amplasament?`<tr><td>Amplasament</td><td>${esc(m.amplasament)}</td></tr>`:""}
+      <tr><td>Beneficiar</td><td>${esc(m.beneficiar||"")}</td></tr>
+      ${m.emitent||FIRMA.nume?`<tr><td>Executant</td><td>${esc(m.emitent||FIRMA.nume)}</td></tr>`:""}
+      ${m.contract?`<tr><td>Contract</td><td>${esc(m.contract)}</td></tr>`:""}
+      ${S.dom.length?`<tr><td>Specialități</td><td>${esc(domNames(S.dom).join(", "))}</td></tr>`:""}
+    </tbody></table>
+    <div class="cop-c">Capitolul A – Documentația privind proiectarea<br>Capitolul B – Documentația privind execuția<br>Capitolul C – Documentația privind recepția<br>Capitolul D – Documentația privind urmărirea comportării în exploatare</div>
+    <div class="cop-f">Întocmită conform HG 343/2017, Anexa 6 · ${esc(roDate(todayIso()))}</div>
+  </div>`;
+}
+
+/* ---- CARTEA TEHNICĂ ÎNTR-UN SINGUR PDF ----
+   Coperta (a aplicației, cu antetul firmei, sau PDF-ul firmei), apoi pentru fiecare dosar opisul și documentele lui,
+   în ordinea din opis; la final, opțional, numărul filei pe fiecare pagină. Totul se face în browser, cu pdf-lib. */
+const PDFLIB_SRC  = window.PDFLIB_SRC  || "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js";
+const FONTKIT_SRC = window.FONTKIT_SRC || "https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js";
+const FONT_SRC    = window.FONT_SRC    || "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf";
+const FONTB_SRC   = window.FONTB_SRC   || "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf";
+const loadScript = src => new Promise(res=>{ const s = document.createElement("script"); s.src = src; s.onload = () => res(true); s.onerror = () => res(false); document.head.appendChild(s); });
+async function loadPdfLib(){
+  if(!window.PDFLib && !await loadScript(PDFLIB_SRC)) return null;
+  if(!window.fontkit && !await loadScript(FONTKIT_SRC)) return null;
+  return window.PDFLib;
+}
+async function buildCartePdf(files, opt, progress){
+  const L = await loadPdfLib(); if(!L) throw new Error("Biblioteca PDF nu s-a putut încărca (e nevoie de internet la prima folosire).");
+  const {PDFDocument, rgb} = L;
+  const out = await PDFDocument.create(); out.registerFontkit(window.fontkit);
+  const [fr, fb] = await Promise.all([fetch(FONT_SRC), fetch(FONTB_SRC)].map(p=>p.then(r=>r.arrayBuffer())));
+  const F = await out.embedFont(fr, {subset:true}), FB = await out.embedFont(fb, {subset:true});
+  const W = 595.28, H = 841.89, M = 50, BLUE = rgb(0.137,0.361,0.51), INK = rgb(0.08,0.13,0.17), MUTED = rgb(0.36,0.42,0.46), RED = rgb(0.61,0.23,0.18);
+  let logo = null;
+  if(FIRMA.logo){ try{ const b = Uint8Array.from(atob(FIRMA.logo.split(",")[1]), c=>c.charCodeAt(0)); logo = await out.embedPng(b); }catch(e){} }
+  let page, y;
+  const wrap = (t, font, size, maxW) => { const words = String(t||"").split(/\s+/), lines = []; let cur = ""; for(const w of words){ const tst = cur ? cur+" "+w : w; if(font.widthOfTextAtSize(tst,size) > maxW && cur){ lines.push(cur); cur = w; } else cur = tst; } if(cur) lines.push(cur); return lines.length ? lines : [""]; };
+  const antet = () => {
+    if(!logo && !FIRMA.nume) return;
+    let x = M;
+    if(logo){ const h = 40, w = logo.width*h/logo.height; page.drawImage(logo, {x:M, y:y-h, width:Math.min(w,160), height:h*Math.min(1,160/w)}); x = M + Math.min(w,160) + 12; }
+    if(FIRMA.nume) page.drawText(FIRMA.nume, {x, y:y-14, size:12, font:FB, color:INK});
+    wrap(firmaLine(), F, 8, W-M-x).slice(0,2).forEach((l,i)=>page.drawText(l, {x, y:y-28-i*10, size:8, font:F, color:MUTED}));
+    y -= 52; page.drawLine({start:{x:M,y}, end:{x:W-M,y}, thickness:1, color:INK}); y -= 18;
+  };
+  const newPage = () => { page = out.addPage([W,H]); y = H - M; antet(); };
+  const text = (t, {size=10, font=F, color=INK, x=M, maxW=W-2*M, gap=3}={}) => { for(const l of wrap(t, font, size, maxW)){ if(y < M+20){ newPage(); } page.drawText(l, {x, y:y-size, size, font, color}); y -= size + gap; } };
+  // coperta
+  if(opt.coperta){
+    let cov = null; try{ cov = await IDB.get("model:coperta"); }catch(e){}
+    if(cov && extOf(cov.name)==="pdf"){
+      try{ const src = await PDFDocument.load(await cov.arrayBuffer(), {ignoreEncryption:true}); (await out.copyPages(src, src.getPageIndices())).forEach(p=>out.addPage(p)); }catch(e){}
+    } else {
+      newPage(); const m = S.meta, p = ctState().p;
+      y = H*0.62;
+      const tt = "CARTEA TEHNICĂ A CONSTRUCȚIEI"; page.drawText(tt, {x:(W-FB.widthOfTextAtSize(tt,22))/2, y, size:22, font:FB, color:BLUE}); y -= 40;
+      for(const l of wrap(m.proiect||"", FB, 14, W-2*M-40)){ page.drawText(l, {x:(W-FB.widthOfTextAtSize(l,14))/2, y, size:14, font:FB, color:INK}); y -= 20; }
+      y -= 16;
+      [[p.nr,"Lucrare nr."],[m.amplasament,"Amplasament"],[m.beneficiar,"Beneficiar"],[m.emitent||FIRMA.nume,"Executant"],[m.contract,"Contract"],[domNames(S.dom).join(", "),"Specialități"]]
+        .filter(x=>x[0]).forEach(([v,l])=>{ page.drawText(l, {x:M+60, y, size:10, font:F, color:MUTED}); wrap(v,F,11,W-2*M-200).forEach((t,i)=>page.drawText(t,{x:M+170, y:y-i*14, size:11, font:F, color:INK})); y -= 18 + 14*(wrap(v,F,11,W-2*M-200).length-1); });
+      page.drawText("Întocmită conform HG 343/2017, Anexa 6 · " + roDate(todayIso()), {x:M, y:M, size:8, font:F, color:MUTED});
+    }
+  }
+  // dosarele
+  const dos = ctMatch() || [], missing = [], notPdf = [], bad = [];
+  let done = 0; const total = dos.reduce((a,d)=>a+d.items.filter(i=>i.doc && !i.na).length, 0);
+  for(const d of dos){
+    if(opt.goale===false && !d.got) continue;
+    if(opt.opis){
+      newPage();
+      text(`OPIS — Dosar ${d.id} · ${dosTitle(d)}`, {size:14, font:FB, color:BLUE});
+      text(`${CT_CH[d.ch]} · Lucrare: ${S.meta.proiect||""}`, {size:8, color:MUTED}); y -= 6;
+      const cx = [M, M+32, W-M-150, W-M-70];
+      const hdr = () => { page.drawRectangle({x:M, y:y-14, width:W-2*M, height:16, color:rgb(0.906,0.925,0.918)}); ["Poz.","Document","Nr.","Data"].forEach((h,i)=>page.drawText(h,{x:cx[i]+3, y:y-10, size:8, font:FB, color:MUTED})); y -= 20; };
+      hdr();
+      let n = 0;
+      for(const i of d.items.filter(i=>!i.na)){
+        if(y < M+30){ newPage(); hdr(); }
+        if(i.group){ text(i.group.toUpperCase(), {size:8, font:FB, color:BLUE, gap:5}); continue; }
+        n++;
+        const doc = i.doc, den = (i.cod?i.cod+" – ":"") + i.den + (doc?"":" — LIPSĂ");
+        const ls = wrap(den, F, 9, cx[2]-cx[1]-8);
+        page.drawText(String(n), {x:cx[0]+3, y:y-9, size:9, font:F, color:INK});
+        ls.forEach((l,k)=>page.drawText(l, {x:cx[1]+3, y:y-9-k*11, size:9, font:F, color:doc?INK:RED}));
+        if(doc){ page.drawText(String(doc.nr||findNr(doc.name)||"").slice(0,14), {x:cx[2]+3, y:y-9, size:9, font:F, color:INK}); if(doc.dataSrc!=="estimat" && doc.data) page.drawText(roDate(doc.data), {x:cx[3]+3, y:y-9, size:9, font:F, color:INK}); }
+        y -= 11*ls.length + 5;
+        page.drawLine({start:{x:M,y:y+2}, end:{x:W-M,y:y+2}, thickness:0.4, color:rgb(0.87,0.9,0.89)});
+      }
+      if(S.meta.semnatar || FIRMA.semnatar){ y -= 10; text(`Întocmit: ${S.meta.semnatar || FIRMA.semnatar}`, {size:9, color:MUTED}); }
+    }
+    for(const i of d.items){
+      if(i.group || i.na || !i.doc) { if(!i.group && !i.na && !i.doc && !d.later) missing.push(`${d.id}: ${i.den}`); continue; }
+      const f = files.get(i.doc.path+"|"+i.doc.name+"|"+i.doc.size) || files.get("|"+i.doc.name+"|"+i.doc.size);
+      progress && progress(++done, total);
+      if(!f){ bad.push(i.doc.name+" (negăsit în folder)"); continue; }
+      const x = extOf(f.name);
+      try{
+        if(x==="pdf"){ const src = await PDFDocument.load(await f.arrayBuffer(), {ignoreEncryption:true}); (await out.copyPages(src, src.getPageIndices())).forEach(p=>out.addPage(p)); }
+        else if(["jpg","jpeg","png"].includes(x)){
+          const b = new Uint8Array(await f.arrayBuffer()), img = x==="png" ? await out.embedPng(b) : await out.embedJpg(b);
+          const pg = out.addPage([W,H]), k = Math.min((W-40)/img.width, (H-40)/img.height);
+          pg.drawImage(img, {x:(W-img.width*k)/2, y:(H-img.height*k)/2, width:img.width*k, height:img.height*k});
+        }
+        else notPdf.push(i.doc.name);
+      }catch(e){ bad.push(i.doc.name+" (nu s-a putut citi)"); }
+    }
+  }
+  // numărul filei
+  if(opt.file){
+    const pages = out.getPages(), N = pages.length;
+    pages.forEach((p,k)=>{ const {width} = p.getSize(); const t = `Fila ${k+1} / ${N}`; p.drawText(t, {x:width-M-F.widthOfTextAtSize(t,8), y:18, size:8, font:F, color:MUTED}); });
+  }
+  const bytes = await out.save();
+  return {blob:new Blob([bytes], {type:"application/pdf"}), pages:out.getPageCount(), notPdf, bad, missing};
+}
+function openCartePdf(){
+  const canPick = true;
+  const draw = (msg) => {
+    $("#intake").innerHTML = `<div class="mbox" style="width:min(760px,100%)">
+      <div class="mh"><h2>Cartea tehnică într-un singur PDF</h2></div>
+      <div style="padding:0 18px;font-size:14.5px;line-height:1.55">
+        <p style="margin:0 0 10px">Aplicația pune într-un PDF, în ordine: coperta, apoi pentru fiecare dosar opisul lui și documentele găsite, în ordinea din opis. Antetul firmei apare pe copertă și pe opisuri; documentele primite rămân neschimbate.</p>
+        <div class="dom-pick" style="grid-template-columns:1fr 1fr">
+          <label><input type="checkbox" id="cpCop" checked> Coperta${MODEL_INFO.coperta && /\.pdf$/i.test(MODEL_INFO.coperta) ? " (PDF-ul firmei)" : ""}</label>
+          <label><input type="checkbox" id="cpOpis" checked> Opisul fiecărui dosar</label>
+          <label><input type="checkbox" id="cpFile" checked> Numărul filei pe fiecare pagină</label>
+          <label><input type="checkbox" id="cpGoale"> Și dosarele fără niciun document</label>
+        </div>
+        <p class="muted" style="margin:10px 0 0">Documentele Word nu pot fi puse direct în PDF: salvează-le întâi ca PDF (Word → Salvare ca → PDF) și adaugă-le în inventar. Aplicația îți spune la final care au rămas pe dinafară.</p>
+        <p class="muted" id="cpMsg" style="margin:10px 0 0">${msg||""}</p>
+      </div>
+      <div class="mf"><span class="muted">Totul se face în browser; fișierele nu pleacă din calculator.</span><button class="btn g" id="cpClose">Închide</button><button class="btn" id="cpGo">${S.folder?"Creează PDF-ul din folderul legat":"Alege folderul cu documente și creează PDF-ul"}</button>
+      <input type="file" id="cpSrc" webkitdirectory directory multiple hidden></div>
+    </div>`;
+    $("#intake").classList.add("on");
+    $("#cpClose").onclick = () => { $("#intake").classList.remove("on"); $("#intake").innerHTML=""; };
+    const run = async m => {
+      const opt = {coperta:$("#cpCop").checked, opis:$("#cpOpis").checked, file:$("#cpFile").checked, goale:$("#cpGoale").checked};
+      const msgEl = $("#cpMsg"); $("#cpGo").disabled = true;
+      try{
+        msgEl.textContent = "Se încarcă biblioteca PDF…";
+        const r = await buildCartePdf(m, opt, (i,n)=>{ msgEl.textContent = `Se adaugă documentele… ${i} din ${n}`; });
+        const a = document.createElement("a"); a.href = URL.createObjectURL(r.blob); a.download = safeName("Carte tehnica - " + (S.meta.proiect||"lucrare")) + ".pdf";
+        document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+        msgEl.innerHTML = `<b style="color:var(--green)">Gata: ${r.pages} pagini.</b>`
+          + (r.notPdf.length ? `<br>Nu au intrat (Word sau alt format — salvează-le ca PDF): ${esc(r.notPdf.join(", "))}.` : "")
+          + (r.bad.length ? `<br>Probleme: ${esc(r.bad.join(", "))}.` : "")
+          + (r.missing.length ? `<br>${pl(r.missing.length,"document lipsește","documente lipsesc")} din capitolele A și B (marcate LIPSĂ în opisuri).` : "");
+      }catch(e){ msgEl.textContent = (e && e.message) || String(e); }
+      $("#cpGo").disabled = false;
+    };
+    $("#cpGo").onclick = async () => {
+      if(S.folder){ const m = await sourceFilesMap(); if(m) return run(m); }
+      const inp = $("#cpSrc"); inp.onchange = () => { const fs = [...inp.files]; inp.value=""; if(fs.length) run(filesMap(fs)); }; inp.click();
+    };
+  };
+  draw();
 }
 
 /* ---- CONFORMITATE ----
@@ -3635,6 +3995,8 @@ const BB_KB = [
   {k:["duplicate","versiune vigoare","care versiune","versiuni"], a:()=>{ const g = dupGroups(), nev = g.filter(x=>!x.docs.some(d=>d.viz)).length; return `Grupurile de duplicate reunesc fișiere cu același conținut sau cu aceeași denumire de bază (rev1, rev2, final). Pentru fiecare grup alegi versiunea <b>în vigoare</b>; celelalte rămân ca istoric și nu apar în opis. ${g.length?`Acum ai <b>${g.length}</b> ${g.length===1?"grup":"grupuri"}, din care <b>${nev}</b> fără versiune aleasă.`:""} ${go("duplicate","Deschide Duplicate")}`; }},
   {k:["data portocalie","data estimata","estimata","de verificat data"], a:()=>{ const n = S.docs.filter(d=>d.dataSrc==="estimat").length; return `Data e portocalie când aplicația n-a găsit-o în denumirea fișierului și a pus data ultimei modificări a fișierului, care de obicei e data copierii, nu data actului. Corecteaz-o din document; în opis, datele estimate nu se tipăresc. ${n?`Ai <b>${n}</b> date estimate.`:""} ${go("inventar","Deschide Inventarul")}`; }},
   {k:["carte tehnica parametri","tronsoane","balize","cod pv","numerotare pv","lista tip","tip lucrare","tipuri lucrari","ce tipuri"], a:()=>`Lista-tip a cărții tehnice vine din <b>domeniile lucrării</b>, bifate la Proiect: construcții civile, drumuri, instalații electrice, termice, sanitare, gaze, rețele edilitare, HVAC. La instalații electrice alegi și tipurile: în clădiri, rețele LEA/LES, LEA cu fibră optică, fotovoltaic, paratrăsnet, IDSAI, supraveghere video, antiefracție, control acces. La <b>Carte tehnică → Parametrii lucrării</b> completezi parametrii fiecărei specialități; aplicația pune PV-urile, probele și buletinele pe dosare, după Anexa 6 din HG 343/2017, iar piesele comune apar o singură dată. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
+  {k:["antet","sigla","logo","firma mea","antetul firmei","model firma","modelul firmei","formular propriu"], a:()=>`Antetul firmei (siglă, denumire, CUI, adresă) îl completezi o singură dată la <b>Firma mea</b>, pe pagina de intrare; apare pe copertă, opisuri, borderouri și cereri. Dacă firma are formularele ei în Word (copertă, opis, borderou), le încarci tot acolo, cu câmpuri ca {lucrare}, {beneficiar}, {dosar} și un rând de tabel cu {poz} {document} {nr} {data_doc}; aplicația le completează și îți dă fișierul Word. Fără model, folosește forma ei.`},
+  {k:["carte tehnica pdf","un singur pdf","pdf final","toata cartea tehnica","numar file","numerotare file"], a:()=>`La <b>Carte tehnică → Cartea tehnică într-un PDF</b> aplicația pune într-un singur PDF coperta, apoi pentru fiecare dosar opisul lui și documentele găsite, în ordine, cu numărul filei pe fiecare pagină. Documentele primite rămân neschimbate. Fișierele Word trebuie salvate întâi ca PDF; aplicația îți spune care au rămas pe dinafară. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
   {k:["rubrici","rubrica","unde gasesc","unde e documentul","muta documentul","alta rubrica"], a:()=>`La <b>Inventar</b> documentele sunt împărțite pe rubrici (avize, PV-uri de execuție, probe, documente de calitate, dispoziții etc.). Apeși pe chenarul rubricii ca să vezi documentele, iar sus ai <b>← Înapoi la rubrici</b>. Căutarea caută în toate. Dacă un document e în rubrica greșită, îl muți din coloana <b>Rubrica</b>. ${CUR?go("inventar","Deschide Inventarul"):""}`},
   {k:["finalizata","lucrare finalizata","in derulare","stadiul lucrarii","receptionata"], a:()=>`O lucrare trece la <b>Finalizate</b> după recepția la terminarea lucrărilor: la <b>Proiect → Stadiul lucrării</b> pui data recepției (sau, dacă aplicația găsește PV-ul de recepție în inventar, apeși „Marchează lucrarea finalizată”). În pagina domeniului lucrările apar la „În derulare” sau la „Finalizate”. ${CUR?go("proiect","Deschide Proiect"):""}`},
   {k:["dosar a1","dosarele","deschid dosarul","nu se aplica document","aleg fisierul","fisier gresit"], a:()=>`La <b>Carte tehnică</b> fiecare dosar (A1 … D1) are chenarul lui, cu „găsite din necesare”. Apeși pe el și vezi documentele necesare și starea lor. Pe fiecare rând poți <b>alege fișierul</b> de mână, marca <b>Nu se aplică</b> sau <b>Cere</b> documentul lipsă. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
@@ -3859,6 +4221,7 @@ function buildOpis(){
   const now = new Date();
   const dt = now.toLocaleDateString("ro-RO")+", ora "+now.toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"});
   return `
+  ${antetHtml()}
   <div class="opis-h">
     <h2>OPIS — ${esc(m.proiect||"Proiect")}</h2>
     <div class="m">
@@ -4012,7 +4375,11 @@ function bind(){
   v.querySelectorAll("[data-cttab]").forEach(b=>b.onclick=()=>{ CTTAB=b.dataset.cttab; render(); v.scrollTop=0; });
   v.querySelectorAll("[data-dos]").forEach(b=>b.onclick=()=>{ CTSEL=b.dataset.dos; render(); v.scrollTop=0; });
   const dop=$("#dosOpis"); if(dop) dop.onclick=()=>printOpisDosare([CTSEL]);
-  const doa=$("#ctOpisAll"); if(doa) doa.onclick=()=>printOpisDosare(null);
+  const dow=$("#dosOpisW"); if(dow) dow.onclick=()=>downloadModel("opis",[CTSEL]);
+  const doa=$("#ctOpisAll"); if(doa) doa.onclick=async()=>{ if(!await downloadModel("opis", null)) printOpisDosare(null); };
+  const ccp=$("#ctCop"); if(ccp) ccp.onclick=async()=>{ if(!await downloadModel("coperta", null)){ $("#print").innerHTML = buildCoperta(); setTimeout(()=>window.print(), 60); } };
+  const cpd=$("#ctPdf"); if(cpd) cpd.onclick=openCartePdf;
+  v.querySelectorAll("#btnFirma,#btnFirma2").forEach(b=>b.onclick=openFirma);
   const dbk=$("#dosBack"); if(dbk) dbk.onclick=()=>{ CTSEL=null; render(); v.scrollTop=0; };
   const ctMan = () => { const ct = ctState(); return ct.man = ct.man || {}; };
   v.querySelectorAll("[data-ctman]").forEach(el=>el.onchange=()=>{ const m = ctMan(); if(el.value) m[el.dataset.ctman]=el.value; else delete m[el.dataset.ctman]; render(); });
@@ -4107,7 +4474,7 @@ function bind(){
     }
     render(); alert(n ? `${pl(n,"document adăugat","documente adăugate")} la Lipsuri, cu „de la cine” completat.` : "Toate lipsurile sunt deja în listă.");
   };
-  const ctp=$("#ctPrint"); if(ctp) ctp.onclick=()=>{ $("#print").innerHTML = buildBorderouri(); setTimeout(()=>window.print(), 60); };
+  const ctp=$("#ctPrint"); if(ctp) ctp.onclick=async()=>{ if(await downloadModel("borderou", null)) return; $("#print").innerHTML = buildBorderouri(); setTimeout(()=>window.print(), 60); };
 
   // cereri
   v.querySelectorAll("[data-setdela]").forEach(el=>el.onchange=()=>{
@@ -4269,6 +4636,7 @@ window.addEventListener("resize", ()=>document.querySelectorAll("textarea.grow")
 autoload();
 markDups();
 render();
+refreshModele().catch(()=>{});
 </script>
 </body>
 </html>
