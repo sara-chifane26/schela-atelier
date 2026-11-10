@@ -10,7 +10,7 @@ Aplicația rulează **doar în browserul tău**. Fișierele pe care le alegi sun
 
 ## Exemplu
 
-Pe pagina de intrare, butonul **Deschide exemplul** adaugă în listă o lucrare demonstrativă cu **date fictive**: fibră optică pe LEA 110 kV, la Instalații electrice, cu 103 documente și situația cărții tehnice pe dosare.
+Pe pagina de intrare, butonul **Deschide exemplul** adaugă în listă o lucrare demonstrativă cu **date fictive**: fibră optică pe LEA 110 kV, la Instalații electrice, cu câteva documente-exemplu (2 tronsoane, 2 balize, 2 prize de pământ) și situația cărții tehnice pe dosare; titlurile PV-urilor sunt doar exemple.
 
 ## Ce face
 

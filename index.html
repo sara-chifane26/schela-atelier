@@ -2153,8 +2153,8 @@ function ctMissing(includeLater){
   return dos.filter(d=>includeLater || !d.later).flatMap(d=>d.items.filter(i=>!i.group && !i.doc && !i.na));
 }
 
-const P_NR   = {k:"nr",  label:"Lucrare nr.", ph:"5.2/2026"};
-const P_COD  = {k:"cod", label:"Cod pentru numerotarea PV-urilor (opțional)", ph:"26L05.2"};
+const P_NR   = {k:"nr",  label:"Lucrare nr.", ph:"01/2026"};
+const P_COD  = {k:"cod", label:"Cod pentru numerotarea PV-urilor (opțional)", ph:"01-2026"};
 const P_EXTRA= {k:"extra", label:"Documente suplimentare cerute de beneficiar — câte unul pe rând", type:"area", ph:"Fișă tehnică echipament\nBuletin verificare protecții conform specificației beneficiarului", wide:true};
 
 function buildBorderouri(){
@@ -3081,7 +3081,7 @@ function viewCarte(){
         <span class="dt-n"><b>${x.got} din ${x.total}</b> · ${st}</span></button>`;
     };
     return tabs + `
-    <div class="note"><b>Cartea tehnică pe dosare.</b> Apasă pe un dosar ca să vezi documentele necesare și starea lor. Lista vine din domeniile lucrării (${esc(domNames(S.dom).join(", "))}), după HG 343/2017, Anexa 6. Capitolele A și B: <b>${got} din ${tot}</b> documente găsite.</div>
+    <div class="note"><b>Cartea tehnică pe dosare.</b> Apasă pe un dosar ca să vezi documentele necesare și starea lor. Lista vine din domeniile lucrării (${esc(domNames(S.dom).join(", "))}), după HG 343/2017, Anexa 6. Capitolele A și B: <b>${got} din ${tot}</b> documente găsite.<br><span class="muted">Denumirile PV-urilor din liste sunt orientative — fiecare firmă are formularele și titlurile ei. Ce aplicația nu recunoaște singură alegi de mână în pagina dosarului.</span></div>
     ${["A","B","C","D"].map(ch=>`<div class="ct-cht">${CT_CH[ch]}</div><div class="dtiles">${dos.filter(x=>x.ch===ch).map(tile).join("")}</div>`).join("")}
     <div class="card" style="margin-top:6px">
       <div style="display:flex;gap:9px;flex-wrap:wrap">
