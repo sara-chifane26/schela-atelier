@@ -382,7 +382,8 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const norm = s => String(s||"").toLowerCase()
   .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-  .replace(/ș|ş/g,"s").replace(/ț|ţ/g,"t").replace(/ă|â/g,"a").replace(/î/g,"i");
+  .replace(/ș|ş/g,"s").replace(/ț|ţ/g,"t").replace(/ă|â/g,"a").replace(/î/g,"i")
+  .replace(/ı/g,"i").replace(/ß/g,"ss").replace(/œ/g,"oe").replace(/æ/g,"ae");
 
 function fmtSize(b){
   if(b==null) return "";
@@ -394,13 +395,35 @@ function fmtSize(b){
 /* ---------------- classification ---------------- */
 /* Regulile se verifică în ordine; prima potrivire câștigă.
    Potrivirea se face pe cuvinte întregi („pv” nu mai prinde „PVC”). */
+/* Tipurile de documente de calitate, recunoscute în română, engleză, germană, franceză, spaniolă și turcă.
+   Frazele sunt scrise fără diacritice (ü→u, ç→c, ş→s, ı→i, ß→ss), așa cum ies după normalizare. */
+const LIMBI = {ro:"română", en:"engleză", de:"germană", fr:"franceză", es:"spaniolă", tr:"turcă"};
+const QTYPES = [
+  {ro:"Declarație de performanță", k:{ro:["declaratie de performanta","declaratia de performanta","declaratia performantei"], en:["declaration of performance"], de:["leistungserklarung"], fr:["declaration des performances","declaration de performance"], es:["declaracion de prestaciones"], tr:["performans beyani"]}},
+  {ro:"Declarație de conformitate", k:{ro:["declaratie de conformitate","declaratia de conformitate"], en:["declaration of conformity","declaration of conformance"], de:["konformitatserklarung"], fr:["declaration de conformite"], es:["declaracion de conformidad"], tr:["uygunluk beyani"]}},
+  {ro:"Certificat de conformitate", k:{ro:["certificat de conformitate"], en:["certificate of conformity","certificate of compliance"], de:["konformitatszertifikat","konformitatsbescheinigung"], fr:["certificat de conformite"], es:["certificado de conformidad"], tr:["uygunluk belgesi","uygunluk sertifikasi"]}},
+  {ro:"Certificat de inspecție / de material (EN 10204)", k:{ro:["certificat de inspectie","certificat de material"], en:["inspection certificate","mill test certificate","material certificate","test certificate"], de:["abnahmeprufzeugnis","werkszeugnis","werksbescheinigung","prufzeugnis"], fr:["certificat de reception","certificat d inspection","certificat matiere"], es:["certificado de inspeccion","certificado de material"], tr:["muayene belgesi","muayene sertifikasi","malzeme sertifikasi"]}},
+  {ro:"Certificat de calitate", k:{ro:["certificat de calitate","certificat calitate"], en:["quality certificate","certificate of quality"], de:["qualitatszertifikat","qualitatszeugnis"], fr:["certificat de qualite"], es:["certificado de calidad"], tr:["kalite belgesi","kalite sertifikasi"]}},
+  {ro:"Raport de încercare", k:{ro:["raport de incercare","buletin de incercare"], en:["test report"], de:["prufbericht"], fr:["rapport d essai","proces verbal d essai"], es:["informe de ensayo"], tr:["test raporu","deney raporu"]}},
+  {ro:"Evaluare tehnică europeană / agrement tehnic", k:{ro:["agrement tehnic","evaluare tehnica europeana"], en:["european technical assessment"], de:["europaische technische bewertung"], fr:["evaluation technique europeenne"], es:["evaluacion tecnica europea"], tr:["avrupa teknik degerlendirmesi"]}},
+  {ro:"Fișă tehnică", k:{ro:["fisa tehnica"], en:["technical data sheet","product data sheet","datasheet"], de:["technisches datenblatt","datenblatt"], fr:["fiche technique"], es:["ficha tecnica"], tr:["teknik veri sayfasi","teknik foy","teknik bilgi formu"]}},
+  {ro:"Certificat de garanție", k:{ro:["certificat de garantie"], en:["warranty certificate","guarantee certificate"], de:["garantieschein","garantiezertifikat"], fr:["certificat de garantie"], es:["certificado de garantia"], tr:["garanti belgesi"]}}
+];
+const QT_N = QTYPES.map(q=>({q, k:Object.entries(q.k).flatMap(([l,ps])=>ps.map(p=>({l, t:" "+norm(p).replace(/[^a-z0-9]+/g," ").trim()+" "})))}));
+// ce fel de document de calitate e și în ce limbă (după denumire și începutul textului)
+function qualType(d){
+  const t = " " + norm((d.name||"").replace(/\.[a-z0-9]{1,5}$/i,"") + " " + (d.txt||"").slice(0,300)).replace(/[^a-z0-9]+/g," ").trim() + " ";
+  let best = null;
+  for(const x of QT_N) for(const k of x.k){ const i = t.indexOf(k.t); if(i>=0 && (!best || i < best.i)) best = {i, tip:x.q.ro, l:k.l, limba:LIMBI[k.l]}; }
+  return best;
+}
 const RULES = [
   // avize și acte de proiectare cu formulare clară — înaintea avizelor de însoțire
   ["Proiectare", ["certificat de urbanism","aviz cte","aviz ctes","aviz de amplasament","aviz amplasament","aviz tehnic","aviz tehnic de racordare","atr","aviz de principiu","aviz isu","aviz de mediu","acord de mediu","aviz favorabil","aviz electrica","aviz distributie","aviz gaze","aviz apa canal","aviz politie","aviz politia rutiera","aviz drumuri","aviz cultura","aviz dsp","autorizatie de construire","autorizatie construire","expertiza","expertiza tehnica","audit energetic"]],
   ["Aprovizionare", ["aviz de insotire","aviz insotire","avize de insotire","aviz marfa","aviz","avize","nir","bon de consum","bon consum","bonuri de consum","fisa de magazie","livrare","dispozitie de livrare"]],
   ["Execuție", ["proces verbal","procese verbale","pv","receptie","atasament","atasamente","situatie de lucrari","situatie lucrari","situatii de lucrari","jurnal de santier","jurnal santier","ordin de incepere","trasare","faza determinanta","faze determinante","fd","comanda de lucru","condica"]],
   ["SSM și SU", ["ssm","instruire","instruiri","securitate si sanatate","plan propriu","coordonare","interventii ulterioare","psi","situatii de urgenta","evaluare riscuri","evaluarea riscurilor","fisa individuala","fise individuale","instructaj","echipament individual"]],
-  ["Calitate", ["program de control","program control","pccvi","plan calitate","buletin","buletine","incercari","incercare","raport de incercare","rapoarte de incercare","certificat","certificate","certificat de calitate","declaratie de conformitate","declaratie conformitate","declaratie de performanta","dop","agrement","agrement tehnic","pram","priza de pamant","prize de pamant","proba","probe","verificare metrologica"]],
+  ["Calitate", [...QTYPES.flatMap(q=>Object.values(q.k).flat()), "program de control","program control","pccvi","plan calitate","buletin","buletine","incercari","incercare","raport de incercare","rapoarte de incercare","certificat","certificate","certificat de calitate","declaratie de conformitate","declaratie conformitate","declaratie de performanta","dop","agrement","agrement tehnic","pram","priza de pamant","prize de pamant","proba","probe","verificare metrologica"]],
   ["Proiectare", ["proiect tehnic","memoriu","memoriu tehnic","caiet de sarcini","caiete de sarcini","breviar","breviar de calcul","plansa","planse","plan de situatie","referat","verificator","studiu","studiu geotehnic","detalii de executie","dde","dtac","releveu proiectare"]],
   ["Contracte", ["contract","contracte","act aditional","acte aditionale","oferta","oferte","comanda","comenzi","garantie","garantii","factura","facturi","deviz","devize","antemasuratoare","proces de licitatie","acord cadru","scrisoare de garantie"]],
   ["Corespondență", ["adresa","adrese","notificare","notificari","dispozitie de santier","dispozitie","solicitare","solicitari","raspuns","raspunsuri","minuta","convocare","email","mail","corespondenta","instiintare"]],
@@ -838,7 +861,7 @@ function rowDoc(d){
     : `<span class="tag t-none">—</span>`;
   return `<tr class="${d.sel?"sel":""}" data-id="${d.id}">
     <td><input type="checkbox" class="chk" data-sel="${d.id}" ${d.sel?"checked":""}></td>
-    <td class="fn">${esc(d.name)}${d.nr?`<span class="path">Nr. ${esc(d.nr)}</span>`:""}${d.path?`<span class="path">${esc(d.path)}</span>`:""}</td>
+    <td class="fn">${esc(d.name)}${(()=>{ const q = qualType(d); return q ? `<span class="path" style="color:var(--blue)">${esc(q.tip)}${q.l!=="ro"?` · în ${esc(q.limba)}`:""}</span>` : ""; })()}${d.nr?`<span class="path">Nr. ${esc(d.nr)}</span>`:""}${d.path?`<span class="path">${esc(d.path)}</span>`:""}</td>
     <td><select data-f="cap" data-id="${d.id}">${CAPS.map(c=>`<option ${d.cap===c?"selected":""}>${c}</option>`).join("")}</select></td>
     <td><input type="date" data-f="data" data-id="${d.id}" value="${esc(d.data)}" class="${d.dataSrc==="estimat"?"isest":""}">${d.dataSrc==="estimat"?`<span class="est" title="Nu am găsit data în denumire; e data ultimei modificări a fișierului, de obicei data copierii. Corecteaz-o din document.">estimată · de verificat</span>`:d.dataSrc==="text"?`<span class="path" title="Data a fost luată din textul documentului.">din text</span>`:""}</td>
     <td><select data-f="sursa" data-id="${d.id}"><option value="">—</option><option value="propriu" ${d.sursa==="propriu"?"selected":""}>Propriu</option><option value="primit" ${d.sursa==="primit"?"selected":""}>Primit</option></select></td>
@@ -2166,9 +2189,9 @@ function buildBorderouri(){
    ISC găsește des certificate lipsă sau care nu corespund materialelor (HG 668/2017; Legea 10/1995, art. 23 lit. f). */
 const live = () => S.docs.filter(d=>!d.dup);
 // fișiere care par documente de calitate: certificate, declarații, agremente, fișe tehnice
-const QSTEM = new Set(["certi","decla","agrem","dop","perfo","confo","garan"]);
+const QSTEM = new Set(["certi","decla","agrem","dop","perfo","confo","garan","zerti","leist","konfo","werks","prufb","prufz","abnah","uygun","beyan","kalit","belge","serti"]);
 function isQualDoc(d){
-  if(d.cap==="Calitate") return true;
+  if(d.cap==="Calitate" || qualType(d)) return true;
   return words(d.name+" "+d.path).some(w=>QSTEM.has(w));
 }
 // cuvintele după care se caută un material: cele cu litere, de cel puțin 3 caractere (ex. „cablu cyy”, „teava ppr”)
@@ -2207,7 +2230,7 @@ function viewMateriale(){
   <div class="dropzone"><b>Certificate și declarații:</b> trage aici PDF-urile sau documentele Word (sau un folder întreg) ori <button class="btn g sm" data-addfiles>alege fișierele</button> <span>Trec prin verificarea la intrare și se leagă singure de materiale.</span></div>
   ${(()=>{ const sg = certSugestii(); return sg.length ? `<div class="card"><h3>Materiale găsite în certificate</h3>
     <p class="muted" style="margin:0 0 10px">Am citit denumirea produsului din ${pl(sg.length,"document de calitate","documente de calitate")}. Bifează ce intră în listă; fiecare material rămâne legat de documentul lui.</p>
-    <div class="dom-pick" style="grid-template-columns:1fr">${sg.map((x,i)=>`<label><input type="checkbox" data-csug="${i}" checked> <span><b>${esc(x.i.den)}</b>${x.i.furn?` · ${esc(x.i.furn)}`:""}<br><span class="muted">din ${esc(x.d.name)}</span></span></label>`).join("")}</div>
+    <div class="dom-pick" style="grid-template-columns:1fr">${sg.map((x,i)=>`<label><input type="checkbox" data-csug="${i}" checked> <span><b>${esc(x.i.den)}</b>${x.i.furn?` · ${esc(x.i.furn)}`:""}<br><span class="muted">din ${esc(x.d.name)}${(()=>{ const q = qualType(x.d); return q ? ` · ${esc(q.tip)}${q.l!=="ro"?" în "+esc(q.limba):""}` : ""; })()}</span></span></label>`).join("")}</div>
     <div style="margin-top:10px"><button class="btn g sm" id="csugAdd">Adaugă materialele bifate</button></div></div>` : ""; })()}
 
   <div class="card">
@@ -2227,7 +2250,7 @@ function viewMateriale(){
       <td><input type="text" data-mf="${r.i}:furn" value="${esc(r.m.furn||"")}" placeholder="furnizor"></td>
       <td><input type="text" data-mf="${r.i}:kw" value="${esc(r.m.kw||"")}" placeholder="${esc(matKeys({den:r.m.den}).join(" "))}"></td>
       <td><select data-mdoc="${r.i}"><option value="">${r.s.f && r.s.f.how==="automat" ? "automat: "+esc(r.s.f.d.name) : "automat — negăsit"}</option>${qd.map(d=>`<option value="${d.id}" ${r.m.docId===d.id?"selected":""}>${esc(d.name)}</option>`).join("")}</select></td>
-      <td>${tag(r)}</td>
+      <td>${tag(r)}${r.s.f && qualType(r.s.f.d) ? `<span class="path">${esc(qualType(r.s.f.d).tip)}${qualType(r.s.f.d).l!=="ro"?" · "+esc(qualType(r.s.f.d).limba):""}</span>` : ""}</td>
       <td>${r.s.f ? `<label class="ck"><input type="checkbox" class="chk" data-mok="${r.i}" ${r.m.ok?"checked":""}> da</label>` : ""}</td>
       <td><button class="btn g sm" data-mdel="${r.i}" aria-label="Șterge">×</button></td>
     </tr>`).join("")}</tbody>
@@ -2568,9 +2591,21 @@ async function fileText(f){
 /* ---- NUMĂRUL ȘI DATA DIN DOCUMENT ----
    Se iau din denumire, apoi din textul de început („Proces-verbal nr. 12 din 03.11.2026”). */
 const LUNI = ["ianuarie","februarie","martie","aprilie","mai","iunie","iulie","august","septembrie","octombrie","noiembrie","decembrie"];
+// lunile în română, engleză, germană, franceză, spaniolă, turcă (fără diacritice) → numărul lunii
+const LUNI_X = {};
+[LUNI,
+ ["january","february","march","april","may","june","july","august","september","october","november","december"],
+ ["januar","februar","marz","april","mai","juni","juli","august","september","oktober","november","dezember"],
+ ["janvier","fevrier","mars","avril","mai","juin","juillet","aout","septembre","octobre","novembre","decembre"],
+ ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"],
+ ["ocak","subat","mart","nisan","mayis","haziran","temmuz","agustos","eylul","ekim","kasim","aralik"]
+].forEach(l=>l.forEach((m,i)=>{ LUNI_X[m] = i+1; }));
+Object.assign(LUNI_X, {jan:1,feb:2,mar:3,apr:4,jun:6,jul:7,aug:8,sep:9,sept:9,setiembre:9,oct:10,nov:11,dec:12,jänner:1,janner:1});
+const LUNI_RX = Object.keys(LUNI_X).sort((a,b)=>b.length-a.length).join("|");
 function findNr(s){
   const t = norm(s);
-  const m = t.match(/\bnr\.?\s*(?:de\s+inregistrare\s*)?[:.]?\s*([0-9]{1,6}(?:[./-][0-9a-z]{1,6})?)\b/) || t.match(/\b(?:pv|ds)\s*([0-9]{1,5})\b/);
+  // nr. / no. / n° / nº / number / nummer / numero / sayi
+  const m = t.match(/(?:\bnr\.?|\bno\.?|\bn[°º]|\bnumber|\bnummer|\bnumero|\bsayi)\s*(?:de\s+inregistrare\s*)?[:.]?\s*([0-9]{1,6}(?:[./-][0-9a-z]{1,6})?)\b/) || t.match(/\b(?:pv|ds|dop)\s*[-_]?\s*([0-9]{1,5})\b/);
   return m ? m[1].replace(/[./-]$/,"") : "";
 }
 function findDateText(s){
@@ -2578,11 +2613,18 @@ function findDateText(s){
   const cands = [];
   let m; const r1 = /(?:^|[^0-9])(0?[1-9]|[12]\d|3[01])[./-](0?[1-9]|1[0-2])[./-](20\d{2})(?![0-9])/g;
   while((m = r1.exec(t))){ if(validIso(m[3],m[2],m[1])) cands.push({i:m.index, iso:`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`}); }
-  const r2 = new RegExp("(?:^|[^0-9])(0?[1-9]|[12]\\d|3[01])\\s+(" + LUNI.join("|") + ")\\s+(20\\d{2})", "g");
-  while((m = r2.exec(t))){ const mo = String(LUNI.indexOf(m[2])+1).padStart(2,"0"); if(validIso(m[3],mo,m[1])) cands.push({i:m.index, iso:`${m[3]}-${mo}-${m[1].padStart(2,"0")}`}); }
+  // „12 martie 2026”, „12. März 2026”, „12 de marzo de 2026”, „12 Mart 2026”
+  const r2 = new RegExp("(?:^|[^0-9])(0?[1-9]|[12]\\d|3[01])\\.?\\s+(?:de\\s+)?(" + LUNI_RX + ")\\.?\\s+(?:de\\s+)?(20\\d{2})", "g");
+  while((m = r2.exec(t))){ const mo = String(LUNI_X[m[2]]).padStart(2,"0"); if(validIso(m[3],mo,m[1])) cands.push({i:m.index, iso:`${m[3]}-${mo}-${m[1].padStart(2,"0")}`}); }
+  // „March 12, 2026”
+  const r3 = new RegExp("\\b(" + LUNI_RX + ")\\.?\\s+(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?,?\\s+(20\\d{2})", "g");
+  while((m = r3.exec(t))){ const mo = String(LUNI_X[m[1]]).padStart(2,"0"); if(validIso(m[3],mo,m[2])) cands.push({i:m.index, iso:`${m[3]}-${mo}-${m[2].padStart(2,"0")}`}); }
+  // „2026-03-12” (ISO)
+  const r4 = /(?:^|[^0-9])(20\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])(?![0-9])/g;
+  while((m = r4.exec(t))){ if(validIso(m[1],m[2],m[3])) cands.push({i:m.index, iso:`${m[1]}-${m[2]}-${m[3]}`}); }
   if(!cands.length) return "";
   // data de lângă „din” / „data” are prioritate; altfel prima din text
-  const near = cands.find(c=>/(din|data|incheiat|astazi)\s*[:.]?\s*$/.test(t.slice(Math.max(0,c.i-14), c.i+1)));
+  const near = cands.find(c=>/(din|data|incheiat|astazi|date|dated|datum|vom|du|le|fecha|tarih|issued)\s*[:.,]?\s*$/.test(t.slice(Math.max(0,c.i-14), c.i+1)));
   return (near || cands.sort((a,b)=>a.i-b.i)[0]).iso;
 }
 // completează numărul și data unui document din text, fără să suprascrie ce ai corectat de mână
@@ -2594,12 +2636,14 @@ function enrichDoc(d){
 // ce material și ce producător scrie pe un certificat / o declarație
 function certInfo(d){
   const t = d.txt || ""; if(!t) return null;
-  const stop = "(?=\\s(?:producator|producatorul|fabricant|fabricantul|fabricat|furnizor|furnizorul|utilizare|cod|lot|lotul|cantitate|nr|data|seria|standard|marca|tip)\\b|\\s\\d{1,2}\\.\\s|[;]\\s|,\\s(?=[a-z]+:)|$)";
-  const m = t.match(new RegExp("(?:cod(?:ul)?\\s+unic\\s+de\\s+identificare\\s+(?:a|al)\\s+produsului[\\s\\-]*tip|denumire(?:a)?\\s+comerciala|denumire(?:a)?\\s+produs(?:ului)?|descriere(?:a)?\\s+produs(?:ului)?|tip(?:ul)?\\s+produs(?:ului)?|produs(?:ul)?|denumire\\s+material|material(?:ul)?|articol(?:ul)?|pentru\\s+produsul)\\s*[:\\-]?\\s*(.{3,70}?)" + stop));
+  const stop = "(?=\\s(?:producator|producatorul|fabricant|fabricantul|fabricat|furnizor|furnizorul|utilizare|cod|lot|lotul|cantitate|nr|no|data|seria|standard|marca|tip|manufacturer|manufactured|producer|hersteller|fabricante|uretici|imalatci|intended|verwendungszweck|usage|uso|kullanim|date|datum|fecha|tarih|batch|charge|lote|parti|order|quantity|menge|quantite|cantidad|miktar|norm|norma)\\b|\\s\\d{1,2}\\.\\s|[;]\\s|,\\s(?=[a-z]+:)|$)";
+  const m = t.match(new RegExp("(?:cod(?:ul)?\\s+unic\\s+de\\s+identificare\\s+(?:a|al)\\s+produsului[\\s\\-]*tip|unique\\s+identification\\s+code\\s+of\\s+the\\s+product[\\s\\-]*type|eindeutiger\\s+kenncode\\s+des\\s+produkttyps|code\\s+d\\W?identification\\s+unique\\s+du\\s+produit[\\s\\-]*type|codigo\\s+de\\s+identificacion\\s+unica\\s+del\\s+producto[\\s\\-]*tipo|urun\\s+tipinin\\s+kendine\\s+has\\s+tanitim\\s+kodu|trade\\s+name|product\\s+name|product\\s+type|product\\s+description|handelsname|produktbezeichnung|nom\\s+commercial|designation(?:\\s+du\\s+produit)?|nombre\\s+comercial|denominacion(?:\\s+del\\s+producto)?|ticari\\s+adi|urun\\s+adi|product|produkt|produit|producto|urun|denumire(?:a)?\\s+comerciala|denumire(?:a)?\\s+produs(?:ului)?|descriere(?:a)?\\s+produs(?:ului)?|tip(?:ul)?\\s+produs(?:ului)?|produs(?:ul)?|denumire\\s+material|material(?:ul)?|articol(?:ul)?|pentru\\s+produsul)\\s*[:\\-]?\\s*(.{3,70}?)" + stop));
   if(!m) return null;
-  const f = t.match(/(?:producator(?:ul)?|fabricant(?:ul)?|fabricat de|furnizor(?:ul)?|numele si adresa (?:producatorului|fabricantului))\s*[:\-]?\s*(.{3,50}?)(?=\s(?:adresa|cui|cod|str|produs|nr|tel)\b|[;,]\s|$)/);
+  const f = t.match(/(?:producator(?:ul)?|fabricante|fabricant(?:ul)?|fabricat de|furnizor(?:ul)?|numele si adresa (?:producatorului|fabricantului)|manufactured by|manufacturer|producer|hersteller|uretici(?: firma)?|imalatci)\s*[:\-]?\s*(.{3,50}?)(?=\s(?:adresa|address|adresse|anschrift|direccion|adres|cui|cod|str|produs|nr|no|tel|phone|telefon|fax|www|email|e-mail|date|datum|fecha|tarih|data)\b|[;,]\s|$)/);
   const cap1 = s => s.trim().replace(/\S*\d\S*/g, w=>w.toUpperCase().replace(/(\d)X(\d)/g,"$1x$2")).replace(/^./, c=>c.toUpperCase());
-  return {den: cap1(m[1]), furn: f ? f[1].trim().replace(/\b(srl|sa|sc)\b/g, x=>x.toUpperCase()).replace(/(^|\s)(\S)/g,(a,b,c)=>b+c.toUpperCase()) : ""};
+  const FORM = {srl:"SRL", sa:"SA", sc:"SC", gmbh:"GmbH", kg:"KG", ag:"AG", ltd:"Ltd", llc:"LLC", sas:"SAS", spa:"SpA", sl:"S.L.", as:"A.Ș."};
+  const firma = x => x.trim().replace(/[a-z0-9]+/g, w => FORM[w] || (w.length>2 ? w[0].toUpperCase()+w.slice(1) : w));
+  return {den: cap1(m[1]), furn: f ? firma(f[1]) : ""};
 }
 function certSugestii(){
   const have = new Set(S.mat.map(m=>m.docId).filter(Boolean)), names = new Set(S.mat.map(m=>norm(m.den)));
@@ -2751,7 +2795,21 @@ async function docText(file){
    Tesseract rulează în pagină, local, cu limba română; motorul și dicționarul se descarcă o singură dată
    de pe jsDelivr. Pentru PDF-uri scanate citim prima pagină, desenată cu pdf.js. */
 const OCR_SRC = window.OCR_SRC || "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
-const OCR_OPT = window.OCR_OPT || {workerPath:"https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js", corePath:"https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1", langPath:"https://cdn.jsdelivr.net/npm/@tesseract.js-data/ron/4.0.0"};
+// prima citire în română și engleză; dacă textul pare german, francez, spaniol sau turc,
+// documentul se citește din nou cu limba lui (dicționarul se descarcă doar când e nevoie)
+const OCR_LANGS = window.OCR_LANGS || "ron+eng";
+const OCR_HINTS = {
+  deu:["und","der","die","das","hersteller","leistungserklarung","produkt","datum","nach","fur","gemass","zeugnis","bescheinigung","mit"],
+  fra:["fabricant","produit","declaration","conformite","performances","selon","pour","les","des","du","avec","essai"],
+  spa:["fabricante","producto","prestaciones","declaracion","conformidad","fecha","segun","para","los","del","con","ensayo"],
+  tur:["uretici","urun","beyani","beyan","tarih","belgesi","uygunluk","ve","icin","ile","sertifikasi","adi"]
+};
+function ocrGuessLang(t){
+  const w = new Set(norm(t).split(/[^a-z]+/)); let best = null, bs = 0;
+  for(const [l, hs] of Object.entries(OCR_HINTS)){ const sc = hs.filter(h=>w.has(h)).length; if(sc>bs){ bs=sc; best=l; } }
+  return bs>=3 ? best : null;
+}
+const OCR_OPT = window.OCR_OPT || {workerPath:"https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js", corePath:"https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1", langPath:"https://tessdata.projectnaptha.com/4.0.0"};
 let OCR_P = null;
 function loadOcr(){
   if(window.Tesseract) return Promise.resolve(window.Tesseract);
@@ -2779,20 +2837,24 @@ async function pdfFirstPageImage(file){
 async function runOcr(files){
   const T = await loadOcr();
   if(!T){ busy(false); alert("Cititorul OCR nu s-a putut încărca. E nevoie de internet la prima folosire."); return; }
+  const workers = {};
+  const getW = async langs => workers[langs] || (workers[langs] = await T.createWorker(langs.split("+"), 1, OCR_OPT));
   let worker;
-  try{ worker = await T.createWorker("ron", 1, OCR_OPT); }catch(e){ busy(false); alert("Cititorul OCR nu a pornit: " + (e && e.message || e)); return; }
+  try{ worker = await getW(OCR_LANGS); }catch(e){ busy(false); alert("Cititorul OCR nu a pornit: " + (e && e.message || e)); return; }
   let n = 0, ok = 0;
   for(const {d, f} of files){
     busy(true, `OCR… ${++n} din ${files.length} (câteva secunde pe pagină)`);
     try{
       const src = d.ext==="pdf" ? await pdfFirstPageImage(f) : f;
       if(!src) continue;
-      const r = await worker.recognize(src);
+      let r = await worker.recognize(src);
+      const lg = ocrGuessLang(r.data.text||"");
+      if(lg){ busy(true, `OCR… ${n} din ${files.length} — documentul pare în ${({deu:"germană",fra:"franceză",spa:"spaniolă",tur:"turcă"})[lg]}, îl citesc din nou`); try{ r = await (await getW(lg+"+eng")).recognize(src); }catch(e){} }
       const t = norm(r.data.text||"").replace(/\s+/g," ").trim().slice(0,800);
       if(t.length > 20){ d.txt = t; d.ocr = true; enrichDoc(d); ok++; } else d.ocr = true;
     }catch(e){ d.ocr = true; }
   }
-  await worker.terminate();
+  for(const w of Object.values(workers)) try{ await w.terminate(); }catch(e){}
   busy(false); render();
   alert(`OCR gata: ${pl(ok,"document citit","documente citite")} din ${files.length}. Verifică datele și numerele preluate; la scanurile neclare citirea poate greși.`);
 }
@@ -3059,6 +3121,7 @@ function cfState(){
   return S.conf;
 }
 function cfDetect(r){
+  if(r.id==="produse" && !S.mat.length){ const q = live().find(d=>qualType(d)); if(q){ const t = qualType(q); return {state:"da", doc:q, info:`${t.tip}${t.l!=="ro"?" în "+t.limba:""}`}; } }
   if(r.id==="produse" && S.mat.length){
     const ms = S.mat.map(matStatus), l = ms.filter(x=>x.st==="lipsa").length, v = ms.filter(x=>x.st==="verif").length;
     return l ? {state:"nu", info:`${pl(l,"material fără document de calitate","materiale fără document de calitate")} (vezi Materiale)`} : {state:"da", info: v ? `toate materialele au document; ${v} de verificat dacă corespund` : "toate materialele au document verificat"};
@@ -3216,6 +3279,7 @@ const BB_KB = [
   {k:["modificari proiect","registru dispozitii","dispozitie fara desen","inclus in as built","modificari de proiect"], a:()=>`Modificările de proiect le ții la <b>Execuție → Dispoziții de șantier</b>: fiecare dispoziție cu numărul, data, ce modifică, dacă are desen și dacă a intrat în as built. Aplicația preia singură dispozițiile găsite în inventar și îți arată ce lipsește înainte de recepție. ${CUR?go("executie:disp","Vezi dispozițiile"):""} <span class="bb-law">HG 343/2017, Anexa 6, pct. 7 lit. c)</span>`},
   {k:["aranjeaza dosarul","foldere dosare","copiez fisierele","stick","organizez dosarul","dosar pe calculator"], a:()=>`La <b>Carte tehnică → Aranjează dosarul pe calculator</b> aplicația face un folder cu subfolderele Dosar A1 … Dosar D1 și pune în ele copii ale fișierelor găsite, numerotate ca în borderou, plus lista documentelor. Originalele nu se ating. Merge în Chrome și Edge, pe calculator. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
   {k:["scan","nume neclar","citeste pdf","text pdf","continut pdf","ocr","scanuri","poze","doc vechi","word vechi"], a:()=>`Din PDF-uri și din Word (.docx și .doc) aplicația citește local începutul textului: recunoaște fișierele cu nume neclar și ia numărul și data. Pentru <b>scanuri și poze</b> apasă <b>Inventar → Citește scanurile (OCR)</b>: textul se citește în pagină, în limba română, câteva secunde pe pagină. La scanurile neclare verifică ce a preluat.`},
+  {k:["limbi straine","engleza","germana","franceza","spaniola","turca","certificat in engleza","document strain","leistungserklarung","declaration of performance"], a:()=>`Documentele de calitate sunt recunoscute în <b>română, engleză, germană, franceză, spaniolă și turcă</b>: aplicația îți arată în ce limbă sunt și ce tip de document e, în română (de exemplu „Leistungserklärung” = <b>declarație de performanță</b>, „Abnahmeprüfzeugnis 3.1” = <b>certificat de inspecție EN 10204</b>, „Uygunluk Beyanı” = <b>declarație de conformitate</b>). Ia și produsul, producătorul, numărul și data, iar OCR-ul citește scanurile în toate cele șase limbi.`},
   {k:["server","folderul lucrarii","leaga folderul","verifica folderul","fisiere noi","sincronizare"], a:()=>`La <b>Inventar → Leagă folderul lucrării</b> alegi o singură dată folderul (și de pe server, dacă e mapat ca disc). Apoi <b>Verifică folderul</b> aduce doar fișierele noi, prin verificarea la intrare. Merge în Chrome și Edge; browserul cere permisiunea o dată pe sesiune. ${CUR?go("inventar","Deschide Inventarul"):""}`},
   // --- noțiuni de specialitate ---
   {k:["faza determinanta","faze determinante"], a:()=>`O <b>fază determinantă</b> e o etapă de execuție hotărâtoare pentru rezistența și stabilitatea construcției. Proiectantul le stabilește în <b>programul de control pe faze determinante</b>, beneficiarul și verificatorul îl acceptă, iar ISC îl aprobă. Executantul convoacă ISC cu <b>cel puțin 3 zile lucrătoare</b> înainte, iar lucrarea continuă doar după acceptul scris, consemnat în procesul-verbal de control. <span class="bb-law">Ordinul MDRAP 1370/2014, art. 9, 15, 18; Legea 10/1995, art. 23 lit. d)</span>`},

@@ -31,7 +31,8 @@ Documentele se adaugă cu butonul, trăgându-le (fișiere ori foldere întregi)
 
 Totul se citește local, în browser:
 - din PDF și Word (.docx și .doc vechi) — începutul textului: numărul și data PV-urilor și ale dispozițiilor, denumirea produsului și producătorul din certificate și declarațiile de performanță;
-- din scanuri și poze — prin OCR în limba română (Tesseract), la cerere;
+- documentele de calitate sunt recunoscute în **română, engleză, germană, franceză, spaniolă și turcă**: aplicația arată tipul documentului în română și limba lui (de exemplu „Leistungserklärung” = declarație de performanță, în germană);
+- din scanuri și poze — prin OCR (Tesseract), la cerere: întâi în română și engleză, apoi, dacă documentul pare în germană, franceză, spaniolă sau turcă, din nou în limba lui;
 - din PDF-urile semnate electronic — numele semnatarilor, care bifează singure semnăturile pe PV-uri.
 
 Bibliotecile pdf.js și Tesseract se încarcă de pe cdnjs / jsDelivr la prima folosire; documentele nu pleacă din calculator.
