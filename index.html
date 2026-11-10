@@ -233,6 +233,14 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 @media (max-width:900px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} .prow{grid-template-columns:1fr 1fr} }
 @media (max-width:760px){ .tile{min-height:132px;gap:10px;padding:16px 8px} .tile svg{width:40px;height:40px} .tile b{font-size:16px} .prow{grid-template-columns:1fr} }
 
+.drop-ov{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(35,92,130,.18);padding:24px}
+.drop-ov.on{display:flex}
+.drop-ov div{display:flex;flex-direction:column;align-items:center;gap:10px;background:var(--surface);border:2px dashed var(--blue);border-radius:10px;padding:34px 40px;color:var(--blue);text-align:center;max-width:460px;box-shadow:0 12px 40px rgba(20,33,43,.2)}
+.drop-ov b{font-size:18px}
+.drop-ov span{color:var(--muted);font-size:13.5px}
+.dropzone{border:2px dashed var(--line);border-radius:6px;padding:14px 16px;color:var(--muted);font-size:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--surface-3);margin-bottom:14px}
+.dropzone b{color:var(--ink)}
+
 /* print */
 #print{display:none}
 @media print{
@@ -301,6 +309,8 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 <div class="bb" id="bb"></div>
 
 <div id="print"></div>
+<div class="drop-ov" id="dropOv" aria-hidden="true"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M7 10l5 5 5-5M4 17v3h16v-3"/></svg><b>Lasă fișierele aici</b><span>PDF, Word, scanuri sau foldere întregi — trec prin verificarea la intrare</span></div></div>
+<input type="file" id="inGlobal" multiple hidden accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.tif,.tiff,.dwg,.zip">
 <div class="modal" id="intake" role="dialog" aria-modal="true" aria-label="Verificare la intrare"></div>
 <div class="busy" id="busy" role="status" aria-live="polite"><div id="busyT">Se citesc fișierele…</div></div>
 
@@ -774,7 +784,7 @@ function viewInventar(){
   if(!S.docs.length){
     return `<div class="card"><div class="empty">
       <h3>Niciun document încă</h3>
-      <p>Alege folderul cu documentele proiectului, exact așa cum ți l-au dat. Fișierele sunt citite local, în pagină, doar ca să li se calculeze amprenta (pentru copii identice) — nu se încarcă nicăieri și nu se modifică.</p>
+      <p>Trage aici folderul cu documentele lucrării (sau fișiere Word și PDF), ori alege-l cu butonul, exact așa cum ți l-au dat. Fișierele sunt citite local, în pagină, doar ca să li se calculeze amprenta (pentru copii identice) — nu se încarcă nicăieri și nu se modifică.</p>
       <div style="display:flex;gap:9px;justify-content:center;flex-wrap:wrap">
         <button class="btn" id="btnPickDir">Alege folderul</button>
         <button class="btn g" id="btnPickFiles">Alege fișiere</button>
@@ -804,7 +814,7 @@ function viewInventar(){
     <button class="btn g sm" id="btnSelNone">Deselectează</button>
     <button class="btn g sm" id="btnDel">Șterge selecția</button>
     <button class="btn g sm" id="btnReclass" title="Aplică regulile actualizate doar documentelor încă neclasificate; ce ai încadrat manual nu se schimbă.">Reîncadrează neclasificatele</button>
-    ${S.docs.some(d=>d.ext==="pdf" && d.txt===undefined) ? `<button class="btn g sm" id="btnPdfTxt" title="Alege din nou folderul lucrării; aplicația citește local începutul textului din PDF-uri, ca să recunoască și fișierele cu nume neclar.">Citește textul din PDF-uri</button><input type="file" id="inPdfTxt" webkitdirectory directory multiple hidden>` : ""}
+    ${S.docs.some(d=>(d.ext==="pdf"||d.ext==="docx") && d.txt===undefined) ? `<button class="btn g sm" id="btnPdfTxt" title="Alege din nou folderul lucrării; aplicația citește local începutul textului din PDF și Word, ia numărul și data și recunoaște fișierele cu nume neclar.">Citește textul din PDF și Word</button><input type="file" id="inPdfTxt" webkitdirectory directory multiple hidden>` : ""}
   </div>
 
   <div class="tw"><table>
@@ -824,9 +834,9 @@ function rowDoc(d){
     : `<span class="tag t-none">—</span>`;
   return `<tr class="${d.sel?"sel":""}" data-id="${d.id}">
     <td><input type="checkbox" class="chk" data-sel="${d.id}" ${d.sel?"checked":""}></td>
-    <td class="fn">${esc(d.name)}${d.path?`<span class="path">${esc(d.path)}</span>`:""}</td>
+    <td class="fn">${esc(d.name)}${d.nr?`<span class="path">Nr. ${esc(d.nr)}</span>`:""}${d.path?`<span class="path">${esc(d.path)}</span>`:""}</td>
     <td><select data-f="cap" data-id="${d.id}">${CAPS.map(c=>`<option ${d.cap===c?"selected":""}>${c}</option>`).join("")}</select></td>
-    <td><input type="date" data-f="data" data-id="${d.id}" value="${esc(d.data)}" class="${d.dataSrc==="estimat"?"isest":""}">${d.dataSrc==="estimat"?`<span class="est" title="Nu am găsit data în denumire; e data ultimei modificări a fișierului, de obicei data copierii. Corecteaz-o din document.">estimată · de verificat</span>`:""}</td>
+    <td><input type="date" data-f="data" data-id="${d.id}" value="${esc(d.data)}" class="${d.dataSrc==="estimat"?"isest":""}">${d.dataSrc==="estimat"?`<span class="est" title="Nu am găsit data în denumire; e data ultimei modificări a fișierului, de obicei data copierii. Corecteaz-o din document.">estimată · de verificat</span>`:d.dataSrc==="text"?`<span class="path" title="Data a fost luată din textul documentului.">din text</span>`:""}</td>
     <td><select data-f="sursa" data-id="${d.id}"><option value="">—</option><option value="propriu" ${d.sursa==="propriu"?"selected":""}>Propriu</option><option value="primit" ${d.sursa==="primit"?"selected":""}>Primit</option></select></td>
     <td><input type="text" data-f="dela" data-id="${d.id}" value="${esc(d.dela)}" placeholder="…"></td>
     <td>${dup}</td>
@@ -909,9 +919,10 @@ let INTAKE = null;   // {items, junk, again, first}
 async function addFiles(list){
   const seen = new Set(S.docs.map(d=>d.path+"|"+d.name+"|"+d.size));
   const todo = []; let junk = 0, again = 0;
-  for(const f of list){
+  for(const it of list){
+    const f = it.f || it;
     if(JUNK.test(f.name)){ junk++; continue; }
-    const path = (f.webkitRelativePath||"").split("/").slice(0,-1).join("/");
+    const path = it.f ? it.path : (f.webkitRelativePath||"").split("/").slice(0,-1).join("/");
     const k = path+"|"+f.name+"|"+f.size;
     if(seen.has(k)){ again++; continue; }
     seen.add(k); todo.push({f, path});
@@ -924,9 +935,8 @@ async function addFiles(list){
     if(i % 5 === 0){ busy(true, `Se verifică fișierele… ${i} din ${todo.length}`); await new Promise(r=>setTimeout(r,0)); }
     const fromName = guessDate(f.name);
     const mtime = f.lastModified ? new Date(f.lastModified).toISOString().slice(0,10) : "";
-    const txt = extOf(f.name)==="pdf" && window.pdfjsLib && f.size <= 40*1048576 ? (await pdfText(f) || "") : undefined;
-    let cap = guessCap(f.name, path);
-    if(cap==="Neclasificat" && txt) cap = matchCap(txt.slice(0,200)) || cap;
+    const txt = await fileText(f);
+    const cap = guessCap(f.name, path);
     cands.push({
       id: "d"+Math.random().toString(36).slice(2,10),
       name: f.name, path, size: f.size, ext: extOf(f.name), mtime, txt,
@@ -936,6 +946,7 @@ async function addFiles(list){
       dataSrc: fromName ? "nume" : (mtime ? "estimat" : ""),
       sursa:"", dela:"", viz:false, dup:false, grp:false, sel:false, obs:""
     });
+    enrichDoc(cands[cands.length-1]);
   }
   busy(false);
   INTAKE = {items: judge(cands), junk, again, first: S.docs.length===0};
@@ -2187,6 +2198,12 @@ function viewMateriale(){
     <div class="stat ok"><div class="v">${nO}</div><div class="l">verificate</div></div>
   </div>
 
+  <div class="dropzone"><b>Certificate și declarații:</b> trage aici PDF-urile sau documentele Word (sau un folder întreg) ori <button class="btn g sm" data-addfiles>alege fișierele</button> <span>Trec prin verificarea la intrare și se leagă singure de materiale.</span></div>
+  ${(()=>{ const sg = certSugestii(); return sg.length ? `<div class="card"><h3>Materiale găsite în certificate</h3>
+    <p class="muted" style="margin:0 0 10px">Am citit denumirea produsului din ${pl(sg.length,"document de calitate","documente de calitate")}. Bifează ce intră în listă; fiecare material rămâne legat de documentul lui.</p>
+    <div class="dom-pick" style="grid-template-columns:1fr">${sg.map((x,i)=>`<label><input type="checkbox" data-csug="${i}" checked> <span><b>${esc(x.i.den)}</b>${x.i.furn?` · ${esc(x.i.furn)}`:""}<br><span class="muted">din ${esc(x.d.name)}</span></span></label>`).join("")}</div>
+    <div style="margin-top:10px"><button class="btn g sm" id="csugAdd">Adaugă materialele bifate</button></div></div>` : ""; })()}
+
   <div class="card">
     <h3>Adaugă materiale</h3>
     <textarea rows="4" id="matBulk" placeholder="Câte un material pe rând; după punct și virgulă, opțional, furnizorul:&#10;Cablu CYY-F 3x2,5 ; Electro Distribuție SRL&#10;Țeavă PPR 20 ; Instal Market&#10;Beton C25/30 ; Stație Betoane Nord"></textarea>
@@ -2243,9 +2260,11 @@ const fazeUrgente = () => (S.faze||[]).filter(f=>{ const s = fazaStatus(f).k; re
 
 // procesele-verbale din inventar și cine trebuie să le semneze
 const SIGN = [["rte","RTE"],["dir","Diriginte"],["pr","Proiectant"],["isc","ISC"]];
-function isPVdoc(d){ const h = new Set(words(d.name)); return h.has("proce") && h.has("verba"); }
+// PV după denumire sau, la fișierele cu nume neclar, după începutul textului
+const docHead = d => d.name + " " + (d.txt||"").slice(0,70);
+function isPVdoc(d){ const h = new Set(words(docHead(d))); return h.has("proce") && h.has("verba"); }
 function pvNeeds(d){
-  const n = norm(d.name);
+  const n = norm(docHead(d));
   const need = ["rte","dir"];
   if(/faz\w* determinant|natura terenului|teren\w* de fundare|terminare\w* structur|receptie pe faza/.test(n)) need.push("pr","isc");
   return need;
@@ -2265,6 +2284,7 @@ function viewExecutie(){
   const dProb = S.disp.filter(x=>!x.desen || !x.asbuilt).length;
   const tab = (id, t, n) => `<button class="btn ${EXTAB===id?"":"g"} sm" data-extab="${id}">${t}${n?` · ${n}`:""}</button>`;
   return `
+  <div class="dropzone"><b>PV-uri și dispoziții de șantier:</b> trage aici fișierele (PDF, Word, foldere) ori <button class="btn g sm" data-addfiles>alege fișierele</button> <span>Numărul și data se iau singure din denumire sau din text.</span></div>
   <div class="fbar">${tab("faze","Faze determinante",urg)}${tab("sem","Semnături pe PV-uri",nes)}${tab("disp","Dispoziții de șantier",dProb)}</div>
   ${EXTAB==="faze" ? viewFaze() : EXTAB==="sem" ? viewSemnaturi() : viewDispozitii()}`;
 }
@@ -2302,9 +2322,9 @@ function viewSemnaturi(){
   </div>
   ${nes.length ? `<div style="margin:-2px 0 14px;display:flex;gap:9px;flex-wrap:wrap"><button class="btn" id="semToLips">Trimite PV-urile nesemnate la Lipsuri</button></div>` : ""}
   ${pvs.length ? `<div class="tw" style="max-height:none"><table>
-    <thead><tr><th>Proces-verbal</th>${SIGN.map(([k,t])=>`<th style="width:92px">${t}</th>`).join("")}<th style="width:120px">Stare</th></tr></thead>
+    <thead><tr><th>Proces-verbal</th><th style="width:80px">Nr.</th><th style="width:96px">Data</th>${SIGN.map(([k,t])=>`<th style="width:92px">${t}</th>`).join("")}<th style="width:120px">Stare</th></tr></thead>
     <tbody>${pvs.map(d=>{ const st = pvState(d); return `<tr>
-      <td class="fn">${esc(d.name)}</td>
+      <td class="fn">${esc(d.name)}${d.txt?`<span class="path">${esc(d.txt.slice(0,70))}…</span>`:""}</td><td class="num">${esc(d.nr||"")}</td><td class="num">${d.dataSrc==="estimat"?"":esc(roDate(d.data))}</td>
       ${SIGN.map(([k])=>`<td>${st.need.includes(k) ? `<label class="ck"><input type="checkbox" class="chk" data-sg="${d.id}:${k}" ${st.s[k]?"checked":""}> semnat</label>` : `<span class="muted">—</span>`}</td>`).join("")}
       <td>${st.miss.length ? `<span class="tag t-late">lipsă ${st.miss.length}</span>` : `<span class="tag t-viz">complet</span>`}</td>
     </tr>`; }).join("")}</tbody></table></div>` : `<div class="card"><div class="empty"><h3>Niciun proces-verbal în inventar</h3><p>PV-urile apar aici după ce le adaugi la Inventar.</p></div></div>`}`;
@@ -2465,7 +2485,7 @@ async function pdfText(file){
         if(t.length > 900) break;
       }
       doc.destroy && doc.destroy();
-      return norm(t).replace(/\s+/g," ").trim().slice(0,600);
+      return norm(t).replace(/\s+/g," ").trim().slice(0,800);
     })();
     return await Promise.race([job, new Promise(r=>setTimeout(()=>r(null), 15000))]);
   }catch(e){ return null; }
@@ -2473,21 +2493,132 @@ async function pdfText(file){
 // citește textul pentru documentele PDF din inventar care nu îl au încă (după ce alegi din nou folderul)
 async function readPdfTexts(files){
   const m = new Map(); for(const f of files){ const path = (f.webkitRelativePath||"").split("/").slice(0,-1).join("/"); m.set(path+"|"+f.name+"|"+f.size, f); m.set("|"+f.name+"|"+f.size, f); }
-  const todo = S.docs.filter(d=>d.ext==="pdf" && d.txt===undefined);
-  busy(true, "Se încarcă cititorul de PDF…");
-  const lib = await loadPdfJs();
-  if(!lib){ busy(false); alert("Cititorul de PDF nu s-a putut încărca. E nevoie de internet pentru prima încărcare."); return; }
+  const todo = S.docs.filter(d=>(d.ext==="pdf" || d.ext==="docx") && d.txt===undefined);
+  if(todo.some(d=>d.ext==="pdf")){ busy(true, "Se încarcă cititorul de PDF…"); if(!await loadPdfJs()) alert("Cititorul de PDF nu s-a putut încărca (e nevoie de internet la prima folosire). Citesc doar documentele Word."); }
   let n = 0, txt = 0;
   for(const d of todo){
     const f = m.get(d.path+"|"+d.name+"|"+d.size) || m.get("|"+d.name+"|"+d.size); if(!f) continue;
     busy(true, `Se citește textul… ${++n} din ${todo.length}`);
-    d.txt = f.size <= 40*1048576 ? (await pdfText(f) || "") : "";
-    if(d.txt) txt++;
-    if(d.cap==="Neclasificat" && d.txt){ const c = matchCap(d.txt.slice(0,200)); if(c) d.cap = c; }
+    const t = await fileText(f); if(t===undefined) continue;
+    d.txt = t; if(t) txt++;
+    enrichDoc(d);
   }
   busy(false); render();
-  alert(`Am citit ${pl(n,"PDF","PDF-uri")}; ${txt} au text. ${n-txt ? (n-txt)+" sunt scanuri fără text (ar trebui OCR)." : ""}`);
+  alert(`Am citit ${pl(n,"document","documente")}; ${txt} au text, din care am luat numărul și data unde le-am găsit.${n-txt ? " "+(n-txt)+" sunt scanuri fără text (ar trebui OCR)." : ""}`);
 }
+
+/* ---- TEXTUL DIN WORD (.docx) ----
+   Un .docx e o arhivă zip; textul e în word/document.xml. Îl despachetăm în pagină, fără biblioteci,
+   cu DecompressionStream (Chrome, Edge, Firefox, Safari recente). Fișierele .doc vechi nu se pot citi așa. */
+async function docxText(file){
+  try{
+    if(typeof DecompressionStream!=="function") return null;
+    const buf = new Uint8Array(await file.arrayBuffer()), dv = new DataView(buf.buffer);
+    // sfârșitul directorului central
+    let e = -1;
+    for(let i=buf.length-22; i>=Math.max(0, buf.length-66000); i--){ if(dv.getUint32(i,true)===0x06054b50){ e=i; break; } }
+    if(e<0) return null;
+    let p = dv.getUint32(e+16,true); const n = dv.getUint16(e+10,true);
+    for(let k=0; k<n; k++){
+      if(dv.getUint32(p,true)!==0x02014b50) return null;
+      const meth = dv.getUint16(p+10,true), csize = dv.getUint32(p+20,true);
+      const fl = dv.getUint16(p+28,true), xl = dv.getUint16(p+30,true), cl = dv.getUint16(p+32,true), off = dv.getUint32(p+42,true);
+      const name = new TextDecoder().decode(buf.subarray(p+46, p+46+fl));
+      if(name==="word/document.xml"){
+        const ds = off + 30 + dv.getUint16(off+26,true) + dv.getUint16(off+28,true);
+        const raw = buf.subarray(ds, ds+csize);
+        let xml;
+        if(meth===0) xml = new TextDecoder().decode(raw);
+        else if(meth===8) xml = await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text();
+        else return null;
+        const t = xml.replace(/<\/w:p>/g," ").replace(/<w:tab\/>/g," ").replace(/<[^>]+>/g,"")
+          .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+        return norm(t).replace(/\s+/g," ").trim().slice(0,800);
+      }
+      p += 46 + fl + xl + cl;
+    }
+    return null;
+  }catch(err){ return null; }
+}
+// textul de început al unui document, dacă se poate citi local (PDF cu text sau Word .docx)
+async function fileText(f){
+  const x = extOf(f.name);
+  if(f.size > 40*1048576) return undefined;
+  if(x==="docx") return (await docxText(f)) || "";
+  if(x==="pdf" && window.pdfjsLib) return (await pdfText(f)) || "";
+  return undefined;
+}
+
+/* ---- NUMĂRUL ȘI DATA DIN DOCUMENT ----
+   Se iau din denumire, apoi din textul de început („Proces-verbal nr. 12 din 03.11.2026”). */
+const LUNI = ["ianuarie","februarie","martie","aprilie","mai","iunie","iulie","august","septembrie","octombrie","noiembrie","decembrie"];
+function findNr(s){
+  const t = norm(s);
+  const m = t.match(/\bnr\.?\s*(?:de\s+inregistrare\s*)?[:.]?\s*([0-9]{1,6}(?:[./-][0-9a-z]{1,6})?)\b/) || t.match(/\b(?:pv|ds)\s*([0-9]{1,5})\b/);
+  return m ? m[1].replace(/[./-]$/,"") : "";
+}
+function findDateText(s){
+  const t = norm(s);
+  const cands = [];
+  let m; const r1 = /(?:^|[^0-9])(0?[1-9]|[12]\d|3[01])[./-](0?[1-9]|1[0-2])[./-](20\d{2})(?![0-9])/g;
+  while((m = r1.exec(t))){ if(validIso(m[3],m[2],m[1])) cands.push({i:m.index, iso:`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`}); }
+  const r2 = new RegExp("(?:^|[^0-9])(0?[1-9]|[12]\\d|3[01])\\s+(" + LUNI.join("|") + ")\\s+(20\\d{2})", "g");
+  while((m = r2.exec(t))){ const mo = String(LUNI.indexOf(m[2])+1).padStart(2,"0"); if(validIso(m[3],mo,m[1])) cands.push({i:m.index, iso:`${m[3]}-${mo}-${m[1].padStart(2,"0")}`}); }
+  if(!cands.length) return "";
+  // data de lângă „din” / „data” are prioritate; altfel prima din text
+  const near = cands.find(c=>/(din|data|incheiat|astazi)\s*[:.]?\s*$/.test(t.slice(Math.max(0,c.i-14), c.i+1)));
+  return (near || cands.sort((a,b)=>a.i-b.i)[0]).iso;
+}
+// completează numărul și data unui document din text, fără să suprascrie ce ai corectat de mână
+function enrichDoc(d){
+  if(!d.nr) d.nr = findNr(d.name) || (d.txt ? findNr(d.txt.slice(0,300)) : "");
+  if(d.txt && (d.dataSrc==="estimat" || !d.data)){ const dt = findDateText(d.txt.slice(0,400)); if(dt){ d.data = dt; d.dataSrc = "text"; } }
+  if(d.cap==="Neclasificat" && d.txt){ const c = matchCap(d.txt.slice(0,200)); if(c) d.cap = c; }
+}
+// ce material și ce producător scrie pe un certificat / o declarație
+function certInfo(d){
+  const t = d.txt || ""; if(!t) return null;
+  const stop = "(?=\\s(?:producator|producatorul|fabricant|furnizor|furnizorul|cod|lot|lotul|cantitate|nr|data|seria|standard|marca|tip)\\b|[;,]\\s|$)";
+  const m = t.match(new RegExp("(?:denumire(?:a)?\\s+produs(?:ului)?|produs(?:ul)?|denumire\\s+material|material(?:ul)?|pentru\\s+produsul)\\s*[:\\-]?\\s*(.{3,70}?)" + stop));
+  if(!m) return null;
+  const f = t.match(/(?:producator(?:ul)?|fabricant(?:ul)?|furnizor(?:ul)?)\s*[:\-]\s*(.{3,50}?)(?=\s(?:adresa|cui|cod|str|produs|nr|tel)\b|[;,]\s|$)/);
+  const cap1 = s => s.trim().replace(/\S*\d\S*/g, w=>w.toUpperCase()).replace(/^./, c=>c.toUpperCase());
+  return {den: cap1(m[1]), furn: f ? f[1].trim().replace(/\b(srl|sa|sc)\b/g, x=>x.toUpperCase()).replace(/(^|\s)(\S)/g,(a,b,c)=>b+c.toUpperCase()) : ""};
+}
+function certSugestii(){
+  const have = new Set(S.mat.map(m=>m.docId).filter(Boolean)), names = new Set(S.mat.map(m=>norm(m.den)));
+  return live().filter(isQualDoc).filter(d=>!have.has(d.id)).map(d=>({d, i:certInfo(d)})).filter(x=>x.i && !names.has(norm(x.i.den)));
+}
+
+/* ---- ADĂUGARE PRIN TRAGERE (drag and drop) ---- */
+async function dropToFiles(dt){
+  const out = [];
+  const items = [...(dt.items||[])].map(i=>i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  if(!items.length) return [...(dt.files||[])].map(f=>({f, path:""}));
+  async function walk(entry, dir){
+    if(entry.isFile){ try{ const f = await new Promise((res,rej)=>entry.file(res,rej)); out.push({f, path:dir}); }catch(e){} return; }
+    if(entry.isDirectory){
+      const sub = dir ? dir+"/"+entry.name : entry.name, rd = entry.createReader();
+      for(;;){ const b = await new Promise((res,rej)=>rd.readEntries(res,rej)); if(!b.length) break; for(const e of b) await walk(e, sub); }
+    }
+  }
+  for(const e of items) await walk(e, "");
+  return out;
+}
+let DRAGN = 0;
+const hasFiles = e => e.dataTransfer && [...(e.dataTransfer.types||[])].includes("Files");
+window.addEventListener("dragenter", e=>{ if(!hasFiles(e)) return; e.preventDefault(); DRAGN++; $("#dropOv").classList.add("on"); $("#dropOv b").textContent = CUR ? "Lasă fișierele sau folderele aici" : "Deschide întâi o lucrare"; });
+window.addEventListener("dragover", e=>{ if(!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = CUR ? "copy" : "none"; });
+window.addEventListener("dragleave", e=>{ if(!hasFiles(e)) return; DRAGN = Math.max(0, DRAGN-1); if(!DRAGN) $("#dropOv").classList.remove("on"); });
+window.addEventListener("drop", async e=>{
+  if(!hasFiles(e)) return; e.preventDefault(); DRAGN = 0; $("#dropOv").classList.remove("on");
+  if(!CUR){ alert("Deschide întâi o lucrare (sau pornește una nouă de pe pagina de intrare), apoi trage fișierele."); return; }
+  if(INTAKE){ alert("Termină întâi verificarea la intrare deschisă."); return; }
+  busy(true, "Se citesc fișierele…");
+  const files = await dropToFiles(e.dataTransfer);
+  busy(false);
+  if(files.length) addFiles(files);
+});
 
 /* ---- CONFORMITATE ----
    Verificare orientativă a dosarului față de actele normative. Detectarea se face după
@@ -2815,7 +2946,7 @@ function viewConformitate(){
 const go = (v, t) => `<button class="btn g sm" data-bgo="${v}">${t}</button>`;
 const BB_KB = [
   // --- folosirea aplicației ---
-  {k:["incarc documente","adaug documente","adaug folder","incarc folder","cum incep","cum adaug"], a:()=>`Mergi la <b>Inventar</b> și apasă <b>Adaugă folder</b>, apoi alege folderul lucrării cu toate subfolderele. Înainte să intre în inventar, fiecare fișier trece prin verificarea la intrare, unde aprobi ce se adaugă. ${go("inventar","Deschide Inventarul")}`},
+  {k:["incarc documente","adaug documente","adaug folder","incarc folder","cum incep","cum adaug","drag and drop","trag fisierele","trag folderul","word","documente word"], a:()=>`Cu lucrarea deschisă, <b>trage</b> fișierele sau un folder întreg oriunde în pagină, sau mergi la <b>Inventar → Adaugă folder</b>. Merg PDF-uri, documente Word, scanuri. Din PDF-uri și din Word (.docx) aplicația citește singură numărul și data (de exemplu „PV nr. 12 din 03.11.2026”), iar din certificate denumirea produsului și producătorul. Înainte să intre în inventar, fiecare fișier trece prin verificarea la intrare, unde aprobi ce se adaugă. ${go("inventar","Deschide Inventarul")}`},
   {k:["verificare intrare","copie identica","de ce nu s-a adaugat","respins","debifat"], a:()=>`La intrare, aplicația compară fiecare fișier cu ce există: <b>copiile identice</b> se resping, <b>versiunile noi</b> îți cer o decizie, fișierele care <b>completează o lipsă</b> o rezolvă automat, iar <b>documentele noi necerute</b> vin debifate după prima încărcare, ca să nu intre din greșeală.`},
   {k:["duplicate","versiune vigoare","care versiune","versiuni"], a:()=>{ const g = dupGroups(), nev = g.filter(x=>!x.docs.some(d=>d.viz)).length; return `Grupurile de duplicate reunesc fișiere cu același conținut sau cu aceeași denumire de bază (rev1, rev2, final). Pentru fiecare grup alegi versiunea <b>în vigoare</b>; celelalte rămân ca istoric și nu apar în opis. ${g.length?`Acum ai <b>${g.length}</b> ${g.length===1?"grup":"grupuri"}, din care <b>${nev}</b> fără versiune aleasă.`:""} ${go("duplicate","Deschide Duplicate")}`; }},
   {k:["data portocalie","data estimata","estimata","de verificat data"], a:()=>{ const n = S.docs.filter(d=>d.dataSrc==="estimat").length; return `Data e portocalie când aplicația n-a găsit-o în denumirea fișierului și a pus data ultimei modificări a fișierului, care de obicei e data copierii, nu data actului. Corecteaz-o din document; în opis, datele estimate nu se tipăresc. ${n?`Ai <b>${n}</b> date estimate.`:""} ${go("inventar","Deschide Inventarul")}`; }},
@@ -3061,10 +3192,10 @@ function roDate(iso){
 function csvEsc(v){ const s=String(v??""); return /[",;\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
 
 function exportCsv(){
-  const src = {nume:"din denumire", estimat:"estimata (data fisierului)", manual:"introdusa manual"};
-  const head = ["Denumire","Cale","Capitol","Data document","Sursa datei","Sursa","De la cine","In vigoare","Inlocuit","In grup de duplicate","Extensie","Marime (bytes)","SHA-256"];
+  const src = {nume:"din denumire", text:"din textul documentului", estimat:"estimata (data fisierului)", manual:"introdusa manual"};
+  const head = ["Denumire","Cale","Capitol","Nr. document","Data document","Sursa datei","Sursa","De la cine","In vigoare","Inlocuit","In grup de duplicate","Extensie","Marime (bytes)","SHA-256"];
   const lines = [head.join(";")].concat(S.docs.map(d=>[
-    d.name, d.path, d.cap, d.data, src[d.dataSrc]||"", d.sursa, d.dela, d.viz?"da":"", d.dup?"da":"", d.grp?"da":"", d.ext, d.size, d.hash||""
+    d.name, d.path, d.cap, d.nr||"", d.data, src[d.dataSrc]||"", d.sursa, d.dela, d.viz?"da":"", d.dup?"da":"", d.grp?"da":"", d.ext, d.size, d.hash||""
   ].map(csvEsc).join(";")));
   download((S.meta.proiect||"inventar").replace(/[^\w\-]+/g,"_")+"_inventar.csv", "﻿"+lines.join("\r\n"), "text/csv;charset=utf-8");
 }
@@ -3332,7 +3463,12 @@ function bind(){
     render(); alert(n ? `${pl(n,"PV adăugat","PV-uri adăugate")} la Lipsuri.` : "Toate sunt deja în listă.");
   };
   const dim=$("#dispImport"); if(dim) dim.onclick=()=>{
-    for(const d of dispNeinregistrate()){ const m = d.name.match(/(?:nr\.?|ds)\s*([0-9]+)/i); S.disp.push({id:newId("s"), nr:m?m[1]:"", data: d.dataSrc==="estimat" ? "" : (d.data||""), desc:"", desen:false, asbuilt:false, docId:d.id}); }
+    for(const d of dispNeinregistrate()){
+      // ce modifică: textul de după număr și dată, dacă documentul are text
+      let desc = "";
+      if(d.txt){ desc = d.txt.replace(/^.*?dispozi\w*\s+de\s+santier/,"").replace(/^\s*nr\.?\s*[:.]?\s*[0-9a-z./-]+/,"").replace(new RegExp("^\\s*(din|data)?\\s*[:.]?\\s*([0-9]{1,2}[./-][0-9]{1,2}[./-][0-9]{4}|[0-9]{1,2}\\s+(" + LUNI.join("|") + ")\\s+[0-9]{4})"),"").replace(/^[\s\-–:,.]+/,"").slice(0,140); }
+      S.disp.push({id:newId("s"), nr:d.nr||findNr(d.name), data: d.dataSrc==="estimat" ? "" : (d.data||""), desc, desen:false, asbuilt:false, docId:d.id});
+    }
     render();
   };
   const dad=$("#dispAdd"); if(dad) dad.onclick=()=>{ S.disp.push({id:newId("s"), nr:"", data:"", desc:"", desen:false, asbuilt:false, docId:""}); render(); };
@@ -3340,6 +3476,12 @@ function bind(){
   v.querySelectorAll("[data-dck]").forEach(el=>el.onchange=()=>{ const [i,k] = el.dataset.dck.split(":"); const x=S.disp[+i]; if(x){ x[k]=el.checked; render(); } });
   v.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{ S.disp.splice(+b.dataset.ddel,1); render(); });
 
+  v.querySelectorAll("[data-addfiles]").forEach(b=>b.onclick=()=>$("#inGlobal").click());
+  const csa=$("#csugAdd"); if(csa) csa.onclick=()=>{
+    const sg = certSugestii(); let n = 0;
+    v.querySelectorAll("[data-csug]").forEach(el=>{ if(!el.checked) return; const x = sg[+el.dataset.csug]; if(!x) return; S.mat.push({id:newId("m"), den:x.i.den, furn:x.i.furn, kw:"", docId:x.d.id, ok:false}); n++; });
+    render(); if(n) alert(`${pl(n,"material adăugat","materiale adăugate")}, fiecare legat de certificatul lui. Verifică dacă documentul corespunde și bifează „Corespunde”.`);
+  };
   // aranjarea dosarului și textul din PDF-uri
   const car=$("#ctArrange"); if(car) car.onclick=openArrange;
   const bpt=$("#btnPdfTxt"), ipt=$("#inPdfTxt"); if(bpt&&ipt){ bpt.onclick=()=>ipt.click(); ipt.onchange=()=>{ if(ipt.files.length) readPdfTexts([...ipt.files]); ipt.value=""; }; }
@@ -3376,6 +3518,7 @@ $("#fileLoad").onchange=e=>{
   };
   r.readAsText(f); e.target.value="";
 };
+$("#inGlobal").onchange=e=>{ const fs=[...e.target.files]; e.target.value=""; if(fs.length && CUR) addFiles(fs); };
 $(".brand").onclick=()=>{ if(CUR) closeLucrare(); VIEW="acasa"; render(); };
 
 

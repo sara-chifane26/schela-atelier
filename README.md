@@ -27,4 +27,4 @@ Pagina de intrare are opt chenare, câte unul pe domeniu: **construcții civile,
 
 **Boloboc** — butonul din colțul din dreapta jos: răspunde la întrebări despre dosar („ce lipsește?”, „cine întârzie?”, „ce fac acum?”), despre folosirea aplicației și despre noțiunile de specialitate (faze determinante, lucrări ascunse, as built, recepție), cu temeiul legal. Funcționează fără AI și fără internet: nimic nu pleacă din pagină.
 
-Din PDF-uri aplicația citește local începutul textului, ca să recunoască și fișierele cu nume neclar (cititorul pdf.js se încarcă de pe cdnjs; documentele nu pleacă din calculator). Scanurile fără text nu sunt citite.
+Documentele se adaugă cu butonul sau trăgându-le (fișiere ori foldere întregi) în pagină. Din PDF-uri și din Word (.docx) aplicația citește local începutul textului: recunoaște fișierele cu nume neclar, ia numărul și data PV-urilor și ale dispozițiilor de șantier și denumirea produsului din certificate (cititorul pdf.js se încarcă de pe cdnjs; documentele nu pleacă din calculator). Scanurile fără text și fișierele .doc vechi nu sunt citite.
