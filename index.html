@@ -366,6 +366,8 @@ input[type=text],input[type=date],input[type=number],select,textarea{border-radi
 @keyframes fxRise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 #view.fx{animation:fxFade .3s ease both}
 #view.fx .rise{animation:fxRise .4s ease both}
+@keyframes fxRiseBig{from{opacity:0;transform:translateY(46px)}to{opacity:1;transform:none}}
+#view.fx .rise.big{animation:fxRiseBig .7s cubic-bezier(.2,.7,.25,1) both}
 .bar i{transition:width .8s cubic-bezier(.2,.7,.3,1)}
 @media (prefers-reduced-motion:reduce){ #view.fx, #view.fx .rise{animation:none} .bar i{transition:none} }
 /* rânduri-card, unde sunt puține rânduri (dosare, persoane, valabilități, materiale, execuție) */
@@ -388,6 +390,16 @@ details.more>summary{list-style:none;cursor:pointer}
 details.more>summary::-webkit-details-marker{display:none}
 details.more>div{position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(20,33,43,.15);padding:6px;display:flex;flex-direction:column;gap:4px;min-width:230px}
 details.more>div .btn{justify-content:flex-start;width:100%;border-color:transparent}
+/* ---- INTRAREA: sigla apare pe fundal deschis, apoi pagina se estompează în loc ---- */
+.splash{position:fixed;inset:0;z-index:90;background:#14212B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;pointer-events:none;opacity:1;transition:opacity .6s ease}
+.splash.out{opacity:0}
+.splash .sl{display:flex;align-items:baseline;gap:2px;opacity:0;transform:scale(.96);animation:slIn .55s ease .05s forwards}
+.splash .sl b{font-size:52px;font-weight:800;color:#FBFCFB;letter-spacing:-.03em}
+.splash .sl i{font-style:normal;font-size:52px;font-weight:800;color:#7FB4D6}
+.splash .sl em{font-style:normal;font-size:14px;color:#6E8391;letter-spacing:.2em;text-transform:uppercase;margin-left:10px;align-self:center}
+.splash .sn{font-size:15px;color:#A9BAC6;max-width:min(560px,90vw);text-align:center;opacity:0;animation:slIn .5s ease .2s forwards}
+@keyframes slIn{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){ .splash{display:none} }
 </style>
 </head>
 <body>
@@ -422,6 +434,7 @@ details.more>div .btn{justify-content:flex-start;width:100%;border-color:transpa
 
 <div id="print"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="splash" id="splash" aria-hidden="true"><div class="sl"><b>Schela</b><i>.</i><em>Atelier</em></div><div class="sn" id="splashN"></div></div>
 <div class="drop-ov" id="dropOv" aria-hidden="true"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M7 10l5 5 5-5M4 17v3h16v-3"/></svg><b>Lasă fișierele aici</b><span>Orice tip de fișier sau foldere întregi (PDF, Word, Excel, poze, DWG…) — trec prin verificarea la intrare</span></div></div>
 <input type="file" id="inGlobal" multiple hidden>
 <div class="modal" id="intake" role="dialog" aria-modal="true" aria-label="Verificare la intrare"></div>
@@ -668,11 +681,25 @@ function autoload(){
   }
   S = blank();
 }
+// sigla pe ecran, apoi pagina apare prin estompare (la pornire și la deschiderea unei lucrări)
+let SPLASH_T = null;
+function splash(text, hold){
+  const el = $("#splash"); if(!el) return;
+  clearTimeout(SPLASH_T);
+  $("#splashN").textContent = text || "";
+  el.style.display = ""; el.classList.remove("out");
+  [...el.querySelectorAll(".sl,.sn")].forEach(x=>{ x.style.animation = "none"; void x.offsetWidth; x.style.animation = ""; });
+  // conținutul de dedesubt stă ascuns până se retrage sigla, apoi apare urcând de jos
+  $("#view").style.visibility = "hidden";
+  SPLASH_T = setTimeout(()=>{ $("#view").style.visibility = ""; animateView(true); el.classList.add("out"); SPLASH_T = setTimeout(()=>{ el.style.display = "none"; }, 650); }, hold || 700);
+}
 function openLucrare(id, view){
   const o = readLucrare(id);
   if(!o){ alert("Lucrarea nu mai există în acest browser."); IDX = IDX.filter(x=>x.id!==id); saveIdx(); return render(); }
   S = Object.assign(blank(), o); S.id = id; migrate(); markDups();
-  CUR = S.id; LAST_JS = ""; VIEW = view || "proiect"; render();
+  CUR = S.id; LAST_JS = ""; VIEW = view || "proiect";
+  if(!NAV_SKIP) splash(S.meta.proiect || "Lucrare fără nume", 550);
+  render();
 }
 function newLucrare(domId){
   S = blank(); if(domId) S.dom = [domId];
@@ -696,6 +723,7 @@ function importLucrare(o, fixedId){
   if(fixedId) S.id = fixedId;
   migrate(); markDups();
   CUR = S.id; LAST_JS = ""; autosave();
+  splash(S.meta.proiect || "", 600);
 }
 function download(name, text, type){
   const b = new Blob([text], {type: type||"application/json;charset=utf-8"});
@@ -834,10 +862,14 @@ function uiPolish(){
   });
   try{ localStorage.setItem(KEY_NOTES, JSON.stringify(seen)); }catch(e){}
   if(!moved) return;
-  // estomparea paginii și apariția pe rând
+  animateView(false);
+}
+// estomparea paginii și apariția pe rând; „big”: după siglă, chenarele urcă de jos, mai lent
+function animateView(big){
+  const v = $("#view");
   v.classList.remove("fx"); void v.offsetWidth; v.classList.add("fx");
   const items = [...v.children, ...v.querySelectorAll(".tiles > .tile, .dtiles > .dtile, .stats > .stat, .lrow")];
-  items.slice(0, 40).forEach((el,i)=>{ el.classList.add("rise"); el.style.animationDelay = Math.min(i,14)*35 + "ms"; el.addEventListener("animationend", ()=>{ el.classList.remove("rise"); el.style.animationDelay = ""; }, {once:true}); });
+  items.slice(0, 40).forEach((el,i)=>{ el.classList.add("rise"); el.classList.toggle("big", !!big); el.style.animationDelay = Math.min(i,14)*(big?70:35) + "ms"; el.addEventListener("animationend", ()=>{ el.classList.remove("rise","big"); el.style.animationDelay = ""; }, {once:true}); });
   v.querySelectorAll(".bar i").forEach(b=>{ const w = b.style.width; b.style.transition = "none"; b.style.width = "0"; void b.offsetWidth; b.style.transition = ""; requestAnimationFrame(()=>requestAnimationFrame(()=>{ b.style.width = w; })); });
 }
 // doar starea explicațiilor, fără animația paginii
@@ -5301,6 +5333,7 @@ autoload();
 markDups();
 navFromHash();
 render();
+splash(CUR ? (S.meta.proiect||"") : "", 900);
 $("#btnWin").onclick = () => openWindow();
 refreshModele().catch(()=>{});
 </script>
