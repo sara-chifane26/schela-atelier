@@ -342,6 +342,52 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
   .adr-body{white-space:normal}
   .pf{margin-top:14px;font-family:var(--fm);font-size:8pt;color:#5B6B76;border-top:1px solid #CBD5D6;padding-top:8px}
 }
+
+/* ---- ASPECT: mai aerisit, mișcare discretă (estompare) ---- */
+body{font-size:16px;line-height:1.5}
+.view{padding:24px 28px 90px}
+.card{border-radius:10px;padding:20px 22px;margin-bottom:18px;box-shadow:0 1px 2px rgba(20,33,43,.05)}
+.card h3{font-size:17px;margin-bottom:14px}
+.stats{gap:14px;margin-bottom:18px}
+.stat{border-radius:10px;padding:16px 18px}
+.stat .v{font-size:30px}
+.btn{border-radius:6px;transition:background .15s,transform .1s,box-shadow .15s}
+.btn:active{transform:scale(.97)}
+.tag{height:22px;padding:0 10px;border-radius:11px}
+.note{border-radius:0 8px 8px 0;padding:14px 18px;font-size:14.5px;line-height:1.6;margin-bottom:18px}
+.tw{border-radius:10px}
+th,td{padding:10px 12px}
+input[type=text],input[type=date],input[type=number],select,textarea{border-radius:6px}
+.tile{border-radius:10px;transition:transform .2s,filter .2s,box-shadow .2s}
+.dtile{border-radius:10px;transition:transform .2s,box-shadow .2s}
+.dropzone{border-radius:10px}
+.lrow{padding:12px 0}
+@keyframes fxFade{from{opacity:0}to{opacity:1}}
+@keyframes fxRise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#view.fx{animation:fxFade .3s ease both}
+#view.fx .rise{animation:fxRise .4s ease both}
+.bar i{transition:width .8s cubic-bezier(.2,.7,.3,1)}
+@media (prefers-reduced-motion:reduce){ #view.fx, #view.fx .rise{animation:none} .bar i{transition:none} }
+/* rânduri-card, unde sunt puține rânduri (dosare, persoane, valabilități, materiale, execuție) */
+.tw.cardsw{background:transparent;border:none;overflow:visible;max-height:none}
+table.cards{border-collapse:separate;border-spacing:0 8px;margin-top:-8px}
+table.cards thead th{background:transparent;position:static;border:none;padding-bottom:0}
+table.cards tbody td{background:var(--surface);border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)}
+table.cards tbody td:first-child{border-left:1px solid var(--line-soft);border-radius:10px 0 0 10px}
+table.cards tbody td:last-child{border-right:1px solid var(--line-soft);border-radius:0 10px 10px 0}
+table.cards tbody tr:hover td{background:var(--surface-3)}
+table.cards tr.cap td,table.cards tr.grp td{background:transparent;border:none;padding-top:14px}
+/* explicațiile: deschise primele dăți, apoi strânse într-un rând */
+.note .nmore{background:none;border:0;padding:0 0 0 8px;font:inherit;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;white-space:nowrap}
+.note.clp{cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:120px;position:relative}
+.note.clp .nmore{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:var(--blue-soft);padding-left:10px}
+.note.clp br{display:none}
+/* meniul „⋯” pentru acțiunile rare */
+details.more{position:relative;display:inline-block}
+details.more>summary{list-style:none;cursor:pointer}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>div{position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(20,33,43,.15);padding:6px;display:flex;flex-direction:column;gap:4px;min-width:230px}
+details.more>div .btn{justify-content:flex-start;width:100%;border-color:transparent}
 </style>
 </head>
 <body>
@@ -756,8 +802,46 @@ function render(){
   bind();
   autosave();
   renderBanner();
+  uiPolish();
   navPush();
 }
+
+/* ---- ASPECT ----
+   La schimbarea paginii: estompare și apariție pe rând (chenare, carduri, cifre), barele de progres se umplu.
+   Tabelele mici devin rânduri-card. Explicațiile lungi sunt deschise primele 3 dăți, apoi strânse într-un rând. */
+let UI_KEY = "", NOTE_OPEN = new Set();
+const KEY_NOTES = "schela_explicatii_v1";
+function uiPolish(){
+  const v = $("#view"), key = JSON.stringify([CUR, VIEW, DSEL, INVRUB, CTSEL, EXTAB, CTTAB]), moved = key !== UI_KEY;
+  UI_KEY = key;
+  // rânduri-card
+  const small = (VIEW==="carte" && CTSEL) || ["executie","materiale","cereri","lipsuri"].includes(VIEW);
+  v.querySelectorAll(".tw").forEach(w=>{ const t = w.querySelector("table"); if(!t) return;
+    const card = (small && t.rows.length <= 80) || !!w.closest(".pdocs");
+    w.classList.toggle("cardsw", card); t.classList.toggle("cards", card); });
+  // explicațiile
+  let seen = {}; try{ seen = JSON.parse(localStorage.getItem(KEY_NOTES)||"{}") || {}; }catch(e){}
+  v.querySelectorAll(".note:not(.warn)").forEach(n=>{
+    if(n.textContent.length < 150) return;
+    const k = norm((n.querySelector("b")||n).textContent).slice(0,50);
+    if(moved) seen[k] = (seen[k]||0) + 1;
+    const clp = !NOTE_OPEN.has(k) && seen[k] > 3;
+    n.classList.toggle("clp", clp);
+    const b = document.createElement("button"); b.className = "nmore"; b.type = "button";
+    b.textContent = clp ? "ⓘ mai mult" : "strânge"; n.appendChild(b);
+    b.onclick = e => { e.stopPropagation(); if(n.classList.contains("clp")) NOTE_OPEN.add(k); else { NOTE_OPEN.delete(k); seen[k] = 99; try{ localStorage.setItem(KEY_NOTES, JSON.stringify(seen)); }catch(_){} } uiNotesOnly(); };
+    n.onclick = e => { if(n.classList.contains("clp") && !e.target.closest("a,input,select")){ NOTE_OPEN.add(k); uiNotesOnly(); } };
+  });
+  try{ localStorage.setItem(KEY_NOTES, JSON.stringify(seen)); }catch(e){}
+  if(!moved) return;
+  // estomparea paginii și apariția pe rând
+  v.classList.remove("fx"); void v.offsetWidth; v.classList.add("fx");
+  const items = [...v.children, ...v.querySelectorAll(".tiles > .tile, .dtiles > .dtile, .stats > .stat, .lrow")];
+  items.slice(0, 40).forEach((el,i)=>{ el.classList.add("rise"); el.style.animationDelay = Math.min(i,14)*35 + "ms"; el.addEventListener("animationend", ()=>{ el.classList.remove("rise"); el.style.animationDelay = ""; }, {once:true}); });
+  v.querySelectorAll(".bar i").forEach(b=>{ const w = b.style.width; b.style.transition = "none"; b.style.width = "0"; void b.offsetWidth; b.style.transition = ""; requestAnimationFrame(()=>requestAnimationFrame(()=>{ b.style.width = w; })); });
+}
+// doar starea explicațiilor, fără animația paginii
+function uiNotesOnly(){ const k = UI_KEY; render(); UI_KEY = k; }
 
 /* ---- ÎNAPOI ȘI ÎNAINTE (săgețile browserului) ----
    Fiecare pagină deschisă (domeniu, lucrare, secțiune, rubrică, dosar) intră în istoricul browserului,
@@ -4750,8 +4834,10 @@ function viewRezultate(){
     <h3>Livrabile</h3>
     <div style="display:flex;gap:9px;flex-wrap:wrap">
       <button class="btn o" id="btnOpis">Generează opisul (tipărire / PDF)</button>
-      <button class="btn g" id="btnCsv">Export inventar (CSV)</button>
-      <button class="btn g" id="btnRaport">Export statistici (CSV)</button>
+      <details class="more"><summary class="btn g">⋯ Exporturi</summary><div>
+        <button class="btn g" id="btnCsv">Export inventar (CSV)</button>
+        <button class="btn g" id="btnRaport">Export statistici (CSV)</button>
+      </div></details>
     </div>
     <p style="margin:12px 0 0;font-size:14px;color:var(--muted);line-height:1.5">Opisul se deschide în fereastra de tipărire a browserului. Alege „Salvare ca PDF" ca destinație. Fișierele CSV se deschid direct în Excel.</p>
   </div>`;
