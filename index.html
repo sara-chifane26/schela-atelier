@@ -733,6 +733,7 @@ function subTitle(){
 }
 function render(){
   if(!CUR && VIEW!=="acasa" && VIEW!=="domeniu") VIEW = "acasa";
+  if(CUR) syncMat();
   renderNav();
   const home = VIEW==="acasa" || VIEW==="domeniu";
   $("#vtitle").textContent = VIEW==="acasa" ? "Acasă" : VIEW==="domeniu" ? (domById(DSEL)||{}).name||"" : (VIEWS.find(v=>v.id===VIEW)||{}).name;
@@ -2392,49 +2393,53 @@ function matStatus(m){
   if(!f) return {st:"lipsa", f};
   return {st: m.ok ? "ok" : "verif", f};
 }
+// lista materialelor se face singură din documentele de calitate: produsul și producătorul citite din fiecare
+const MAT_NU = /\b(executant\w*|raport\w*|buletin\w*|metrolog\w*|etalonar\w*|garantie|garanție|program\w*|proces|pv)\b/i;
+const matSrcDoc = d => !d.dup && (rubOf(d)==="calitate" || (!!qualType(d) && !["probe","program"].includes(rubOf(d)))) && (!!certInfo(d) || !MAT_NU.test(norm(d.name)));
+function matNameFromFile(n){
+  return n.replace(/\.[^.]+$/,"").replace(/[_]+/g," ").replace(/\s*-\s*/g," – ")
+    .replace(/^(certificat(e|ul)?|declarati[ae]|declarații|dop|agrement(ul|e)?|fis[ae] tehnic[ae]|fișa tehnică|aviz tehnic)\b(\s+(de|a|al))?(\s+(calitate|conformitate|performanta|performanță|garantie|garanție|tehnic))?\s*(nr\.?\s*\S+)?\s*/i,"").trim().replace(/^./, c=>c.toUpperCase()) || n;
+}
+function syncMat(){
+  if(!Array.isArray(S.matIgn)) S.matIgn = [];
+  const have = new Set(S.mat.map(m=>m.docId).filter(Boolean)), ign = new Set(S.matIgn);
+  for(const d of live().filter(matSrcDoc)){
+    if(have.has(d.id) || ign.has(d.id)) continue;
+    const i = certInfo(d);
+    S.mat.push({id:newId("m"), den: i ? i.den : matNameFromFile(d.name), furn: i ? i.furn : "", kw:"", docId:d.id, ok:false, auto:true});
+    have.add(d.id);
+  }
+  // materialul al cărui document a fost scos din inventar dispare și el (cele scrise de mână, din versiunile vechi, rămân)
+  S.mat = S.mat.filter(m=>!m.auto || S.docs.some(d=>d.id===m.docId && !d.dup));
+}
 function viewMateriale(){
+  syncMat();
   const rows = S.mat.map((m,i)=>({m, i, s:matStatus(m)}));
   const inLips = new Set(S.lipsuri.map(l=>norm(lden(l))));
   const nL = rows.filter(r=>r.s.st==="lipsa").length, nLn = rows.filter(r=>r.s.st==="lipsa" && !inLips.has(norm(`Certificat de calitate / declarație de performanță – ${r.m.den}`))).length, nV = rows.filter(r=>r.s.st==="verif").length, nO = rows.filter(r=>r.s.st==="ok").length;
-  const qd = live().filter(isQualDoc).sort((a,b)=>a.name.localeCompare(b.name));
-  const tag = r => r.s.st==="lipsa" ? `<span class="tag t-late">lipsă</span>` : r.s.st==="verif" ? `<span class="tag t-dup">de verificat</span>` : `<span class="tag t-viz">verificat</span>`;
+  const tag = r => r.s.st==="lipsa" ? `<span class="tag t-late">fără document</span>` : r.s.st==="verif" ? `<span class="tag t-dup">de verificat</span>` : `<span class="tag t-viz">verificat</span>`;
   return `
-  <div class="note"><b>Materiale și documente de calitate.</b> Treci materialele principale puse în operă (din deviz, ofertă sau avize de însoțire). Aplicația caută documentul de calitate al fiecăruia în inventar; tu confirmi că documentul corespunde materialului livrat — tip, dimensiuni, producător. Așa prinzi certificatele lipsă sau greșite înainte de ISC.</div>
+  <div class="note"><b>Materiale și documente de calitate.</b> Adaugi certificatele, declarațiile de performanță și agrementele; aplicația face singură lista materialelor din ele — produsul și producătorul, citite din document (și în engleză, germană, franceză, spaniolă, turcă). Tu doar bifezi <b>Corespunde</b> după ce verifici că documentul e al materialului livrat: tip, dimensiuni, producător.</div>
 
-  <div class="stats">
-    <div class="stat ${nL?"bad":"ok"}"><div class="v">${nL}</div><div class="l">fără document de calitate</div></div>
-    <div class="stat ${nV?"hot":""}"><div class="v">${nV}</div><div class="l">cu document, de verificat</div></div>
-    <div class="stat ok"><div class="v">${nO}</div><div class="l">verificate</div></div>
+  <div class="dropzone"><b>Certificate și declarații:</b> trage aici PDF-urile sau documentele Word (sau un folder întreg) ori <button class="btn g sm" data-addfiles>alege fișierele</button> <span>Fiecare document devine un rând în lista materialelor.</span><span class="fmtline">${fmtTag("calitate")}</span></div>
+
+  ${S.mat.length ? `<div class="stats">
+    <div class="stat ${nV?"hot":""}"><div class="v">${nV}</div><div class="l">de verificat</div></div>
+    <div class="stat ok"><div class="v">${nO}</div><div class="l">verificate, corespund</div></div>
+    ${nL ? `<div class="stat bad"><div class="v">${nL}</div><div class="l">fără document de calitate</div></div>` : ""}
   </div>
-
-  <div class="dropzone"><b>Certificate și declarații:</b> trage aici PDF-urile sau documentele Word (sau un folder întreg) ori <button class="btn g sm" data-addfiles>alege fișierele</button> <span>Trec prin verificarea la intrare și se leagă singure de materiale.</span><span class="fmtline">${fmtTag("calitate")}</span></div>
-  ${(()=>{ const sg = certSugestii(); return sg.length ? `<div class="card"><h3>Materiale găsite în certificate</h3>
-    <p class="muted" style="margin:0 0 10px">Am citit denumirea produsului din ${pl(sg.length,"document de calitate","documente de calitate")}. Bifează ce intră în listă; fiecare material rămâne legat de documentul lui.</p>
-    <div class="dom-pick" style="grid-template-columns:1fr">${sg.map((x,i)=>`<label><input type="checkbox" data-csug="${i}" checked> <span><b>${esc(x.i.den)}</b>${x.i.furn?` · ${esc(x.i.furn)}`:""}<br><span class="muted">din ${esc(x.d.name)}${(()=>{ const q = qualType(x.d); return q ? ` · ${esc(q.tip)}${q.l!=="ro"?" în "+esc(q.limba):""}` : ""; })()}</span></span></label>`).join("")}</div>
-    <div style="margin-top:10px"><button class="btn g sm" id="csugAdd">Adaugă materialele bifate</button></div></div>` : ""; })()}
-
-  <div class="card">
-    <h3>Adaugă materiale</h3>
-    <textarea rows="4" id="matBulk" placeholder="Câte un material pe rând; după punct și virgulă, opțional, furnizorul:&#10;Cablu CYY-F 3x2,5 ; Electro Distribuție SRL&#10;Țeavă PPR 20 ; Instal Market&#10;Beton C25/30 ; Stație Betoane Nord"></textarea>
-    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:10px">
-      <button class="btn" id="matAdd">Adaugă în listă</button>
-      ${nLn ? `<button class="btn g" id="matToLips">Trimite ${nLn} ${nLn===1?"lipsă":"lipsuri"} la Lipsuri</button>` : nL ? `<span class="muted" style="align-self:center">Lipsurile sunt deja în lista de Lipsuri.</span>` : ""}
-    </div>
-    <p class="muted" style="margin:8px 0 0">Căutarea se face după cuvintele din denumire (ex. „cablu cyy”). Dacă documentul are alt nume, alege-l din listă sau scrie la „Caută după” cuvântul din numele fișierului.</p>
-  </div>
-
-  ${S.mat.length ? `<div class="tw" style="max-height:none"><table>
-    <thead><tr><th>Material</th><th style="width:170px">Furnizor</th><th style="width:140px">Caută după</th><th style="width:30%">Document de calitate</th><th style="width:105px">Stare</th><th style="width:96px">Corespunde</th><th style="width:60px"></th></tr></thead>
-    <tbody>${rows.map(r=>`<tr>
-      <td><input type="text" data-mf="${r.i}:den" value="${esc(r.m.den)}"></td>
-      <td><input type="text" data-mf="${r.i}:furn" value="${esc(r.m.furn||"")}" placeholder="furnizor"></td>
-      <td><input type="text" data-mf="${r.i}:kw" value="${esc(r.m.kw||"")}" placeholder="${esc(matKeys({den:r.m.den}).join(" "))}"></td>
-      <td><select data-mdoc="${r.i}"><option value="">${r.s.f && r.s.f.how==="automat" ? "automat: "+esc(r.s.f.d.name) : "automat — negăsit"}</option>${qd.map(d=>`<option value="${d.id}" ${r.m.docId===d.id?"selected":""}>${esc(d.name)}</option>`).join("")}</select></td>
-      <td>${tag(r)}${r.s.f && qualType(r.s.f.d) ? `<span class="path">${esc(qualType(r.s.f.d).tip)}${qualType(r.s.f.d).l!=="ro"?" · "+esc(qualType(r.s.f.d).limba):""}</span>` : ""}</td>
-      <td>${r.s.f ? `<label class="ck"><input type="checkbox" class="chk" data-mok="${r.i}" ${r.m.ok?"checked":""}> da</label>` : ""}</td>
-      <td><button class="btn g sm" data-mdel="${r.i}" aria-label="Șterge">×</button></td>
-    </tr>`).join("")}</tbody>
-  </table></div>` : `<div class="card"><div class="empty"><h3>Lista e goală</h3><p>Lipește materialele principale mai sus, câte unul pe rând.</p></div></div>`}`;
+  <div class="tw" style="max-height:none"><table>
+    <thead><tr><th>Material</th><th style="width:190px">Producător</th><th style="width:32%">Document de calitate</th><th style="width:120px">Stare</th><th style="width:110px">Corespunde</th><th style="width:44px"></th></tr></thead>
+    <tbody>${rows.map(r=>{ const d = r.s.f && r.s.f.d, q = d && qualType(d); return `<tr>
+      <td><b>${esc(r.m.den)}</b>${r.m.auto && d && !certInfo(d) ? `<span class="path">din numele fișierului${needsOcr(d)?" — scan necitit; Inventar → OCR îl citește":""}</span>` : ""}</td>
+      <td>${esc(r.m.furn||"") || `<span class="muted">—</span>`}</td>
+      <td class="fn">${d ? esc(d.name) : `<span class="muted">—</span>`}${q ? `<span class="path">${esc(q.tip)}${q.l!=="ro"?" · "+esc(q.limba):""}</span>` : ""}</td>
+      <td>${tag(r)}</td>
+      <td>${d ? `<label class="ck"><input type="checkbox" class="chk" data-mok="${r.i}" ${r.m.ok?"checked":""}> da</label>` : ""}</td>
+      <td><button class="btn g sm" data-mdel="${r.i}" aria-label="Scoate din listă" title="Scoate din listă (documentul rămâne în inventar)">×</button></td>
+    </tr>`; }).join("")}</tbody>
+  </table></div>
+  ${nLn ? `<div style="margin-top:10px"><button class="btn g" id="matToLips">Trimite ${nLn} ${nLn===1?"lipsă":"lipsuri"} la Lipsuri</button></div>` : ""}` : `<div class="card"><div class="empty"><h3>Niciun document de calitate încă</h3><p>Trage mai sus certificatele și declarațiile de performanță; lista materialelor se face singură.</p></div></div>`}`;
 }
 
 /* ---- EXECUȚIE: faze determinante, semnături pe PV-uri, dispoziții de șantier ---- */
@@ -2822,7 +2827,7 @@ function enrichDoc(d){
 // ce material și ce producător scrie pe un certificat / o declarație
 function certInfo(d){
   const t = d.txt || ""; if(!t) return null;
-  const stop = "(?=\\s(?:producator|producatorul|fabricant|fabricantul|fabricat|furnizor|furnizorul|utilizare|cod|lot|lotul|cantitate|nr|no|data|seria|standard|marca|tip|manufacturer|manufactured|producer|hersteller|fabricante|uretici|imalatci|intended|verwendungszweck|usage|uso|kullanim|date|datum|fecha|tarih|batch|charge|lote|parti|order|quantity|menge|quantite|cantidad|miktar|norm|norma)\\b|\\s\\d{1,2}\\.\\s|[;]\\s|,\\s(?=[a-z]+:)|$)";
+  const stop = "(?=\\s(?:producator|producatorul|fabricant|fabricantul|fabricat|furnizor|furnizorul|utilizare|cod|lot|lotul|cantitate|nr|no|data|seria|standard|marca|tip|manufacturer|manufactured|producer|hersteller|fabricante|uretici|imalatci|intended|verwendungszweck|usage|uso|kullanim|date|datum|fecha|tarih|batch|charge|lote|parti|order|quantity|menge|quantite|cantidad|miktar|norm|norma|valabil|valabila|valabilitate|gultig|gueltig|valid|validity|valable|valido|gecerli|gecerlilik|expira|expiry)\\b|\\s\\d{1,2}\\.\\s|[;]\\s|,\\s(?=[a-z]+:)|$)";
   const m = t.match(new RegExp("(?:cod(?:ul)?\\s+unic\\s+de\\s+identificare\\s+(?:a|al)\\s+produsului[\\s\\-]*tip|unique\\s+identification\\s+code\\s+of\\s+the\\s+product[\\s\\-]*type|eindeutiger\\s+kenncode\\s+des\\s+produkttyps|code\\s+d\\W?identification\\s+unique\\s+du\\s+produit[\\s\\-]*type|codigo\\s+de\\s+identificacion\\s+unica\\s+del\\s+producto[\\s\\-]*tipo|urun\\s+tipinin\\s+kendine\\s+has\\s+tanitim\\s+kodu|trade\\s+name|product\\s+name|product\\s+type|product\\s+description|handelsname|produktbezeichnung|nom\\s+commercial|designation(?:\\s+du\\s+produit)?|nombre\\s+comercial|denominacion(?:\\s+del\\s+producto)?|ticari\\s+adi|urun\\s+adi|product|produkt|produit|producto|urun|denumire(?:a)?\\s+comerciala|denumire(?:a)?\\s+produs(?:ului)?|descriere(?:a)?\\s+produs(?:ului)?|tip(?:ul)?\\s+produs(?:ului)?|produs(?:ul)?|denumire\\s+material|material(?:ul)?|articol(?:ul)?|pentru\\s+produsul)\\s*[:\\-]?\\s*(.{3,70}?)" + stop));
   if(!m) return null;
   const f = t.match(/(?:producator(?:ul)?|fabricante|fabricant(?:ul)?|fabricat de|furnizor(?:ul)?|numele si adresa (?:producatorului|fabricantului)|manufactured by|manufacturer|producer|hersteller|uretici(?: firma)?|imalatci)\s*[:\-]?\s*(.{3,50}?)(?=\s(?:adresa|address|adresse|anschrift|direccion|adres|cui|cod|str|produs|nr|no|tel|phone|telefon|fax|www|email|e-mail|date|datum|fecha|tarih|data)\b|[;,]\s|$)/);
@@ -3861,6 +3866,7 @@ function restoreTrash(tid){
   if(t.kind==="lipsa"){ if(!S.lipsuri.some(l=>l.id===it.id)) S.lipsuri.push(it); (t.extra||[]).forEach(c=>{ const cur = S.cereri.find(x=>x.id===c.id); if(cur){ if(!cur.items.includes(it.id)) cur.items.push(it.id); } else S.cereri.push(c); }); }
   if(t.kind==="cerere"){ if(!S.cereri.some(c=>c.id===it.id)) S.cereri.push(it); }
   if(t.kind==="pers") S.pers.push(it);
+  if(t.kind==="mat" && it.docId && Array.isArray(S.matIgn)) S.matIgn = S.matIgn.filter(id=>id!==it.docId);
   if(t.kind==="mat") S.mat.push(it);
   if(t.kind==="faza") S.faze.push(it);
   if(t.kind==="disp") S.disp.push(it);
@@ -4585,7 +4591,7 @@ const BB_KB = [
   {k:["exemplu","demo","cum arata"], a:()=>`Pe site, pe pagina de intrare, butonul <b>Deschide exemplul</b> adaugă în listă o lucrare demonstrativă cu date fictive (fibră optică pe LEA 110 kV, la Instalații electrice).`},
   {k:["export","csv","excel"], a:()=>`La <b>Rezultate</b> ai <b>Export inventar (CSV)</b> și <b>Export statistici (CSV)</b>; se deschid direct în Excel. ${go("rezultate","Deschide Rezultate")}`},
   {k:["conformitate","verificare norme","verificare conformitate","legislatie"], a:()=>`La <b>Conformitate</b>, aplicația verifică dosarul față de HG 343/2017, Legea 10/1995 și procedura ISC (Ordinul MDRAP 1370/2014). Fiecare lipsă are gravitatea (control ISC, blochează recepția, recomandat) și temeiul legal. Alege faza lucrării ca să vezi ce e scadent acum. ${go("conformitate","Deschide Conformitate")}`},
-  {k:["materiale","cum verific certificatele","verific certificatele","verificare certificate","certificate materiale","certificat nu corespunde","documente de calitate materiale","lista materiale"], a:()=>`La <b>Materiale</b> lipești lista materialelor principale (din deviz, ofertă sau avize), câte unul pe rând, opțional cu furnizorul după „;”. Aplicația caută documentul de calitate al fiecăruia în inventar; tu bifezi <b>Corespunde</b> după ce verifici că tipul, dimensiunile și producătorul se potrivesc cu materialul livrat. Ce lipsește trimiți la Lipsuri și ceri de la furnizori. ${CUR?go("materiale","Deschide Materiale"):""}`},
+  {k:["materiale","cum verific certificatele","verific certificatele","verificare certificate","certificate materiale","certificat nu corespunde","documente de calitate materiale","lista materiale"], a:()=>`La <b>Materiale</b> doar adaugi certificatele, declarațiile de performanță și agrementele (PDF, Word, poze). Aplicația face singură lista materialelor: produsul și producătorul, citite din fiecare document, și în limbi străine. Tu bifezi <b>Corespunde</b> după ce verifici că tipul, dimensiunile și producătorul se potrivesc cu materialul livrat. Un rând greșit îl scoți cu ×; documentul rămâne în inventar. ${CUR?go("materiale","Deschide Materiale"):""}`},
   {k:["semnaturi","pv nesemnat","pv nesemnate","cine semneaza pv","semnaturi lipsa"], a:()=>`La <b>Execuție → Semnături pe PV-uri</b> apar toate procesele-verbale din inventar. PDF-urile semnate electronic se bifează singure, după numele din certificat comparat cu persoanele de la Proiect; la cele scanate bifezi tu (sau „toate” pe rând). RTE și dirigintele semnează orice PV, iar la fazele determinante și la natura terenului și proiectantul și ISC. Cele incomplete le trimiți la Lipsuri. ${CUR?go("executie:sem","Vezi semnăturile"):""}`},
   {k:["convocare isc","cand convoc","calendar faze","termen convocare","3 zile lucratoare"], a:()=>`La <b>Execuție → Faze determinante</b> treci data estimată a fiecărei faze; aplicația calculează până când trebuie trimisă convocarea (cu cel puțin 3 zile lucrătoare înainte, fără sărbătorile legale) și îți pregătește un model de text. ${(()=>{ if(!CUR) return ""; const u = fazeUrgente(); return u.length ? `Acum ai <b>${u.length}</b> ${u.length===1?"convocare urgentă":"convocări urgente"}: ${u.slice(0,3).map(f=>esc(f.den)).join("; ")}.` : ""; })()} ${CUR?go("executie:faze","Vezi fazele"):""} <span class="bb-law">Ordinul MDRAP 1370/2014, art. 15</span>`},
   {k:["modificari proiect","registru dispozitii","dispozitie fara desen","inclus in as built","modificari de proiect"], a:()=>`Modificările de proiect le ții la <b>Execuție → Modificări de proiect</b>: dispoziții de șantier, revizii de proiect, cereri ale beneficiarului și note de constatare, fiecare cu numărul, data, ce modifică, planșele afectate, cine a aprobat (proiectant, beneficiar, verificator), dacă are desen și dacă a intrat în as built. Aplicația preia singură dispozițiile din inventar și versiunile noi ale planșelor, iar registrul se tipărește. ${CUR?go("executie:disp","Vezi registrul"):""} <span class="bb-law">HG 343/2017, Anexa 6, pct. 7 lit. c)</span>`},
@@ -4735,17 +4741,9 @@ function viewRezultate(){
     <div class="stat bad"><div class="v">${m.lipsuri}</div><div class="l">documente lipsă</div></div>
     <div class="stat ${m.necerute?"hot":""}"><div class="v">${m.necerute}</div><div class="l">lipsuri încă necerute</div></div>
     <div class="stat ${m.cerIntarziate?"bad":""}"><div class="v">${m.cerIntarziate} / ${m.cerDeschise}</div><div class="l">cereri întârziate / deschise</div></div>
-    <div class="stat"><div class="v">${m.ncl}</div><div class="l">neîncadrate în capitole</div></div>
+    <div class="stat"><div class="v">${m.ncl}</div><div class="l">neclasificate</div></div>
     <div class="stat ${m.est?"hot":""}"><div class="v">${m.est}</div><div class="l">date estimate, de verificat</div></div>
     <div class="stat"><div class="v">${pct(m.scans)}%</div><div class="l">scanuri și poze</div></div>
-  </div>
-
-  <div class="card">
-    <h3>Distribuția pe capitole</h3>
-    <div class="tw" style="max-height:none"><table>
-      <thead><tr><th>Capitol</th><th style="width:80px">Documente</th><th style="width:70px">Pondere</th></tr></thead>
-      <tbody>${CAPS.map(c=>`<tr><td>${c}</td><td class="num">${m.byCap[c]}</td><td class="num">${pct(m.byCap[c])}%</td></tr>`).join("")}</tbody>
-    </table></div>
   </div>
 
   <div class="card">
@@ -5080,7 +5078,7 @@ function bind(){
   v.querySelectorAll("[data-mf]").forEach(el=>{ const [i,k] = el.dataset.mf.split(":"); el.onchange=()=>{ if(S.mat[+i]){ S.mat[+i][k]=el.value.trim(); if(k!=="furn") S.mat[+i].ok=false; render(); } }; });
   v.querySelectorAll("[data-mdoc]").forEach(el=>el.onchange=()=>{ const m=S.mat[+el.dataset.mdoc]; if(m){ m.docId=el.value; m.ok=false; render(); } });
   v.querySelectorAll("[data-mok]").forEach(el=>el.onchange=()=>{ const m=S.mat[+el.dataset.mok]; if(m){ m.ok=el.checked; render(); } });
-  v.querySelectorAll("[data-mdel]").forEach(b=>b.onclick=()=>{ toTrash("mat", S.mat.splice(+b.dataset.mdel,1)); render(); });
+  v.querySelectorAll("[data-mdel]").forEach(b=>b.onclick=()=>{ const [m] = S.mat.splice(+b.dataset.mdel,1); if(m){ if(m.auto && m.docId){ if(!Array.isArray(S.matIgn)) S.matIgn=[]; S.matIgn.push(m.docId); } toTrash("mat", m); } render(); });
   const mtl=$("#matToLips"); if(mtl) mtl.onclick=()=>{
     const have = new Set(S.lipsuri.map(l=>norm(lden(l)))); let n = 0;
     for(const m of S.mat.filter(m=>matStatus(m).st==="lipsa")){
