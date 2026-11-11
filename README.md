@@ -49,6 +49,11 @@ Bibliotecile pdf.js și Tesseract se încarcă de pe cdnjs / jsDelivr la prima f
 - **Documentele persoanei**: copia autorizației ISC, legitimația ANRE, decizia de numire, certificatul de verificator. Intră în inventar legate de persoană și în dosarul **B1** al cărții tehnice („Autorizațiile persoanelor lucrării”). Numărul și data de valabilitate le citește aplicația din document — scanurile și pozele prin OCR, singure; omul doar atașează. Aplicația arată ce copie lipsește pentru fiecare rol.
 - **Fișa „Persoanele lucrării”** se tipărește și intră în cartea tehnică într-un PDF, după copertă. Dirigintele și RTE apar pe copertă; în modelele Word: {diriginte}, {aut_diriginte}, {rte}, {aut_rte}, {proiectant}, {aut_proiectant}, {verificator}, {aut_verificator}, {electrician}, {aut_electrician}.
 
+## Navigare și două ferestre
+
+- Săgeata **Înapoi** a browserului te duce unde erai; butonul **← Înapoi** urcă un nivel; traseul de sus („Acasă › domeniu › lucrare › secțiune”) se poate apăsa.
+- **Două ferestre**: **⧉ Fereastră nouă** deschide pagina curentă într-o fereastră separată (pe jumătatea dreaptă a ecranului sau pe al doilea monitor). Ce schimbi într-una apare imediat în cealaltă. Ctrl + clic pe o secțiune din meniu o deschide direct într-o fereastră nouă.
+
 ## Coș de gunoi și copii de siguranță
 
 - **Coș de gunoi**: documentele, lucrările, lipsurile, cererile, persoanele, materialele, fazele și dispozițiile șterse stau **30 de zile** în coș și se pot restaura; imediat după ștergere apare butonul **Anulează**. Coșul lucrării e în meniul din stânga; lucrările șterse sunt pe pagina de intrare. Ștergerea din aplicație nu atinge fișierele de pe calculator sau de pe server.
