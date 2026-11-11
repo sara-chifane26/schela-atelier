@@ -1746,9 +1746,12 @@ const CT_COMMON = {
   ],
   C1: () => [
     {den:"Dispoziția de numire a comisiei de recepție", kw:"comisie receptie", cap:"Execuție", dela:"Beneficiar"},
+    {den:"Referatele proiectantului, pe specialități, privind modul de execuție a lucrărilor (HG 343/2017, art. 15 alin. 3 lit. i)", kws:["referat proiectant","referatul proiectantului","referate proiectant"], cap:"Execuție", dela:"Proiectant"},
+    {den:"Referatele dirigintelui de șantier, pe specialități, privind modul de execuție a lucrărilor (HG 343/2017, art. 15 alin. 3 lit. i)", kws:["referat diriginte","referatul dirigintelui","raport diriginte","punct de vedere diriginte"], cap:"Execuție", dela:"Diriginte de șantier"},
     {den:"PV de recepție la terminarea lucrărilor, cu anexe", kw:"receptie terminare", cap:"Execuție", dela:"Beneficiar"},
     {den:"Lista lucrărilor de remediat și PV de remediere", kw:"remedi", cap:"Execuție", dela:"Executant"},
     {den:"Acte privind verificări suplimentare cerute de comisie", kw:"verificari suplimentare", cap:"Execuție", dela:"Beneficiar"},
+    {den:"Referatul proprietarului / utilizatorului privind urmărirea comportării în exploatare în perioada de garanție (HG 343/2017, art. 27 alin. 1 lit. b)", kws:["referat comportare","comportarea in exploatare","comportare in perioada de garantie","urmarirea comportarii in exploatare"], cap:"Execuție", dela:"Beneficiar (proprietar / utilizator)"},
     {den:"PV de recepție finală", kw:"receptie finala", cap:"Execuție", dela:"Beneficiar"}
   ],
   D1: () => [
@@ -1875,9 +1878,7 @@ const CT_TPL = {
           {den:"Ordin de începere execuție lucrări", kw:"ordin incepere", cap:"Execuție", dela:"Beneficiar"},
           {den:"Convenție de lucrări", kw:"conventie", cap:"Contracte", dela:"Beneficiar"},
           {den:"Programe de lucrări", kw:"program lucrari", cap:"Execuție", dela:"Executant"},
-          {den:"Referat proiectant", kw:"referat proiectant", cap:"Proiectare", dela:"Proiectant"},
           {den:"Referat RTE", kw:"referat rte", cap:"Execuție", dela:"RTE"},
-          {den:"Referat diriginte de șantier", kw:"referat diriginte", cap:"Execuție", dela:"Diriginte de șantier"},
           {den:"Atestate ANRE ale executantului", kw:"atestat anre", cap:"Contracte", dela:"Executant"},
           C_SSM
         ],
