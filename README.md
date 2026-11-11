@@ -46,7 +46,7 @@ Bibliotecile pdf.js și Tesseract se încarcă de pe cdnjs / jsDelivr la prima f
 ## Persoanele lucrării
 
 - La **Proiect → Persoane și specialități**, fiecare persoană are nr. autorizației și valabilitatea, iar dirigintele cu domenii ANRE și legitimația ANRE.
-- **Documentele persoanei**: copia autorizației ISC, legitimația ANRE, decizia de numire, certificatul de verificator. Intră în inventar legate de persoană; numărul și valabilitatea se completează din text. Aplicația arată ce copie lipsește pentru fiecare rol.
+- **Documentele persoanei**: copia autorizației ISC, legitimația ANRE, decizia de numire, certificatul de verificator. Intră în inventar legate de persoană și în dosarul **B1** al cărții tehnice („Autorizațiile persoanelor lucrării”). Numărul și data de valabilitate le citește aplicația din document — scanurile și pozele prin OCR, singure; omul doar atașează. Aplicația arată ce copie lipsește pentru fiecare rol.
 - **Fișa „Persoanele lucrării”** se tipărește și intră în cartea tehnică într-un PDF, după copertă. Dirigintele și RTE apar pe copertă; în modelele Word: {diriginte}, {aut_diriginte}, {rte}, {aut_rte}, {proiectant}, {aut_proiectant}, {verificator}, {aut_verificator}, {electrician}, {aut_electrician}.
 
 ## Coș de gunoi și copii de siguranță

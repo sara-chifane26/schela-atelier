@@ -876,13 +876,13 @@ function viewPersoane(){
         <div><span class="lbl">Nume</span><input type="text" data-pf="${i}:nume" value="${esc(p.nume)}" placeholder="Ing. Nume Prenume"></div>
         <div><span class="lbl">Rol</span><select data-pf="${i}:rol">${ROLURI.map(r=>`<option ${p.rol===r?"selected":""}>${esc(r)}</option>`).join("")}</select></div>
         <div><span class="lbl">Nr. autorizație / legitimație</span><input type="text" data-pf="${i}:autnr" value="${esc(p.autnr||"")}" placeholder="${p.rol===ROLURI[0]?"autorizație ISC nr.":p.rol===ROLURI[5]?"legitimație ANRE nr.":"nr. și emitent"}"></div>
-        <div><span class="lbl">Valabilă până la</span><input type="date" data-pf="${i}:autval" value="${esc(p.autval||"")}"></div>
+        <div><span class="lbl">Valabilă până la</span>${valRo(p.autval)}</div>
         <div style="padding-top:20px"><button class="btn g sm" data-pdel="${i}" aria-label="Șterge persoana">Șterge</button></div>
       </div>
       ${p.rol===ROLURI[0] ? `<span class="lbl" style="margin-top:4px">Domenii de autorizare (diriginte de șantier)</span>
         <div class="chips autchips">${AUT_DIR.map(a=>`<label class="${(p.aut||[]).includes(a.c)?"on":""}" title="${esc(a.t)}${a.anre?" — cu legitimație ANRE valabilă":""}"><input type="checkbox" data-paut="${i}:${a.c}" ${(p.aut||[]).includes(a.c)?"checked":""}> <b>${a.c}</b> ${esc(a.t)}</label>`).join("")}</div>
         ${(p.aut||[]).some(c=>autByC(c)&&autByC(c).anre) || p.anrenr ? `<p class="muted" style="margin:6px 0 0">La ${(p.aut||[]).filter(c=>autByC(c)&&autByC(c).anre).join(", ")||"instalații electrice și gaze"} dirigintele trebuie să aibă și legitimație ANRE valabilă.</p>
-        <div class="prow2"><div><span class="lbl">Legitimație ANRE nr.</span><input type="text" data-pf="${i}:anrenr" value="${esc(p.anrenr||"")}" placeholder="nr. legitimație"></div><div><span class="lbl">Valabilă până la</span><input type="date" data-pf="${i}:anreval" value="${esc(p.anreval||"")}"></div></div>` : ""}` :
+        <div class="prow2"><div><span class="lbl">Legitimație ANRE nr.</span><input type="text" data-pf="${i}:anrenr" value="${esc(p.anrenr||"")}" placeholder="nr. legitimație"></div><div><span class="lbl">Valabilă până la</span>${valRo(p.anreval)}</div></div>` : ""}` :
         p.rol===ROLURI[1] ? `<p class="muted" style="margin:4px 0 0">Domeniile de autorizare ale RTE le treci la „Nr. autorizație”, așa cum apar pe autorizația ISC.</p>` : ""}
       <span class="lbl" style="margin-top:8px">Acoperă în această lucrare</span>
       <span class="chips">${S.dom.length ? S.dom.map(id=>`<label class="${p.dom.includes(id)?"on":""}"><input type="checkbox" data-pdom="${i}:${id}" ${p.dom.includes(id)?"checked":""}> ${esc(domById(id).name)}</label>`).join("") : `<span class="muted">alege întâi domeniul lucrării</span>`}</span>
@@ -1582,7 +1582,9 @@ function ctDosare(){
   const ts = activeTpls(); if(!ts.length) return null;
   const ct = ctState();
   const specs = ts.map(t=>({t, name:CT_TPL[t].name, spec:CT_TPL[t].spec(Object.assign({}, ct.p, ct.pp[t]||{}))}));
-  return ctBuild(ct.p, specs);
+  const dos = ctBuild(ct.p, specs), b1 = dos && dos.find(d=>d.id==="B1");
+  if(b1){ const pi = persCtItems(); if(pi.length) b1.items.push({group:"Autorizațiile persoanelor lucrării"}, ...pi); }
+  return dos;
 }
 const PV = (den, extra) => Object.assign({den, cap:"Execuție", dela:"Executant", seq:true}, extra||{});
 const BUL = (den, extra) => Object.assign({den, cap:"Calitate", dela:"Executant (laborator)", seq:true}, extra||{});
@@ -2114,7 +2116,14 @@ function ctMatch(){
     if(v==="na"){ x.na = true; continue; }
     if(v){ const f = liveD.find(d=>d.id===v); if(f && !used.has(f.id)){ x.doc = f; x.manual = true; used.add(f.id); } }
   }
-  const all = every.filter(x=>!x.na);
+  // 0b. actele persoanelor (B1): documentul atașat la persoană, fără căutare după denumire;
+  //     deciziile de numire atașate la persoane completează poziția comună „Deciziile de numire…”
+  for(const x of every){
+    if(x.na || x.doc) continue;
+    if(x.i.pdoc){ const f = liveD.find(d=>d.id===x.i.pdoc); if(f && !used.has(f.id)){ x.doc = f; used.add(f.id); } }
+    else if(/^deciziile de numire/.test(norm(x.i.den))){ const f = liveD.find(d=>d.persId && d.ptip===PDOC_TIP[4] && !used.has(d.id)); if(f){ x.doc = f; used.add(f.id); } }
+  }
+  const all = every.filter(x=>!x.na && !x.i.noAuto);
   // 1. după cod exact
   for(const x of all){ if(!x.i.cod) continue; const f = liveD.find(d=>!used.has(d.id) && codeIn(d.name, x.i.cod)); if(f){ x.doc=f; used.add(f.id); } }
   // 2. după cuvinte cheie / denumire (un document general poate acoperi o singură poziție).
@@ -2904,7 +2913,7 @@ async function pdfFirstPageImage(file){
   doc.destroy && doc.destroy();
   return c;
 }
-async function runOcr(files){
+async function runOcr(files, quiet){
   const T = await loadOcr();
   if(!T){ busy(false); alert("Cititorul OCR nu s-a putut încărca. E nevoie de internet la prima folosire."); return; }
   const workers = {};
@@ -2926,7 +2935,7 @@ async function runOcr(files){
   }
   for(const w of Object.values(workers)) try{ await w.terminate(); }catch(e){}
   busy(false); render();
-  alert(`OCR gata: ${pl(ok,"document citit","documente citite")} din ${files.length}. Verifică datele și numerele preluate; la scanurile neclare citirea poate greși.`);
+  if(!quiet) alert(`OCR gata: ${pl(ok,"document citit","documente citite")} din ${files.length}. Verifică datele și numerele preluate; la scanurile neclare citirea poate greși.`);
 }
 // documentele care au nevoie de OCR: imagini și PDF-uri fără text
 const needsOcr = d => !d.ocr && (["jpg","jpeg","png","tif","tiff","bmp","webp"].includes(d.ext) || (d.ext==="pdf" && d.txt===""));
@@ -3364,7 +3373,7 @@ const FMT = {
   modelW:  ["Doar Word .docx", "un .doc vechi se salvează întâi ca .docx (Word → Salvare ca)"],
   modelC:  ["Word .docx sau PDF", "PDF-ul intră ca atare, fără câmpuri"],
   proiect: ["Fișier .json salvat din Schela", "cu „Salvează proiect”"],
-  persdoc: ["PDF, poze (JPG, PNG) sau Word", "numărul și valabilitatea se citesc din text; scanurile, prin OCR din Inventar"],
+  persdoc: ["PDF, poze (JPG, PNG) sau Word", "numărul și valabilitatea le citește aplicația, și din scanuri (OCR)"],
   pdfin:   ["Intră în PDF: PDF, JPG, PNG", "Word, Excel și altele: salvează-le întâi ca PDF"]
 };
 const fmtTag = k => `<span class="fmt" title="${esc(FMT[k][1])}"><b>${esc(FMT[k][0])}</b> · ${esc(FMT[k][1])}</span>`;
@@ -3955,20 +3964,21 @@ function viewValabilitati(){
   const noDate = all.filter(d=>!d.exp).length, ds = VAL_ALL ? all : all.filter(d=>d.exp);
   const al = valAlerts().length;
   return `
-  <div class="note"><b>Termene de valabilitate.</b> Autorizațiile și legitimațiile persoanelor, avizele, certificatele și buletinele care expiră. Data se ia singură din document când scrie „valabil până la…” (și în engleză, germană, franceză, spaniolă, turcă); altfel o treci tu. Aplicația te avertizează cu ${VAL_ZILE} de zile înainte, cât timp lucrarea e în derulare.</div>
+  <div class="note"><b>Termene de valabilitate.</b> Autorizațiile și legitimațiile persoanelor, avizele, certificatele și buletinele care expiră. Aplicația citește singură data din document („valabil până la…”, și în engleză, germană, franceză, spaniolă, turcă; scanurile prin OCR). Tu doar atașezi documentul. Aplicația te avertizează cu ${VAL_ZILE} de zile înainte, cât timp lucrarea e în derulare.</div>
   ${valFin() ? `<div class="note">Lucrarea e finalizată: termenele rămân aici ca evidență, fără avertizări.</div>` : al ? `<div class="note warn"><b>${pl(al,"termen expirat sau aproape de expirare","termene expirate sau aproape de expirare")}.</b> Cere din timp documentul reînnoit.</div>` : ""}
   <div class="card">
     <h3>Persoane</h3>
-    ${ps.length ? `<div class="tw" style="max-height:none"><table><thead><tr><th>Autorizație / legitimație</th><th style="width:170px">Valabilă până la</th><th style="width:170px">Stare</th></tr></thead><tbody>
-      ${ps.map(x=>`<tr><td>${esc(x.den)}</td><td>${x.doc?`<input type="date" data-dexp="${x.doc.id}" value="${esc(x.exp)}">`:`<input type="date" data-pf="${x.i}:${x.k}" value="${esc(x.exp)}">`}</td><td>${tag(x.exp)}</td></tr>`).join("")}
+    ${ps.length ? `<div class="tw" style="max-height:none"><table><thead><tr><th>Autorizație / legitimație</th><th style="width:200px">Valabilă până la</th><th style="width:170px">Stare</th></tr></thead><tbody>
+      ${ps.map(x=>{ const d = x.doc || persDocs(x.p).find(d=>d.exp===x.exp && x.exp); return `<tr><td>${esc(x.den)}${d?`<span class="muted" style="display:block;font-size:12px">${esc(d.name)}</span>`:""}</td><td>${x.exp?`<b>${esc(roDate(x.exp))}</b>`:`<span class="muted">atașează documentul la persoană</span>`}</td><td>${tag(x.exp)}</td></tr>`; }).join("")}
     </tbody></table></div>` : `<p class="muted" style="margin:0">Nicio autorizație trecută. Numărul și valabilitatea le completezi la <button class="linkbtn" data-v-go="proiect">Proiect → Persoane</button>.</p>`}
   </div>
   <div class="card">
     <h3>Documente</h3>
-    ${ds.length ? `<div class="tw" style="max-height:none"><table><thead><tr><th>Document</th><th style="width:190px">Rubrica</th><th style="width:170px">Valabil până la</th><th style="width:170px">Stare</th></tr></thead><tbody>
-      ${ds.map(d=>`<tr><td class="fn">${esc(d.name)}</td><td class="muted">${esc(rubById(rubOf(d)).name)}</td><td><input type="date" data-dexp="${d.id}" value="${esc(d.exp||"")}">${d.exp && d.expSrc==="text"?`<span class="muted" style="display:block;font-size:12px">din text</span>`:""}</td><td>${tag(d.exp)}</td></tr>`).join("")}
+    ${ds.length ? `<div class="tw" style="max-height:none"><table><thead><tr><th>Document</th><th style="width:190px">Rubrica</th><th style="width:320px" colspan="2">Valabil până la</th></tr></thead><tbody>
+      ${ds.map(d=>`<tr><td class="fn">${esc(d.name)}</td><td class="muted">${esc(rubById(rubOf(d)).name)}</td><td colspan="2">${expCell(d)}</td></tr>`).join("")}
     </tbody></table></div>` : `<p class="muted" style="margin:0">${all.length ? "Niciun document cu dată de valabilitate încă." : "Niciun aviz, certificat sau buletin în inventar."}</p>`}
-    ${noDate ? `<p style="margin:10px 0 0"><button class="linkbtn" id="valAll">${VAL_ALL ? "Ascunde documentele fără dată" : `Arată și avizele, certificatele și buletinele fără dată (${noDate}), ca să le treci valabilitatea`}</button></p>` : ""}
+    ${all.filter(needsOcr).length ? `<div class="note warn" style="margin:10px 0 0">${pl(all.filter(needsOcr).length,"scan sau poză necitită","scanuri sau poze necitite")}: data de valabilitate se poate afla doar citindu-le. <button class="btn g sm" id="valOcr" style="margin-left:8px">Citește-le acum (OCR)</button></div>` : ""}
+    ${noDate ? `<p style="margin:10px 0 0"><button class="linkbtn" id="valAll">${VAL_ALL ? "Ascunde documentele fără dată" : `Arată și avizele, certificatele și buletinele în care nu scrie o dată de valabilitate (${noDate})`}</button></p>` : ""}
   </div>`;
 }
 
@@ -4029,15 +4039,38 @@ function persNeed(p){
 }
 // completează numărul și valabilitatea persoanei din documentul atașat, fără să suprascrie ce e scris
 function persFromDoc(p, d){
-  if(d.ptip===PDOC_TIP[1] && p.rol===ROLURI[0]){ if(!p.anrenr && d.nr) p.anrenr = d.nr; if(!p.anreval && d.exp) p.anreval = d.exp; return; }
-  if([PDOC_TIP[0],PDOC_TIP[1],PDOC_TIP[2]].includes(d.ptip)){ if(!p.autnr && d.nr) p.autnr = d.nr; if(!p.autval && d.exp) p.autval = d.exp; }
+  if(d.ptip===PDOC_TIP[1] && p.rol===ROLURI[0]){ if(!p.anrenr && d.nr) p.anrenr = d.nr; if(d.exp) p.anreval = d.exp; return; }
+  if([PDOC_TIP[0],PDOC_TIP[1],PDOC_TIP[2]].includes(d.ptip)){ if(!p.autnr && d.nr) p.autnr = d.nr; if(d.exp) p.autval = d.exp; }
+}
+// pozițiile din dosarul B1 pentru actele fiecărei persoane: ce e atașat și ce lipsește
+function persCtItems(){
+  const out = [];
+  for(const p of S.pers.filter(p=>p.nume)){
+    const ds = persDocs(p).filter(d=>d.ptip!==PDOC_TIP[4] && d.ptip!==PDOC_TIP[5]);
+    for(const d of ds) out.push({den:`${d.ptip||"Document"} – ${p.nume} (${rolScurt(p.rol||"")})`, pdoc:d.id, noAuto:true, cap:"Contracte", dela:p.nume});
+    for(const t of persNeed(p).filter(t=>!ds.some(d=>d.ptip===t))) out.push({den:`${t} – ${p.nume} (${rolScurt(p.rol||"")})`, noAuto:true, cap:"Contracte", dela:p.nume});
+  }
+  return out;
+}
+// data de valabilitate, așa cum a citit-o aplicația; se corectează doar la nevoie
+let EXP_EDIT = new Set();
+function expCell(d){
+  const s = expState(d.exp), cls = s.k==="late"?"t-late":s.k==="soon"?"t-dup":s.k==="ok"?"t-viz":"t-none";
+  if(EXP_EDIT.has(d.id)) return `<input type="date" data-dexp="${d.id}" value="${esc(d.exp||"")}">`;
+  return d.exp ? `<b>${esc(roDate(d.exp))}</b> <span class="tag ${cls}">${esc(s.t)}</span><span class="muted" style="display:block;font-size:12px">${d.expSrc==="manual"?"corectată de mână":"citită din document"} · <button class="linkbtn" data-expedit="${d.id}">corectează</button></span>`
+    : `<span class="muted">${needsOcr(d) ? "scan necitit încă" : "nu scrie o dată de valabilitate"}</span><span class="muted" style="display:block;font-size:12px"><button class="linkbtn" data-expedit="${d.id}">trece data</button></span>`;
+}
+function valRo(iso){
+  if(!iso) return `<span class="muted" style="display:block;padding-top:8px;font-size:13px">se citește din documentul atașat</span>`;
+  const s = expState(iso);
+  return `<span style="display:block;padding-top:6px"><b>${esc(roDate(iso))}</b> <span class="tag ${s.k==="late"?"t-late":s.k==="soon"?"t-dup":"t-viz"}">${esc(s.t)}</span></span>`;
 }
 async function attachPersDocs(pi, files){
   const p = S.pers[pi]; if(!p || !files.length) return;
   busy(true, "Se citesc documentele…");
   if(files.some(f=>extOf(f.name)==="pdf")) await loadPdfJs();
   const byHash = new Map(S.docs.filter(d=>d.hash).map(d=>[d.hash, d]));
-  let added = 0, linked = 0;
+  let added = 0, linked = 0; const fresh = [];
   for(const f of files){
     if(JUNK.test(f.name)) continue;
     const hash = await hashFile(f), ex = byHash.get(hash);
@@ -4049,21 +4082,24 @@ async function attachPersDocs(pi, files){
       sursa:"", dela:p.nume||"", viz:false, dup:false, grp:false, sel:false, obs:"", persId:p.id};
     if(d.ext==="pdf"){ d.sig = (await pdfSigInfo(f)) || undefined; d.sigChecked = true; }
     enrichDoc(d); d.ptip = persDocTip(d); persFromDoc(p, d);
-    S.docs.push(d); byHash.set(hash, d); added++;
+    S.docs.push(d); byHash.set(hash, d); added++; fresh.push({d, f});
   }
+  // scanurile și pozele se citesc singure (OCR), ca data de valabilitate să nu fie trecută de mână
+  const scans = fresh.filter(x=>needsOcr(x.d));
+  if(scans.length){ await runOcr(scans, true); for(const {d} of scans){ if(!d.ptip || d.ptip===PDOC_TIP[6]) d.ptip = persDocTip(d); persFromDoc(p, d); } }
   markDups(); busy(false); render();
   toast(`${p.nume||"Persoana"}: ${[added?pl(added,"document atașat","documente atașate"):"", linked?pl(linked,"document din inventar legat","documente din inventar legate"):""].filter(Boolean).join(", ")||"nimic nou"}.`);
 }
 function persDocsHtml(p, i){
   const ds = persDocs(p), need = persNeed(p).filter(t=>!ds.some(d=>d.ptip===t));
+  void 0;
   const opts = S.docs.filter(d=>!d.persId && !d.dup && ["contracte","avize","alte"].includes(rubOf(d)));
   return `<div class="pdocs">
     <span class="lbl" style="margin-top:10px">Documentele persoanei</span>
-    ${ds.length ? `<div class="tw" style="max-height:none;margin-top:4px"><table><tbody>${ds.map(d=>{ const s = expState(d.exp); return `<tr>
+    ${ds.length ? `<div class="tw" style="max-height:none;margin-top:4px"><table><tbody>${ds.map(d=>{ return `<tr>
       <td class="fn">${esc(d.name)}${d.nr?`<span class="muted" style="display:block;font-size:12px">nr. ${esc(d.nr)}</span>`:""}</td>
       <td style="width:230px"><select data-ptip="${d.id}">${PDOC_TIP.map(t=>`<option ${d.ptip===t?"selected":""}>${esc(t)}</option>`).join("")}</select></td>
-      <td style="width:150px"><input type="date" data-dexp="${d.id}" value="${esc(d.exp||"")}" title="valabil până la"></td>
-      <td style="width:150px"><span class="tag ${s.k==="late"?"t-late":s.k==="soon"?"t-dup":s.k==="ok"?"t-viz":"t-none"}">${esc(s.t)}</span></td>
+      <td style="width:260px">${expCell(d)}</td>
       <td style="width:70px"><button class="btn g sm" data-punlink="${d.id}" title="Documentul rămâne în inventar">Scoate</button></td></tr>`; }).join("")}</tbody></table></div>` : ""}
     ${need.length ? `<p style="margin:6px 0 0;font-size:13.5px;color:var(--ochre)">Lipsește copia: ${esc(need.join(", "))}.</p>` : ""}
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
@@ -4401,8 +4437,8 @@ function viewConformitate(){
 const go = (v, t) => `<button class="btn g sm" data-bgo="${v}">${t}</button>`;
 const BB_KB = [
   // --- folosirea aplicației ---
-  {k:["valabilitate","valabil","expira","expirat","expirata","autorizatie expirata","legitimatie expirata","certificat expirat","termen valabilitate"], a:()=>{ const n = CUR ? valAlerts().length : 0; return `La <b>Execuție → Valabilități</b> vezi autorizațiile și legitimațiile persoanelor, avizele, certificatele și buletinele, cu data până la care sunt valabile. Data se ia singură din document când scrie „valabil până la…”; altfel o treci tu. Aplicația te avertizează cu ${VAL_ZILE} de zile înainte, cât lucrarea e în derulare. ${n?`Acum ai <b>${pl(n,"termen expirat sau aproape de expirare","termene expirate sau aproape de expirare")}</b>.`:""} ${CUR?go("executie:val","Vezi valabilitățile"):""}`; }},
-  {k:["fisa persoanelor","persoanele lucrarii","lista persoane","documentele persoanei","autorizatia dirigintelui","copie autorizatie","legitimatia","atasez autorizatia","diriginte pe coperta","rte pe coperta"], a:()=>`La <b>Proiect → Persoane și specialități</b>, fiecare persoană are <b>Documentele persoanei</b>: atașezi copia autorizației ISC, legitimația ANRE, decizia de numire sau certificatul de verificator. Numărul și valabilitatea se iau din text și apar la <b>Execuție → Valabilități</b>; aplicația îți spune ce copie lipsește pentru fiecare rol. Butonul <b>Tipărește fișa „Persoanele lucrării”</b> scoate evidența (nume, rol, autorizație, valabilitate, documente), care intră și în cartea tehnică într-un PDF. În modelele Word ale firmei poți folosi {diriginte}, {aut_diriginte}, {rte}, {aut_rte}, {proiectant}, {verificator}.`},
+  {k:["valabilitate","valabil","expira","expirat","expirata","autorizatie expirata","legitimatie expirata","certificat expirat","termen valabilitate"], a:()=>{ const n = CUR ? valAlerts().length : 0; return `La <b>Execuție → Valabilități</b> vezi autorizațiile și legitimațiile persoanelor, avizele, certificatele și buletinele, cu data până la care sunt valabile. Data o citește aplicația din document (inclusiv din scanuri, prin OCR); tu doar atașezi documentul. Aplicația te avertizează cu ${VAL_ZILE} de zile înainte, cât lucrarea e în derulare. ${n?`Acum ai <b>${pl(n,"termen expirat sau aproape de expirare","termene expirate sau aproape de expirare")}</b>.`:""} ${CUR?go("executie:val","Vezi valabilitățile"):""}`; }},
+  {k:["fisa persoanelor","persoanele lucrarii","lista persoane","documentele persoanei","autorizatia dirigintelui","copie autorizatie","legitimatia","atasez autorizatia","diriginte pe coperta","rte pe coperta"], a:()=>`La <b>Proiect → Persoane și specialități</b>, fiecare persoană are <b>Documentele persoanei</b>: atașezi copia autorizației ISC, legitimația ANRE, decizia de numire sau certificatul de verificator. Numărul și valabilitatea le citește aplicația din document (scanurile prin OCR), apar la <b>Execuție → Valabilități</b> și în dosarul <b>B1</b> al cărții tehnice; aplicația îți spune ce copie lipsește pentru fiecare rol. Butonul <b>Tipărește fișa „Persoanele lucrării”</b> scoate evidența (nume, rol, autorizație, valabilitate, documente), care intră și în cartea tehnică într-un PDF. În modelele Word ale firmei poți folosi {diriginte}, {aut_diriginte}, {rte}, {aut_rte}, {proiectant}, {verificator}.`},
   {k:["cos de gunoi","cosul de gunoi","am sters","sters din greseala","sters gresit","restaurez","restaurare","recuperez","anulez stergerea","sters definitiv"], a:()=>`Ce ștergi din aplicație (documente, lucrări, lipsuri, cereri, persoane, materiale, faze, dispoziții) ajunge în <b>Coșul de gunoi</b> și stă acolo <b>${TRASH_DAYS} de zile</b>. Imediat după ștergere apare jos butonul <b>Anulează</b>. Mai târziu: din lucrare, <b>Coș de gunoi</b> în meniul din stânga → <b>Restaurează</b>; o lucrare ștearsă o găsești pe pagina de intrare. Fișierele de pe calculator sau de pe server nu sunt atinse niciodată. ${CUR && (S.trash||[]).length ? `Acum ai <b>${pl(S.trash.length,"ștergere","ștergeri")}</b> în coșul acestei lucrări.` : ""}`},
   {k:["salvare automata","backup","copie de siguranta","se pierde","se sterge daca","golesc browserul","alt calculator","schimb calculatorul","unde se salveaza","se salveaza"], a:()=>`Lucrarea se salvează singură în browser la fiecare modificare. Ca să nu depindă de browser: leagă folderul lucrării (<b>Inventar → Leagă folderul lucrării</b>) și bifează <b>Salvează automat copia lucrării în acest folder</b>. Aplicația scrie acolo „${CUR?esc(backupName()):"Schela - &lt;lucrare&gt;.json"}” la câteva minute și când închizi pagina, plus ultimele 5 versiuni în „Schela - copii”. Dacă e pe server, copia intră în backup-ul firmei. Pe alt calculator: <b>Deschide proiect (.json)</b>. Fără folder legat, folosește <b>Salvează proiect</b>; dacă trec 7 zile, aplicația îți amintește.`},
   {k:["incarc documente","adaug documente","adaug folder","incarc folder","cum incep","cum adaug","drag and drop","trag fisierele","trag folderul","word","documente word"], a:()=>`Cu lucrarea deschisă, <b>trage</b> fișierele sau un folder întreg oriunde în pagină, sau mergi la <b>Inventar → Adaugă folder</b>. Merg PDF-uri, documente Word, scanuri. Din PDF-uri și din Word (.docx) aplicația citește singură numărul și data (de exemplu „PV nr. 12 din 03.11.2026”), iar din certificate denumirea produsului și producătorul. Înainte să intre în inventar, fiecare fișier trece prin verificarea la intrare, unde aprobi ce se adaugă. ${go("inventar","Deschide Inventarul")}`},
@@ -4979,9 +5015,11 @@ function bind(){
   const dad=$("#dispAdd"); if(dad) dad.onclick=()=>{ S.disp.push({id:newId("s"), tip:MOD_TIP[0], nr:"", data:"", desc:"", plans:"", desen:false, asbuilt:false, docId:""}); render(); };
   const dpr=$("#dispPrint"); if(dpr) dpr.onclick=printRegMod;
   const rim=$("#revImport"); if(rim) rim.onclick=()=>{ for(const {d,label} of revSugestii()){ const rv = (d.name.match(/\b(rev(?:izia|izie)?\.?\s*[0-9a-z]{1,3}|r[0-9]{1,2})\b/i)||[])[1]||""; S.disp.push({id:newId("s"), tip:"Revizie de proiect", nr:rv, data:d.dataSrc==="estimat"?"":(d.data||""), desc:"Versiune nouă a planșei", plans:d.name.replace(/\.[^.]+$/,""), desen:true, asbuilt:false, docId:d.id}); } render(); };
-  v.querySelectorAll("[data-dexp]").forEach(el=>el.onchange=()=>{ const d=S.docs.find(x=>x.id===el.dataset.dexp); if(d){ d.exp=el.value; d.expSrc="manual"; const p=S.pers.find(x=>x.id===d.persId); if(p) persFromDoc(p,d); render(); } });
+  v.querySelectorAll("[data-dexp]").forEach(el=>el.onchange=()=>{ const d=S.docs.find(x=>x.id===el.dataset.dexp); if(d){ d.exp=el.value; d.expSrc="manual"; EXP_EDIT.delete(d.id); const p=S.pers.find(x=>x.id===d.persId); if(p) persFromDoc(p,d); render(); } });
   const bfp=$("#btnFisaPers"); if(bfp) bfp.onclick=printFisaPers;
   const vall=$("#valAll"); if(vall) vall.onclick=()=>{ VAL_ALL=!VAL_ALL; render(); };
+  v.querySelectorAll("[data-expedit]").forEach(b=>b.onclick=()=>{ EXP_EDIT.add(b.dataset.expedit); render(); });
+  const vocr=$("#valOcr"); if(vocr) vocr.onclick=async()=>{ const m = await sourceFilesMap(); const ds = valDocs().filter(needsOcr); const list = ds.map(d=>({d, f: m && (m.get(d.path+"|"+d.name+"|"+d.size) || m.get("|"+d.name+"|"+d.size))})).filter(x=>x.f); if(!list.length) return alert("Pentru a citi scanurile, leagă folderul lucrării (Inventar → Leagă folderul lucrării) sau folosește „OCR” din Inventar."); await runOcr(list); };
   v.querySelectorAll("[data-pattach]").forEach(b=>b.onclick=()=>{ const inp=v.querySelector(`[data-pfile="${b.dataset.pattach}"]`); inp.onchange=()=>{ const fs=[...inp.files]; inp.value=""; attachPersDocs(+b.dataset.pattach, fs); }; inp.click(); });
   v.querySelectorAll("[data-plink]").forEach(el=>el.onchange=()=>{ const p=S.pers[+el.dataset.plink], d=S.docs.find(x=>x.id===el.value); if(p&&d){ d.persId=p.id; d.ptip=d.ptip||persDocTip(d); persFromDoc(p,d); render(); } });
   v.querySelectorAll("[data-ptip]").forEach(el=>el.onchange=()=>{ const d=S.docs.find(x=>x.id===el.dataset.ptip); if(d){ d.ptip=el.value; const p=S.pers.find(x=>x.id===d.persId); if(p) persFromDoc(p,d); render(); } });
