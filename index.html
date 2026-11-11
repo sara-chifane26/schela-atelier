@@ -44,7 +44,13 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 .main{display:flex;flex-direction:column;overflow:hidden}
 .top{background:var(--surface);border-bottom:1px solid var(--line-soft);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .top h1{font-size:20px;font-weight:700;margin:0;letter-spacing:-.02em}
-.top .sub{font-size:13px;color:var(--muted);flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top .ttl{flex:1 1 0;min-width:0}
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px;font-size:13px;color:var(--muted);margin-top:2px}
+.crumbs button{background:none;border:0;padding:2px 4px;border-radius:4px;color:var(--blue,#235C82);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crumbs button:hover{background:var(--surface-2)}
+.crumbs .sep{color:var(--faint)}
+.crumbs b{color:var(--ink);font-weight:600;padding:2px 4px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upbtn{flex:none}
 .spacer{margin-left:auto}
 .view{flex:1;overflow:auto;padding:18px 20px 60px}
 
@@ -352,8 +358,8 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 
   <div class="main">
     <div class="top">
-      <h1 id="vtitle">Proiect</h1>
-      <span class="sub" id="vsub"></span>
+      <button class="btn g sm upbtn" id="btnUp" title="Înapoi un nivel">← Înapoi</button>
+      <div class="ttl"><h1 id="vtitle">Proiect</h1><nav class="crumbs" id="vsub" aria-label="Unde ești"></nav></div>
       <span class="spacer"></span>
       <button class="btn g sm" id="btnSave">Salvează proiect</button>
       <button class="btn g sm" id="btnLoad" title="Fișier .json salvat din Schela cu „Salvează proiect”">Deschide proiect (.json)</button>
@@ -697,6 +703,27 @@ function renderNav(){
 }
 
 const domNames = ids => ids.map(id=>(domById(id)||{}).name).filter(Boolean);
+/* „Unde ești”: Acasă › domeniu › lucrare › secțiune › rubrică/dosar; fiecare treaptă se poate apăsa */
+const EXTAB_N = {faze:"Faze determinante", sem:"Semnături pe PV-uri", disp:"Modificări de proiect", val:"Valabilități"};
+function crumbList(){
+  const c = [{t:"Acasă", go:()=>{ if(CUR) closeLucrare(); VIEW="acasa"; }}];
+  const dom = CUR ? S.dom[0] : (VIEW==="domeniu" ? DSEL : null);
+  if(dom && domById(dom)) c.push({t:domById(dom).name, go:()=>{ if(CUR) closeLucrare(); DSEL=dom; VIEW="domeniu"; }});
+  if(!CUR) return c;
+  c.push({t:S.meta.proiect || "Lucrare fără nume", go:()=>{ VIEW="proiect"; }});
+  if(VIEW!=="proiect"){ const vw = VIEW; c.push({t:(VIEWS.find(v=>v.id===vw)||{}).name || vw, go:()=>{ VIEW=vw; INVRUB=null; CTSEL=null; CTTAB="dosare"; }}); }
+  if(VIEW==="inventar" && INVRUB) c.push({t: INVRUB==="toate" ? "Toate documentele" : (rubById(INVRUB)||{}).name || INVRUB});
+  if(VIEW==="carte" && CTSEL) c.push({t:"Dosar " + CTSEL});
+  if(VIEW==="carte" && !CTSEL && CTTAB==="parametri") c.push({t:"Parametri"});
+  return c;
+}
+function renderCrumbs(){
+  const c = crumbList(), el = $("#vsub");
+  el.innerHTML = c.length < 2 ? "" : c.map((x,i)=> i===c.length-1 ? `<b>${esc(x.t)}</b>` : `<button data-cr="${i}" title="Mergi la ${esc(x.t)}">${esc(x.t)}</button><span class="sep">›</span>`).join("");
+  el.querySelectorAll("[data-cr]").forEach(b=>b.onclick=()=>{ c[+b.dataset.cr].go(); render(); $("#view").scrollTop = 0; });
+  const up = $("#btnUp"); up.style.display = c.length < 2 ? "none" : "";
+  up.onclick = () => { const k = c.length-2; if(k>=0){ c[k].go(); render(); $("#view").scrollTop = 0; } };
+}
 function subTitle(){
   if(!CUR) return "";
   const d = domNames(S.dom).join(" · ");
@@ -707,7 +734,7 @@ function render(){
   renderNav();
   const home = VIEW==="acasa" || VIEW==="domeniu";
   $("#vtitle").textContent = VIEW==="acasa" ? "Acasă" : VIEW==="domeniu" ? (domById(DSEL)||{}).name||"" : (VIEWS.find(v=>v.id===VIEW)||{}).name;
-  $("#vsub").textContent = home ? "" : subTitle();
+  renderCrumbs();
   $("#btnSave").style.display = CUR ? "" : "none";
   const v = $("#view");
   if(VIEW==="acasa") v.innerHTML = viewAcasa();
@@ -726,7 +753,46 @@ function render(){
   bind();
   autosave();
   renderBanner();
+  navPush();
 }
+
+/* ---- ÎNAPOI ȘI ÎNAINTE (săgețile browserului) ----
+   Fiecare pagină deschisă (domeniu, lucrare, secțiune, rubrică, dosar) intră în istoricul browserului,
+   așa că săgeata „Înapoi” te duce unde erai. O fereastră deschisă (încărcare, alegere) se închide întâi. */
+let NAV_LAST = null, NAV_SKIP = false, MODAL_H = false, IGNORE_POP = 0;
+const navState = () => ({cur:CUR, view:VIEW, dsel:DSEL, extab:EXTAB, invrub:INVRUB, ctsel:CTSEL, cttab:CTTAB});
+function navPush(){
+  if(NAV_SKIP) return;
+  const st = navState(), k = JSON.stringify(st);
+  if(k===NAV_LAST) return;
+  try{ if(NAV_LAST===null) history.replaceState(st, ""); else history.pushState(st, ""); }catch(e){}
+  NAV_LAST = k;
+}
+window.addEventListener("popstate", e => {
+  if(IGNORE_POP){ IGNORE_POP--; return; }
+  const m = $("#intake");
+  if(MODAL_H && m && m.classList.contains("on")){ MODAL_H = false; m.classList.remove("on"); m.innerHTML = ""; INTAKE = null; return; }
+  const st = e.state; if(!st) return;
+  NAV_SKIP = true;
+  try{
+    if(m && m.classList.contains("on")){ m.classList.remove("on"); m.innerHTML = ""; }
+    if(st.cur !== CUR){
+      if(CUR) closeLucrare();
+      if(st.cur && IDX.some(x=>x.id===st.cur)) openLucrare(st.cur, st.view);
+    }
+    if(!st.cur || CUR===st.cur){ VIEW = st.view; DSEL = st.dsel; }
+    EXTAB = st.extab || "faze"; INVRUB = st.invrub ?? null; CTSEL = st.ctsel ?? null; CTTAB = st.cttab || "dosare";
+    render();
+  } finally { NAV_SKIP = false; }
+  NAV_LAST = JSON.stringify(navState());
+  try{ history.replaceState(navState(), ""); }catch(err){}
+});
+// ferestrele (încărcare, alegerea tipului, Firma mea…) au și ele un pas în istoric
+new MutationObserver(() => {
+  const on = $("#intake").classList.contains("on");
+  if(on && !MODAL_H){ MODAL_H = true; try{ history.pushState(Object.assign(navState(), {modal:true}), ""); }catch(e){} }
+  else if(!on && MODAL_H){ MODAL_H = false; if(history.state && history.state.modal){ IGNORE_POP++; history.back(); } }
+}).observe($("#intake"), {attributes:true, attributeFilter:["class"]});
 
 /* ---- ACASĂ: chenarele domeniilor și lista lucrărilor ---- */
 function lucrariHtml(list, emptyText){
@@ -4733,7 +4799,7 @@ function bind(){
   v.querySelectorAll("[data-meta]").forEach(el=>{
     el.oninput = () => {
       if(el.classList.contains("grow")){ el.value = el.value.replace(/\n/g," "); fit(el); }
-      S.meta[el.dataset.meta] = el.value; autosave(); $("#vsub").textContent = S.meta.proiect?"· "+S.meta.proiect:"";
+      S.meta[el.dataset.meta] = el.value; autosave(); renderCrumbs();
     };
     if(el.classList.contains("grow")){
       el.onkeydown = e => { if(e.key==="Enter") e.preventDefault(); };   // un singur paragraf, fără rânduri noi
