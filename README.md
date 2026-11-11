@@ -20,7 +20,7 @@ Pagina de intrare are opt chenare, câte unul pe domeniu: **construcții civile,
 2. **Duplicate** — alegi versiunea în vigoare.
 3. **Carte tehnică** — fiecare dosar (A1 … D1) are chenarul lui; în pagina dosarului vezi documentele necesare și starea lor, alegi fișierul de mână, marchezi „nu se aplică” sau ceri documentul lipsă; fiecare dosar are opisul lui (poziția, documentul, numărul și data), tipărit separat sau toate odată. Lista beneficiarului se încarcă ca PDF, Word, Excel sau poză. Completezi parametrii fiecărei specialități; aplicația reunește documentele așteptate pe dosare A–D după HG 343/2017 (Anexa 6), cu piesele comune o singură dată, le caută în inventar și tipărește borderourile. Documentele cerute în plus de beneficiar se adaugă într-un câmp separat. În Chrome sau Edge, aplicația poate aranja copiile fișierelor în foldere Dosar A1 … D1, numerotate ca în borderou.
 4. **Materiale** — lista materialelor principale, cu documentul de calitate al fiecăruia și confirmarea că acesta corespunde materialului livrat.
-5. **Execuție** — fazele determinante cu termenul de convocare ISC și model de convocare, semnăturile pe PV-uri, registrul dispozițiilor de șantier.
+5. **Execuție** — fazele determinante cu termenul de convocare ISC și model de convocare, semnăturile pe PV-uri, **registrul modificărilor de proiect** (dispoziții de șantier, revizii, cereri ale beneficiarului, note de constatare: planșe afectate, cine a aprobat, desen, as built; se tipărește) și **valabilitățile** (autorizații, legitimații, avize, certificate, buletine: data se ia din text când scrie „valabil până la…”, avertizare cu 30 de zile înainte).
 6. **Conformitate** — verifică dosarul față de legislație (HG 343/2017, Legea 10/1995, Ordinul MDRAP 1370/2014 pentru controlul ISC) și față de normativele fiecărui domeniu (I 7, I 9, I 13, I 5, NTPEE, NP 133, P 118/3, HG 301/2012 etc.) și semnalează, pe faze, documentele lipsă cu temeiul legal.
 7. **Lipsuri** și **Cereri** — ce lipsește, de la cine, cu termene și reamintiri.
 8. **Rezultate** — statistici, opis (tipărire / PDF), exporturi CSV.
@@ -42,6 +42,12 @@ Bibliotecile pdf.js și Tesseract se încarcă de pe cdnjs / jsDelivr la prima f
 - **Firma mea** (pe pagina de intrare): siglă, denumire, CUI, adresă și cine întocmește — apar pe copertă, opisuri, borderouri și cereri, pentru toate lucrările.
 - **Modelele firmei**: copertă, opis și borderou în Word, cu câmpuri între acolade ({lucrare}, {beneficiar}, {dosar}…) și un rând de tabel cu {poz} {document} {nr} {data_doc}; aplicația le completează și descarcă fișierul Word. Coperta poate fi și un PDF gata făcut. Fără model, aplicația folosește forma ei, cu antetul firmei.
 - **Cartea tehnică într-un PDF**: coperta, apoi pentru fiecare dosar opisul și documentele găsite (PDF și poze), în ordine, cu numărul filei pe fiecare pagină. Documentele primite rămân neschimbate; fișierele Word se salvează întâi ca PDF. Bibliotecile pdf-lib și fontul DejaVu se încarcă de pe jsDelivr la prima folosire.
+
+## Persoanele lucrării
+
+- La **Proiect → Persoane și specialități**, fiecare persoană are nr. autorizației și valabilitatea, iar dirigintele cu domenii ANRE și legitimația ANRE.
+- **Documentele persoanei**: copia autorizației ISC, legitimația ANRE, decizia de numire, certificatul de verificator. Intră în inventar legate de persoană; numărul și valabilitatea se completează din text. Aplicația arată ce copie lipsește pentru fiecare rol.
+- **Fișa „Persoanele lucrării”** se tipărește și intră în cartea tehnică într-un PDF, după copertă. Dirigintele și RTE apar pe copertă; în modelele Word: {diriginte}, {aut_diriginte}, {rte}, {aut_rte}, {proiectant}, {aut_proiectant}, {verificator}, {aut_verificator}, {electrician}, {aut_electrician}.
 
 ## Coș de gunoi și copii de siguranță
 
