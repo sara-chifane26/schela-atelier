@@ -2622,13 +2622,8 @@ function viewExecutie(){
   ${EXTAB==="faze" ? viewFaze() : EXTAB==="sem" ? viewSemnaturi() : EXTAB==="val" ? viewValabilitati() : viewDispozitii()}`;
 }
 function viewFaze(){
-  const sug = S.dom.flatMap(d=>(FD_SUG[d]||[]).map(den=>({den, dom:d}))).filter(x=>!S.faze.some(f=>norm(f.den)===norm(x.den)));
   return `
   <div class="note"><b>Fazele determinante și convocările ISC.</b> Pentru fiecare fază din programul de control aprobat treci data estimată; aplicația calculează până când trebuie trimisă convocarea — cu cel puțin 3 zile lucrătoare înainte — și te avertizează. Sărbătorile legale nu sunt scăzute automat. <span class="muted">Temei: Ordinul MDRAP 1370/2014, art. 15.</span></div>
-  ${sug.length ? `<div class="card"><h3>Sugestii pentru domeniile lucrării</h3>
-    <p class="muted" style="margin:0 0 10px">Sunt doar sugestii; fazele valabile sunt cele din programul de control al calității aprobat de ISC.</p>
-    <div class="dom-pick">${sug.map((x,i)=>`<label><input type="checkbox" data-fsug="${i}" checked> ${esc(x.den)} <span class="muted">· ${esc(domById(x.dom).name)}</span></label>`).join("")}</div>
-    <div style="margin-top:10px"><button class="btn g sm" id="fSugAdd">Adaugă fazele bifate</button></div></div>` : ""}
   <div class="card">
     <h3>Fazele lucrării</h3>
     ${S.faze.length ? `<div class="tw" style="max-height:none"><table>
@@ -3358,14 +3353,8 @@ function ctParamsHtml(){
     <div class="dropzone" style="margin-bottom:12px"><b>Lista beneficiarului:</b> <button class="btn sm" id="benUp">Încarcă lista (PDF, Word, Excel sau poză)</button> <span>Aplicația scoate documentele din listă și ți le arată să le confirmi.</span><span class="fmtline">${fmtTag("lista")}</span>
       ${ct.ben ? `<span style="flex-basis:100%">Lista încărcată: <b>${esc(ct.ben.name)}</b> · ${esc(roDate(ct.ben.at))} <button class="btn g sm" id="benOpen">Deschide originalul</button></span>` : ""}
       <input type="file" id="inBen" accept=".pdf,.doc,.docx,.xlsx,.xlsm,.xls,.csv,.txt,.jpg,.jpeg,.png,.tif,.tiff,.webp" hidden></div>
-    <div class="grid2">${field(P_EXTRA)}</div>
-  </div>
-  ${ts.map(t=>{ const T = CT_TPL[t]; return `<div class="card">
-    <h3>${esc(T.name)}</h3>
-    ${T.params.filter(f=>f.type!=="area").length ? `<div class="grid2">${T.params.filter(f=>f.type!=="area").map(f=>field(f,t)).join("")}</div>` : ""}
-    <div class="grid2" style="margin-top:12px">${T.params.filter(f=>f.type==="area").map(f=>field(f,t)).join("")}</div>
-    <p class="muted" style="margin:10px 0 0">Repere normative: ${esc(T.norme)}.</p>
-  </div>`; }).join("")}`;
+    ${(()=>{ const L = parseLines(p.extra); return L.length ? `<p class="muted" style="margin:4px 0 0">Din listă au intrat în cartea tehnică (dosarul „Documente cerute de beneficiar”): ${L.map(x=>`<span class="tag">${esc(x)}</span>`).join(" ")}</p>` : ""; })()}
+  </div>`;
 }
 function viewCarte(){
   const ts = activeTpls();
@@ -3377,8 +3366,8 @@ function viewCarte(){
   const inLips = new Set(S.lipsuri.map(l=>norm(lden(l))));
   const miss = ctMissing(false).filter(i=>!inLips.has(norm(lden(i))));
   const tot = dos.filter(d=>!d.later).reduce((a,d)=>a+d.total,0), got = dos.filter(d=>!d.later).reduce((a,d)=>a+d.got,0);
-  const tabs = `<div class="fbar"><button class="btn ${CTTAB==="dosare"?"":"g"} sm" data-cttab="dosare">Dosarele cărții tehnice</button><button class="btn ${CTTAB==="parametri"?"":"g"} sm" data-cttab="parametri">Parametrii lucrării și lista beneficiarului</button></div>`;
-  if(CTTAB==="parametri") return tabs + `<div class="note">Parametrii fiecărei specialități (tronsoane, tablouri, zone…) hotărăsc ce PV-uri și buletine apar în dosare. Documentele cerute în plus de beneficiar intră într-un dosar separat.</div>` + ctParamsHtml();
+  const tabs = `<div class="fbar"><button class="btn ${CTTAB==="dosare"?"":"g"} sm" data-cttab="dosare">Dosarele cărții tehnice</button><button class="btn ${CTTAB==="parametri"?"":"g"} sm" data-cttab="parametri">Date comune și lista beneficiarului</button></div>`;
+  if(CTTAB==="parametri") return tabs + `<div class="note">Încarcă lista beneficiarului; documentele cerute în plus intră singure într-un dosar separat.</div>` + ctParamsHtml();
   const d = CTSEL && dos.find(x=>x.id===CTSEL);
   if(!d){
     const tile = (x, i) => {
@@ -3564,7 +3553,7 @@ async function importBenList(file){
   const items = await readBenList(file);
   busy(false);
   if(items===null) return alert("Nu am putut citi fișierul. Pentru PDF-uri scanate și poze e nevoie de internet la prima folosire a cititorului.");
-  if(!items.length) return alert("Nu am găsit o listă de documente în fișier. Le poți scrie în câmpul de mai jos, câte unul pe rând.");
+  if(!items.length) return alert("Nu am găsit o listă de documente în fișier. Încearcă alt fișier (PDF, Word, Excel sau o poză clară a listei).");
   const have = new Set(parseLines(ctState().p.extra).map(norm));
   $("#intake").innerHTML = `<div class="mbox" style="width:min(820px,100%)">
     <div class="mh"><h2>Documentele din lista beneficiarului</h2><span class="muted">${esc(file.name)} · ${pl(items.length,"document găsit","documente găsite")}</span></div>
@@ -4678,7 +4667,7 @@ const BB_KB = [
   {k:["verificare intrare","copie identica","de ce nu s-a adaugat","respins","debifat"], a:()=>`La intrare, aplicația compară fiecare fișier cu ce există: <b>copiile identice</b> se resping, <b>versiunile noi</b> îți cer o decizie, fișierele care <b>completează o lipsă</b> o rezolvă automat, iar <b>documentele noi necerute</b> vin debifate după prima încărcare, ca să nu intre din greșeală.`},
   {k:["duplicate","versiune vigoare","care versiune","versiuni"], a:()=>{ const g = dupGroups(), nev = g.filter(x=>!x.docs.some(d=>d.viz)).length; return `Grupurile de duplicate reunesc fișiere cu același conținut sau cu aceeași denumire de bază (rev1, rev2, final). Pentru fiecare grup alegi versiunea <b>în vigoare</b>; celelalte rămân ca istoric și nu apar în opis. ${g.length?`Acum ai <b>${g.length}</b> ${g.length===1?"grup":"grupuri"}, din care <b>${nev}</b> fără versiune aleasă.`:""} ${go("duplicate","Deschide Duplicate")}`; }},
   {k:["data portocalie","data estimata","estimata","de verificat data"], a:()=>{ const n = S.docs.filter(d=>d.dataSrc==="estimat").length; return `Data e portocalie când aplicația n-a găsit-o în denumirea fișierului și a pus data ultimei modificări a fișierului, care de obicei e data copierii, nu data actului. Corecteaz-o din document; în opis, datele estimate nu se tipăresc. ${n?`Ai <b>${n}</b> date estimate.`:""} ${go("inventar","Deschide Inventarul")}`; }},
-  {k:["carte tehnica parametri","tronsoane","balize","cod pv","numerotare pv","lista tip","tip lucrare","tipuri lucrari","ce tipuri"], a:()=>`Lista-tip a cărții tehnice vine din <b>domeniile lucrării</b>, bifate la Proiect: construcții civile, drumuri, instalații electrice, termice, sanitare, gaze, rețele edilitare, HVAC. La instalații electrice alegi și tipurile: în clădiri, rețele LEA/LES, LEA cu fibră optică, fotovoltaic, paratrăsnet, IDSAI, supraveghere video, antiefracție, control acces. La <b>Carte tehnică → Parametrii lucrării</b> completezi parametrii fiecărei specialități; aplicația pune PV-urile, probele și buletinele pe dosare, după Anexa 6 din HG 343/2017, iar piesele comune apar o singură dată. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
+  {k:["carte tehnica parametri","tronsoane","balize","cod pv","numerotare pv","lista tip","tip lucrare","tipuri lucrari","ce tipuri"], a:()=>`Lista-tip a cărții tehnice vine din <b>domeniile lucrării</b>, bifate la Proiect: construcții civile, drumuri, instalații electrice, termice, sanitare, gaze, rețele edilitare, HVAC. La instalații electrice alegi și tipurile: în clădiri, rețele LEA/LES, LEA cu fibră optică, fotovoltaic, paratrăsnet, IDSAI, supraveghere video, antiefracție, control acces. Aplicația pune PV-urile, probele și buletinele pe dosare, după Anexa 6 din HG 343/2017, iar piesele comune apar o singură dată. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
   {k:["antet","sigla","logo","firma mea","antetul firmei","model firma","modelul firmei","formular propriu"], a:()=>`Antetul firmei (siglă, denumire, CUI, adresă) îl completezi o singură dată la <b>Firma mea</b>, pe pagina de intrare; apare pe copertă, opisuri, borderouri și cereri. Dacă firma are formularele ei în Word (copertă, opis, borderou), le încarci tot acolo, cu câmpuri ca {lucrare}, {beneficiar}, {dosar} și un rând de tabel cu {poz} {document} {nr} {data_doc}; aplicația le completează și îți dă fișierul Word. Fără model, folosește forma ei.`},
   {k:["carte tehnica pdf","un singur pdf","pdf final","toata cartea tehnica","numar file","numerotare file"], a:()=>`La <b>Carte tehnică → Cartea tehnică într-un PDF</b> aplicația pune într-un singur PDF coperta, apoi pentru fiecare dosar opisul lui și documentele găsite, în ordine, cu numărul filei pe fiecare pagină. Documentele primite rămân neschimbate. Fișierele Word trebuie salvate întâi ca PDF; aplicația îți spune care au rămas pe dinafară. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
   {k:["rubrici","rubrica","unde gasesc","unde e documentul","muta documentul","alta rubrica"], a:()=>`La <b>Inventar</b> documentele sunt împărțite pe rubrici (avize, PV-uri de execuție, probe, documente de calitate, dispoziții etc.). Apeși pe chenarul rubricii ca să vezi documentele, iar sus ai <b>← Înapoi la rubrici</b>. Căutarea caută în toate. Dacă un document e în rubrica greșită, îl muți din coloana <b>Rubrica</b>. ${CUR?go("inventar","Deschide Inventarul"):""}`},
@@ -4695,7 +4684,7 @@ const BB_KB = [
   {k:["idsai","detectie incendiu","semnalizare incendiu","registru de control"], a:()=>`La <b>IDSAI</b>, firma trebuie autorizată de IGSU pentru instalarea și întreținerea sistemelor de semnalizare la incendiu. După montaj urmează o perioadă de funcționare preliminară, apoi o comisie verifică documentația și face probe funcționale. Executantul predă <b>registrul de control</b>, instrucțiunile și documentul de configurare, iar mentenanța începe imediat după recepție. <span class="bb-law">P 118/3-2015, cap. 5</span>`},
   {k:["supraveghere video","camere","antiefractie","control acces","licenta igpr","sisteme securitate"], a:()=>`Sistemele de <b>supraveghere video, antiefracție și control acces</b> se proiectează și se instalează doar de societăți cu <b>licență IGPR</b>. La obiectivele din HG 301/2012, art. 68 (bănci, benzinării, instituții publice, depozite cu valori peste 10.000 euro etc.) proiectul se avizează de poliție înainte de execuție. La predare, beneficiarul primește codurile, programele și documentația pe bază de proces-verbal. <span class="bb-law">Legea 333/2003; HG 301/2012, art. 68–69, 76, 86</span>`},
   {k:["paratrasnet","ipt","trasnet","priza paratrasnet"], a:()=>`Pentru <b>paratrăsnet</b> păstrezi proiectul cu nivelul de protecție, PV-ul de lucrări ascunse pentru fiecare priză de pământ, PV-ul de montaj (captare, coborâri) și buletinele de măsurare a rezistenței de dispersie și a continuității. <span class="bb-law">I 7-2011 (modificat în 2023); SR EN 62305</span>`},
-  {k:["cerinte beneficiar","documente suplimentare","operator retea cere","beneficiarul cere","lista beneficiar","lista de la beneficiar","excel beneficiar"], a:()=>`Lista primită de la beneficiar o încarci la <b>Carte tehnică → Parametrii lucrării și lista beneficiarului → Încarcă lista</b>: PDF, Word, <b>Excel</b> sau poză. Aplicația scoate documentele (rânduri numerotate, cu liniuță sau coloana cu denumiri din tabel), ți le arată să le confirmi și le pune într-un dosar separat; originalul rămâne la lucrare. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
+  {k:["cerinte beneficiar","documente suplimentare","operator retea cere","beneficiarul cere","lista beneficiar","lista de la beneficiar","excel beneficiar"], a:()=>`Lista primită de la beneficiar o încarci la <b>Carte tehnică → Date comune și lista beneficiarului → Încarcă lista</b>: PDF, Word, <b>Excel</b> sau poză. Aplicația scoate documentele (rânduri numerotate, cu liniuță sau coloana cu denumiri din tabel), ți le arată să le confirmi și le pune într-un dosar separat; originalul rămâne la lucrare. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
   {k:["borderou","borderouri","tiparesc borderou"], a:()=>`Borderourile se tipăresc de la <b>Carte tehnică → Tipărește borderourile</b>: câte unul pe dosar, cu numerotarea calculată; documentele lipsă apar marcate LIPSĂ. Ca să obții PDF, alege „Salvare ca PDF” în fereastra de tipărire. ${go("carte","Deschide Cartea tehnică")}`},
   {k:["opis","pdf opis","tiparesc opis","opis dosar","opisul dosarului"], a:()=>`Fiecare dosar al cărții tehnice are opisul lui: în pagina dosarului apeși <b>Opisul dosarului</b> (poziția, documentul, numărul și data, cu lipsurile marcate), iar pe pagina cu dosarele <b>Tipărește opisurile dosarelor</b> le scoate pe toate, fiecare pe pagina lui. Opisul general al lucrării se generează de la <b>Rezultate → Generează opisul</b>. Conține documentele în vigoare, grupate pe capitole, plus lipsurile marcate LIPSĂ. Pentru PDF, alege „Salvare ca PDF” la tipărire. ${go("rezultate","Deschide Rezultate")}`},
   {k:["cerere","cer documente","trimit cerere","email cerere","adresa cerere"], a:()=>`La <b>Cereri</b>, lipsurile sunt grupate pe „de la cine se recuperează”. Alegi termenul și apeși <b>Pregătește cererea</b>: poți copia textul, îl poți deschide în email sau poți tipări o adresă formală. După <b>Marchează ca trimisă</b>, aplicația urmărește termenul și bifează singură documentele care sosesc. ${go("cereri","Deschide Cereri")}`},
