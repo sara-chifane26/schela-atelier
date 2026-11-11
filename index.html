@@ -941,14 +941,9 @@ function viewProiect(){
 
   ${viewPersoane()}
 
-  <div class="card">
-    <h3>Observații pe parcurs</h3>
-    <textarea rows="5" data-note placeholder="Ce te-a surprins, ce nu a încăput în niciun capitol, ce ai schimba la structură…">${esc(S.note)}</textarea>
-  </div>
-
   <div class="card" style="border-color:var(--red)">
     <h3 style="color:var(--red)">Șterge lucrarea</h3>
-    <p style="margin:0 0 12px;font-size:14px;color:var(--muted)">Scoate lucrarea din acest browser. Salvează întâi în fișier dacă vrei să o păstrezi.</p>
+    <p style="margin:0 0 12px;font-size:14px;color:var(--muted)">Lucrarea ajunge în coșul de gunoi de pe pagina de intrare și se poate restaura 30 de zile.</p>
     <button class="btn g sm" id="btnClear">Șterge lucrarea</button>
   </div>`;
 }
