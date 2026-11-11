@@ -779,11 +779,6 @@ function viewDomeniu(){
     </div>
   </div>
   <div class="card">
-    <h3>${d.tpls.length>1 ? "Tipuri de lucrări din domeniu" : "Ce verifică aplicația"}</h3>
-    ${d.tpls.map(t=>`<div class="lrow"><div class="ln"><b>${esc(CT_TPL[t].name)}</b><span class="muted">${esc(CT_TPL[t].norme)}</span></div></div>`).join("")}
-    ${d.tpls.length>1 ? `<p class="muted" style="margin:10px 0 0">Într-o lucrare bifezi la Proiect unul sau mai multe tipuri; cartea tehnică le reunește într-un singur dosar.</p>` : ""}
-  </div>
-  <div class="card">
     <h3>Lucrări în ${esc(d.name.toLowerCase())}</h3>
     ${lucrariHtml(list, "Nicio lucrare încă în acest domeniu.")}
   </div>`;
