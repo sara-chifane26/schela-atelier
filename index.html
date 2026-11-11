@@ -2330,6 +2330,7 @@ function ctNameScore(den, fileName){
 }
 
 // potrivește fiecare document așteptat cu un fișier din inventar
+const attTitle = n => String(n).replace(/\.[a-z0-9]{1,6}$/i,"").replace(/_+/g," ").replace(/\s+/g," ").trim();
 function ctMatch(){
   const dos = ctDosare(); if(!dos) return null;
   const liveD = S.docs.filter(d=>!d.dup);
@@ -2408,6 +2409,19 @@ function ctMatch(){
   }
   tp.sort((a,b)=>b.sc-a.sc);
   for(const pr of tp){ if(pr.x.doc || used.has(pr.d.id)) continue; pr.x.doc = pr.d; pr.x.byText = true; used.add(pr.d.id); }
+  // 4. PV-urile și buletinele aduse de client care nu sunt în lista-tip intră singure, în ordinea titlurilor lui
+  const att = liveD.filter(d=>!used.has(d.id) && !d.persId && ["pv","probe"].includes(rubOf(d)) && !/dispozit/.test(norm(d.name)))
+    .sort((a,b)=>attTitle(a.name).localeCompare(attTitle(b.name), "ro", {numeric:true, sensitivity:"base"}));
+  for(const [rub, id, grp] of [["pv","B2","PV-uri atașate (în ordinea titlurilor)"], ["probe","B3","Buletine și probe atașate (în ordinea titlurilor)"]]){
+    const ds = att.filter(d=>rubOf(d)===rub), dd = dos.find(d=>d.id===id); if(!ds.length || !dd) continue;
+    dd.items.push({group:grp});
+    for(const doc of ds){
+      const i = {den:attTitle(doc.name), cap: rub==="pv" ? "Execuție" : "Calitate", dela:"Executant", att:doc.id};
+      const x = {i, d:dd, key:"att|"+doc.id};
+      if(man[x.key]==="na") x.na = true; else x.doc = doc;
+      used.add(doc.id); dd.items.push(i); every.push(x);
+    }
+  }
   for(const d of dos){
     const xs = every.filter(x=>x.d===d), on = xs.filter(x=>!x.na);
     d.total = on.length; d.got = on.filter(x=>x.doc).length; d.na = xs.length - on.length;
@@ -3405,9 +3419,9 @@ function viewCarte(){
     <tbody>${d.items.map(i=> i.group ? `<tr class="grp-row${i.spec?" spec":""}"><td colspan="5">${esc(i.group)}</td></tr>` : `<tr class="${i.na?"off":""}">
       <td class="num">${esc(i.cod||"")}</td>
       <td>${esc(i.den)}${i.dela?`<span class="path">de la: ${esc(i.dela)}</span>`:""}</td>
-      <td>${i.na ? `<span class="tag t-none">nu se aplică</span>` : i.doc ? `<span class="tag t-viz">găsit${i.manual?" · ales":""}</span>${["pdf","jpg","jpeg","png"].includes(extOf(i.doc.name)) ? "" : `<span class="tag t-conv" title="Ca să intre în cartea tehnică PDF, salvează-l ca PDF și adaugă PDF-ul în inventar.">${esc(extOf(i.doc.name).toUpperCase()||"fișier")} — de salvat ca PDF</span>`}` : d.later ? `<span class="tag t-none">de completat</span>` : inLips.has(norm(lden(i))) ? `<span class="tag t-dup">în Lipsuri</span>` : `<span class="tag t-late">lipsă</span>`}</td>
-      <td>${i.na ? "" : `<select data-ctman="${esc(i.key)}"><option value="">${i.doc && !i.manual ? "automat: "+esc(i.doc.name) : "automat — negăsit"}</option>${docs.map(x=>`<option value="${x.id}" ${i.manual && i.doc && i.doc.id===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select>`}</td>
-      <td style="white-space:nowrap">${i.na ? `<button class="btn g sm" data-ctna="${esc(i.key)}">Se aplică</button>` : `${!i.doc && !d.later && !inLips.has(norm(lden(i))) ? `<button class="btn g sm" data-ctask="${esc(i.key)}">Cere</button> ` : ""}<button class="btn g sm" data-ctna="${esc(i.key)}">Nu se aplică</button>`}</td>
+      <td>${i.na ? `<span class="tag t-none">${i.att?"scos din dosar":"nu se aplică"}</span>` : i.doc ? `<span class="tag t-viz">găsit${i.manual?" · ales":""}</span>${["pdf","jpg","jpeg","png"].includes(extOf(i.doc.name)) ? "" : `<span class="tag t-conv" title="Ca să intre în cartea tehnică PDF, salvează-l ca PDF și adaugă PDF-ul în inventar.">${esc(extOf(i.doc.name).toUpperCase()||"fișier")} — de salvat ca PDF</span>`}` : d.later ? `<span class="tag t-none">de completat</span>` : inLips.has(norm(lden(i))) ? `<span class="tag t-dup">în Lipsuri</span>` : `<span class="tag t-late">lipsă</span>`}</td>
+      <td>${i.na ? "" : i.att ? `<span class="muted">atașat: ${esc(i.doc ? i.doc.name : "")}</span>` : `<select data-ctman="${esc(i.key)}"><option value="">${i.doc && !i.manual ? "automat: "+esc(i.doc.name) : "automat — negăsit"}</option>${docs.map(x=>`<option value="${x.id}" ${i.manual && i.doc && i.doc.id===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select>`}</td>
+      <td style="white-space:nowrap">${i.att ? `<button class="btn g sm" data-ctna="${esc(i.key)}">${i.na ? "Pune înapoi" : "Scoate din dosar"}</button>` : i.na ? `<button class="btn g sm" data-ctna="${esc(i.key)}">Se aplică</button>` : `${!i.doc && !d.later && !inLips.has(norm(lden(i))) ? `<button class="btn g sm" data-ctask="${esc(i.key)}">Cere</button> ` : ""}<button class="btn g sm" data-ctna="${esc(i.key)}">Nu se aplică</button>`}</td>
     </tr>`).join("")}</tbody>
   </table></div>
   ${dMiss.length && !d.later ? `<div style="margin-top:12px"><button class="btn" id="dosToLips">Cere toate cele ${dMiss.length} lipsă din dosarul ${d.id}</button></div>` : ""}`;
@@ -4667,7 +4681,7 @@ const BB_KB = [
   {k:["verificare intrare","copie identica","de ce nu s-a adaugat","respins","debifat"], a:()=>`La intrare, aplicația compară fiecare fișier cu ce există: <b>copiile identice</b> se resping, <b>versiunile noi</b> îți cer o decizie, fișierele care <b>completează o lipsă</b> o rezolvă automat, iar <b>documentele noi necerute</b> vin debifate după prima încărcare, ca să nu intre din greșeală.`},
   {k:["duplicate","versiune vigoare","care versiune","versiuni"], a:()=>{ const g = dupGroups(), nev = g.filter(x=>!x.docs.some(d=>d.viz)).length; return `Grupurile de duplicate reunesc fișiere cu același conținut sau cu aceeași denumire de bază (rev1, rev2, final). Pentru fiecare grup alegi versiunea <b>în vigoare</b>; celelalte rămân ca istoric și nu apar în opis. ${g.length?`Acum ai <b>${g.length}</b> ${g.length===1?"grup":"grupuri"}, din care <b>${nev}</b> fără versiune aleasă.`:""} ${go("duplicate","Deschide Duplicate")}`; }},
   {k:["data portocalie","data estimata","estimata","de verificat data"], a:()=>{ const n = S.docs.filter(d=>d.dataSrc==="estimat").length; return `Data e portocalie când aplicația n-a găsit-o în denumirea fișierului și a pus data ultimei modificări a fișierului, care de obicei e data copierii, nu data actului. Corecteaz-o din document; în opis, datele estimate nu se tipăresc. ${n?`Ai <b>${n}</b> date estimate.`:""} ${go("inventar","Deschide Inventarul")}`; }},
-  {k:["carte tehnica parametri","tronsoane","balize","cod pv","numerotare pv","lista tip","tip lucrare","tipuri lucrari","ce tipuri"], a:()=>`Lista-tip a cărții tehnice vine din <b>domeniile lucrării</b>, bifate la Proiect: construcții civile, drumuri, instalații electrice, termice, sanitare, gaze, rețele edilitare, HVAC. La instalații electrice alegi și tipurile: în clădiri, rețele LEA/LES, LEA cu fibră optică, fotovoltaic, paratrăsnet, IDSAI, supraveghere video, antiefracție, control acces. Aplicația pune PV-urile, probele și buletinele pe dosare, după Anexa 6 din HG 343/2017, iar piesele comune apar o singură dată. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
+  {k:["carte tehnica parametri","tronsoane","balize","cod pv","numerotare pv","lista tip","tip lucrare","tipuri lucrari","ce tipuri"], a:()=>`Lista-tip a cărții tehnice vine din <b>domeniile lucrării</b>, bifate la Proiect: construcții civile, drumuri, instalații electrice, termice, sanitare, gaze, rețele edilitare, HVAC. La instalații electrice alegi și tipurile: în clădiri, rețele LEA/LES, LEA cu fibră optică, fotovoltaic, paratrăsnet, IDSAI, supraveghere video, antiefracție, control acces. Aplicația pune PV-urile, probele și buletinele pe dosare; PV-urile și buletinele atașate care nu sunt în lista-tip intră singure în dosarele B2 și B3, în ordinea titlurilor date de tine, iar unul pus greșit îl scoți cu „Scoate din dosar”. Dosarele urmează Anexa 6 din HG 343/2017, iar piesele comune apar o singură dată. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
   {k:["antet","sigla","logo","firma mea","antetul firmei","model firma","modelul firmei","formular propriu"], a:()=>`Antetul firmei (siglă, denumire, CUI, adresă) îl completezi o singură dată la <b>Firma mea</b>, pe pagina de intrare; apare pe copertă, opisuri, borderouri și cereri. Dacă firma are formularele ei în Word (copertă, opis, borderou), le încarci tot acolo, cu câmpuri ca {lucrare}, {beneficiar}, {dosar} și un rând de tabel cu {poz} {document} {nr} {data_doc}; aplicația le completează și îți dă fișierul Word. Fără model, folosește forma ei.`},
   {k:["carte tehnica pdf","un singur pdf","pdf final","toata cartea tehnica","numar file","numerotare file"], a:()=>`La <b>Carte tehnică → Cartea tehnică într-un PDF</b> aplicația pune într-un singur PDF coperta, apoi pentru fiecare dosar opisul lui și documentele găsite, în ordine, cu numărul filei pe fiecare pagină. Documentele primite rămân neschimbate. Fișierele Word trebuie salvate întâi ca PDF; aplicația îți spune care au rămas pe dinafară. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
   {k:["rubrici","rubrica","unde gasesc","unde e documentul","muta documentul","alta rubrica"], a:()=>`La <b>Inventar</b> documentele sunt împărțite pe rubrici (avize, PV-uri de execuție, probe, documente de calitate, dispoziții etc.). Apeși pe chenarul rubricii ca să vezi documentele, iar sus ai <b>← Înapoi la rubrici</b>. Căutarea caută în toate. Dacă un document e în rubrica greșită, îl muți din coloana <b>Rubrica</b>. ${CUR?go("inventar","Deschide Inventarul"):""}`},
