@@ -361,6 +361,7 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
       <button class="btn g sm upbtn" id="btnUp" title="Înapoi un nivel">← Înapoi</button>
       <div class="ttl"><h1 id="vtitle">Proiect</h1><nav class="crumbs" id="vsub" aria-label="Unde ești"></nav></div>
       <span class="spacer"></span>
+      <button class="btn g sm" id="btnWin" title="Deschide pagina aceasta într-o fereastră nouă — lucrezi în două locuri deodată (de ex. pe al doilea monitor)">⧉ Fereastră nouă</button>
       <button class="btn g sm" id="btnSave">Salvează proiect</button>
       <button class="btn g sm" id="btnLoad" title="Fișier .json salvat din Schela cu „Salvează proiect”">Deschide proiect (.json)</button>
       <input type="file" id="fileLoad" accept=".json" hidden>
@@ -699,7 +700,8 @@ function renderNav(){
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${v.icon}"/></svg>
       <span>${v.name}</span><span class="n">${n}</span></button>`;
   }).join("") + `<button data-v="cos" class="navcos"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg><span>Coș de gunoi</span><span class="n">${trN||""}</span></button>`;
-  $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{ if(b.dataset.v==="cos") return openTrash(); if(b.dataset.v==="acasa") closeLucrare(); else VIEW=b.dataset.v; render(); });
+  $("#nav").querySelectorAll("button").forEach(b=>b.onauxclick=e=>{ if(e.button===1 && CUR && VIEWS.some(x=>x.id===b.dataset.v)){ e.preventDefault(); openWindow(Object.assign(navState(), {view:b.dataset.v, invrub:null, ctsel:null})); } });
+  $("#nav").querySelectorAll("button").forEach(b=>b.onclick=(e)=>{ if((e.ctrlKey||e.metaKey||e.shiftKey) && CUR && VIEWS.some(x=>x.id===b.dataset.v)) return openWindow(Object.assign(navState(), {view:b.dataset.v, invrub:null, ctsel:null})); if(b.dataset.v==="cos") return openTrash(); if(b.dataset.v==="acasa") closeLucrare(); else VIEW=b.dataset.v; render(); });
 }
 
 const domNames = ids => ids.map(id=>(domById(id)||{}).name).filter(Boolean);
@@ -765,9 +767,48 @@ function navPush(){
   if(NAV_SKIP) return;
   const st = navState(), k = JSON.stringify(st);
   if(k===NAV_LAST) return;
-  try{ if(NAV_LAST===null) history.replaceState(st, ""); else history.pushState(st, ""); }catch(e){}
+  try{ if(NAV_LAST===null) history.replaceState(st, "", navHash(st)); else history.pushState(st, "", navHash(st)); }catch(e){}
   NAV_LAST = k;
 }
+// adresa paginii păstrează locul: o fereastră nouă sau o reîncărcare deschide exact aceeași pagină
+function navHash(st){
+  const q = new URLSearchParams();
+  if(st.cur) q.set("l", st.cur); else if(st.view==="domeniu" && st.dsel) q.set("dom", st.dsel);
+  if(st.cur){ q.set("v", st.view); if(st.view==="inventar" && st.invrub) q.set("r", st.invrub); if(st.view==="carte"){ if(st.ctsel) q.set("d", st.ctsel); if(st.cttab!=="dosare") q.set("t", st.cttab); } if(st.view==="executie") q.set("x", st.extab); }
+  const h = q.toString(); return h ? "#" + h : location.pathname + location.search;
+}
+function navFromHash(){
+  const q = new URLSearchParams(location.hash.slice(1)); if(![...q.keys()].length) return;
+  const id = q.get("l");
+  if(id && IDX.some(x=>x.id===id)){
+    INVRUB = q.get("r") || null; CTSEL = q.get("d") || null; CTTAB = q.get("t") || "dosare"; EXTAB = q.get("x") || "faze";
+    const v = q.get("v") || "proiect";
+    const o = readLucrare(id); if(!o) return;
+    S = Object.assign(blank(), o); S.id = id; migrate(); markDups(); CUR = id; LAST_JS = JSON.stringify(S);
+    VIEW = (VIEWS.some(x=>x.id===v)) ? v : "proiect";
+  } else if(q.get("dom") && domById(q.get("dom"))){ DSEL = q.get("dom"); VIEW = "domeniu"; }
+}
+function openWindow(st){
+  const w = window.open(location.pathname + location.search + navHash(st || navState()), "_blank");
+  if(!w) alert("Browserul a blocat fereastra nouă. Permite ferestrele pop-up pentru această pagină (iconița din bara de adrese) și încearcă din nou.");
+}
+/* ---- DOUĂ FERESTRE DEODATĂ ----
+   Ce schimbi într-o fereastră apare imediat în cealaltă (aceeași lucrare, același browser). */
+window.addEventListener("storage", e => {
+  if(!e.key) return;
+  if(e.key===KEY_IDX){ try{ IDX = JSON.parse(e.newValue||"[]") || []; }catch(_){} if(!CUR && !$("#intake").classList.contains("on")) render(); else renderNav(); return; }
+  if(e.key===KEY_FIRMA){ try{ FIRMA = JSON.parse(e.newValue||"null") || {}; }catch(_){} return; }
+  if(!CUR || e.key!==KEY_L(CUR) || !e.newValue || e.newValue===LAST_JS) return;
+  let o; try{ o = JSON.parse(e.newValue); }catch(_){ return; }
+  const a = document.activeElement, sel = a && a.closest && a.closest("#view") && [...a.attributes].find(x=>x.name.startsWith("data-"));
+  const caret = sel && typeof a.selectionStart==="number" ? a.selectionStart : null;
+  const sc = $("#view").scrollTop;
+  S = Object.assign(blank(), o); S.id = CUR; migrate(); markDups(); LAST_JS = JSON.stringify(S);
+  if($("#intake").classList.contains("on")){ renderNav(); return; }
+  NAV_SKIP = true; try{ render(); } finally { NAV_SKIP = false; }
+  $("#view").scrollTop = sc;
+  if(sel){ const el = $("#view").querySelector(`[${sel.name}="${CSS.escape(sel.value)}"]`); if(el){ el.focus(); if(caret!==null) try{ el.setSelectionRange(caret, caret); }catch(_){} } }
+});
 window.addEventListener("popstate", e => {
   if(IGNORE_POP){ IGNORE_POP--; return; }
   const m = $("#intake");
@@ -4503,6 +4544,7 @@ function viewConformitate(){
 const go = (v, t) => `<button class="btn g sm" data-bgo="${v}">${t}</button>`;
 const BB_KB = [
   // --- folosirea aplicației ---
+  {k:["doua ferestre","fereastra noua","doua ecrane","doua monitoare","al doilea monitor","share screen","impart ecranul","in paralel","simultan","doua locuri","doua pagini"], a:()=>`Apasă <b>⧉ Fereastră nouă</b> (sus, lângă „Salvează proiect”): pagina în care ești se deschide într-o a doua fereastră, pe care o muți pe celălalt monitor sau o pui alături (Windows: tasta Windows + săgeată stânga / dreapta). Lucrezi în amândouă deodată — de exemplu persoanele la Proiect într-una și cartea tehnică în cealaltă; ce schimbi într-o fereastră apare imediat și în cealaltă. Scurtătură: <b>Ctrl + clic</b> (sau clic pe rotița mouse-ului) pe o secțiune din meniu o deschide direct în fereastră nouă.`},
   {k:["valabilitate","valabil","expira","expirat","expirata","autorizatie expirata","legitimatie expirata","certificat expirat","termen valabilitate"], a:()=>{ const n = CUR ? valAlerts().length : 0; return `La <b>Execuție → Valabilități</b> vezi autorizațiile și legitimațiile persoanelor, avizele, certificatele și buletinele, cu data până la care sunt valabile. Data o citește aplicația din document (inclusiv din scanuri, prin OCR); tu doar atașezi documentul. Aplicația te avertizează cu ${VAL_ZILE} de zile înainte, cât lucrarea e în derulare. ${n?`Acum ai <b>${pl(n,"termen expirat sau aproape de expirare","termene expirate sau aproape de expirare")}</b>.`:""} ${CUR?go("executie:val","Vezi valabilitățile"):""}`; }},
   {k:["fisa persoanelor","persoanele lucrarii","lista persoane","documentele persoanei","autorizatia dirigintelui","copie autorizatie","legitimatia","atasez autorizatia","diriginte pe coperta","rte pe coperta"], a:()=>`La <b>Proiect → Persoane și specialități</b>, fiecare persoană are <b>Documentele persoanei</b>: atașezi copia autorizației ISC, legitimația ANRE, decizia de numire sau certificatul de verificator. Numărul și valabilitatea le citește aplicația din document (scanurile prin OCR), apar la <b>Execuție → Valabilități</b> și în dosarul <b>B1</b> al cărții tehnice; aplicația îți spune ce copie lipsește pentru fiecare rol. Butonul <b>Tipărește fișa „Persoanele lucrării”</b> scoate evidența (nume, rol, autorizație, valabilitate, documente), care intră și în cartea tehnică într-un PDF. În modelele Word ale firmei poți folosi {diriginte}, {aut_diriginte}, {rte}, {aut_rte}, {proiectant}, {verificator}.`},
   {k:["cos de gunoi","cosul de gunoi","am sters","sters din greseala","sters gresit","restaurez","restaurare","recuperez","anulez stergerea","sters definitiv"], a:()=>`Ce ștergi din aplicație (documente, lucrări, lipsuri, cereri, persoane, materiale, faze, dispoziții) ajunge în <b>Coșul de gunoi</b> și stă acolo <b>${TRASH_DAYS} de zile</b>. Imediat după ștergere apare jos butonul <b>Anulează</b>. Mai târziu: din lucrare, <b>Coș de gunoi</b> în meniul din stânga → <b>Restaurează</b>; o lucrare ștearsă o găsești pe pagina de intrare. Fișierele de pe calculator sau de pe server nu sunt atinse niciodată. ${CUR && (S.trash||[]).length ? `Acum ai <b>${pl(S.trash.length,"ștergere","ștergeri")}</b> în coșul acestei lucrări.` : ""}`},
@@ -5170,7 +5212,9 @@ window.addEventListener("resize", ()=>document.querySelectorAll("textarea.grow")
 
 autoload();
 markDups();
+navFromHash();
 render();
+$("#btnWin").onclick = () => openWindow();
 refreshModele().catch(()=>{});
 </script>
 </body>
