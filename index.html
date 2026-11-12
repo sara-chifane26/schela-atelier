@@ -566,6 +566,17 @@ details.more>div{background:var(--surface);border-color:var(--line);border-radiu
 .cf-why{font-size:16.5px!important}
 .view p .tag,.view p .fmt,.droph .fmt,.view p input,.view p select,.view p button.btn{font-family:var(--fd);font-weight:500;font-size:12.5px;letter-spacing:0}
 .droph .fmt{font-size:13px}
+/* bannerul de pe pagina de start */
+.hero{position:relative;overflow:hidden;border-radius:12px;background:radial-gradient(ellipse at 75% 110%,#2A3F66 0,#12203A 45%,#0B1526 80%);color:#F4EFE5;padding:34px 40px;margin:0 0 26px;min-height:190px}
+.hero .rule{position:absolute;left:22px;top:34px;bottom:34px;width:2px;background:var(--gold)}
+.hero .k{font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-2)}
+.hero h2{font-family:var(--fh);color:#F4EFE5;font-size:46px;font-weight:700;line-height:1.08;margin:10px 0 10px;position:relative;z-index:1}
+.hero h2 i{font-style:normal;color:var(--gold)}
+.hero h2 .d{color:var(--gold);margin:0 .06em;font-weight:500}
+.view .hero p{font-family:var(--fh)!important;font-size:20px!important;color:#C3CAD6;margin:0;position:relative;z-index:1}
+.hero svg.sky{position:absolute;right:0;bottom:0;height:100%;width:50%;opacity:.95}
+@media (max-width:900px){ .hero svg.sky{opacity:.28;width:80%} .hero h2{font-size:36px} }
+@media (max-width:560px){ .hero{padding:24px 22px 26px 30px} .hero .rule{left:14px;top:24px;bottom:26px} .hero h2{font-size:30px} }
 /* INVENTAR: rubricile în stânga, documentele în dreapta */
 .inv{display:grid;grid-template-columns:250px minmax(0,1fr);gap:26px;align-items:start}
 .rail .h{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:2px 10px 8px}
@@ -1220,9 +1231,12 @@ function lucrariHtml(list, emptyText){
 }
 function viewAcasa(){
   return `
+  <div class="hero" role="banner"><div class="rule"></div><div class="k">Schela · Atelier</div>
+    <h2>Sprijin <span class="d">·</span> Structură <span class="d">·</span> <i>Sistematizare</i></h2>
+    <p>Dosarul lucrării, de la autorizație la recepție.</p>
+    <svg class="sky" aria-hidden="true" viewBox="0 0 600 220" preserveAspectRatio="xMaxYMax meet" fill="none" stroke="#C9A24A" stroke-width="1.2"><g opacity=".9"><path d="M300 220V120h40v100M350 220V70h46v150M410 220V40h52v180M476 220V95h40v125M528 220V130h30v90M250 220v-60h40v60"/><path d="M410 40l26-18 26 18M350 70l23-14 23 14"/><path d="M180 220v-40h50v40M120 220v-24h40v24" opacity=".5"/><g stroke-width=".7" opacity=".55"><path d="M420 60h32M420 80h32M420 100h32M420 120h32M420 140h32M420 160h32M420 180h32M420 200h32M360 90h26M360 110h26M360 130h26M360 150h26M360 170h26M360 190h26M484 115h24M484 135h24M484 155h24M484 175h24M484 195h24M308 140h24M308 160h24M308 180h24M308 200h24"/></g><path d="M540 130V20M540 20h-50M540 20l14 0M498 20v14" stroke-width="1"/><path d="M0 219.5h600" opacity=".6"/></g></svg></div>
   <div class="home-h">
     <h2>Alege domeniul lucrării</h2>
-    <p>Fiecare domeniu are aceeași structură, de la proiect până la cartea tehnică, cu listele-tip și verificările lui. Intră în domeniul tău ca să vezi lucrările în derulare și finalizate sau să pornești una nouă.</p>
   </div>
   <div class="tiles">${DOM.map((d,i)=>`<button class="tile ${(Math.floor(i/4)+i)%2?"dk":""}" data-dom-open="${d.id}" aria-label="${esc(d.name)}">${d.icon}<b>${esc(d.name)}</b>${IDX.filter(l=>(l.dom||[]).includes(d.id)).length?`<small>${pl(IDX.filter(l=>(l.dom||[]).includes(d.id)).length,"lucrare","lucrări")}</small>`:""}</button>`).join("")}</div>
   ${IDX.some(l=>!(l.dom||[]).length) ? `<div class="card"><h3>Lucrări fără domeniu</h3><p class="muted" style="margin:0 0 6px">Deschide-le și alege domeniul, ca să apară în chenarul lui.</p>${lucrariHtml(IDX.filter(l=>!(l.dom||[]).length), "")}</div>` : ""}
