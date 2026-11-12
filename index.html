@@ -684,7 +684,11 @@ function autoload(){
   }
   S = blank();
 }
-// sigla pe ecran, apoi pagina apare prin estompare (la pornire și la deschiderea unei lucrări)
+// sigla pe ecran, apoi pagina apare prin estompare: la pornire și când treci dintr-o rubrică principală în alta
+// (ex. de la Instalații electrice la HVAC); nu și între paginile aceleiași rubrici
+let RUB_PREV = null;
+const rubKey = () => CUR ? (S.dom[0] || null) : (VIEW==="domeniu" ? DSEL : null);
+function rubSplash(){ const k = rubKey(); if(!k) return; if(RUB_PREV && k!==RUB_PREV) splash("", 550); RUB_PREV = k; }
 let SPLASH_T = null;
 function splash(text, hold){
   const el = $("#splash"); if(!el) return;
@@ -701,7 +705,6 @@ function openLucrare(id, view){
   if(!o){ alert("Lucrarea nu mai există în acest browser."); IDX = IDX.filter(x=>x.id!==id); saveIdx(); return render(); }
   S = Object.assign(blank(), o); S.id = id; migrate(); markDups();
   CUR = S.id; LAST_JS = ""; VIEW = view || "proiect";
-  if(!NAV_SKIP) splash(S.meta.proiect || "Lucrare fără nume", 550);
   render();
 }
 function newLucrare(domId){
@@ -726,7 +729,6 @@ function importLucrare(o, fixedId){
   if(fixedId) S.id = fixedId;
   migrate(); markDups();
   CUR = S.id; LAST_JS = ""; autosave();
-  splash(S.meta.proiect || "", 600);
 }
 function download(name, text, type){
   const b = new Blob([text], {type: type||"application/json;charset=utf-8"});
@@ -833,7 +835,7 @@ function render(){
   bind();
   autosave();
   renderBanner();
-  uiPolish();
+  uiPolish(); rubSplash();
   navPush();
 }
 
@@ -5415,7 +5417,7 @@ autoload();
 markDups();
 navFromHash();
 render();
-splash(CUR ? (S.meta.proiect||"") : "", 900);
+splash("", 900); RUB_PREV = rubKey();
 $("#btnWin").onclick = () => openWindow();
 refreshModele().catch(()=>{});
 $("#normData").textContent = roDate(NORME.ver);
