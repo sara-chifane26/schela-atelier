@@ -248,7 +248,8 @@ label.ck{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:po
 .fmt b{color:var(--ink);font-weight:600}
 .fmtline{flex-basis:100%;margin-top:2px}
 .tag.t-conv{background:var(--ochre-soft);color:var(--ochre)}
-.drop-ov{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(35,92,130,.18);padding:24px}
+.drop-ov{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(20,33,43,.28);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);padding:24px;animation:fxFade .18s ease-out}
+@keyframes fxFade{from{opacity:0}to{opacity:1}}
 .drop-ov.on{display:flex}
 .drop-ov div{display:flex;flex-direction:column;align-items:center;gap:10px;background:var(--surface);border:2px dashed var(--blue);border-radius:10px;padding:34px 40px;color:var(--blue);text-align:center;max-width:460px;box-shadow:0 12px 40px rgba(20,33,43,.2)}
 .drop-ov b{font-size:18px}
@@ -420,6 +421,10 @@ details.more>div .btn{justify-content:flex-start;width:100%;border-color:transpa
       <button class="btn g sm upbtn" id="btnUp" title="Înapoi un nivel">← Înapoi</button>
       <div class="ttl"><h1 id="vtitle">Proiect</h1><nav class="crumbs" id="vsub" aria-label="Unde ești"></nav></div>
       <span class="spacer"></span>
+      <details class="more" id="addTop"><summary class="btn sm" title="Contracte, PV-uri, certificate, autorizații — aplicația le recunoaște și le duce singură unde trebuie. Poți și să le tragi oriunde în pagină.">＋ Adaugă documente</summary><div>
+        <button class="btn g sm" id="addTopF">Alege fișiere</button>
+        <button class="btn g sm" id="addTopD">Alege un folder întreg</button>
+        <span class="muted" style="font-size:12.5px;padding:4px 8px 2px">sau trage fișierele oriunde în pagină</span></div></details>
       <button class="btn g sm" id="btnWin" title="Deschide pagina aceasta într-o fereastră nouă — lucrezi în două locuri deodată (de ex. pe al doilea monitor)">⧉ Fereastră nouă</button>
       <button class="btn g sm" id="btnSave">Salvează proiect</button>
       <button class="btn g sm" id="btnLoad" title="Fișier .json salvat din Schela cu „Salvează proiect”">Deschide proiect (.json)</button>
@@ -438,6 +443,7 @@ details.more>div .btn{justify-content:flex-start;width:100%;border-color:transpa
 <div class="splash" id="splash" aria-hidden="true"><div class="sl"><b>Schela</b><i>.</i><em>Atelier</em></div><div class="sn" id="splashN"></div></div>
 <div class="drop-ov" id="dropOv" aria-hidden="true"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M7 10l5 5 5-5M4 17v3h16v-3"/></svg><b>Lasă fișierele aici</b><span>Orice tip de fișier sau foldere întregi (PDF, Word, Excel, poze, DWG…) — trec prin verificarea la intrare</span></div></div>
 <input type="file" id="inGlobal" multiple hidden>
+<input type="file" id="inGlobalDir" webkitdirectory directory multiple hidden>
 <div class="modal" id="intake" role="dialog" aria-modal="true" aria-label="Verificare la intrare"></div>
 <div class="busy" id="busy" role="status" aria-live="polite"><div id="busyT">Se citesc fișierele…</div></div>
 
@@ -818,6 +824,7 @@ function render(){
   $("#vtitle").textContent = VIEW==="acasa" ? "Acasă" : VIEW==="domeniu" ? (domById(DSEL)||{}).name||"" : (VIEWS.find(v=>v.id===VIEW)||{}).name;
   renderCrumbs();
   $("#btnSave").style.display = CUR ? "" : "none";
+  $("#addTop").style.display = CUR ? "" : "none";
   const v = $("#view");
   if(VIEW==="acasa") v.innerHTML = viewAcasa();
   if(VIEW==="domeniu") v.innerHTML = viewDomeniu();
@@ -5406,6 +5413,10 @@ $("#fileLoad").onchange=e=>{
   r.readAsText(f); e.target.value="";
 };
 $("#inGlobal").onchange=e=>{ const fs=[...e.target.files]; e.target.value=""; if(fs.length && CUR) addFiles(fs); };
+$("#inGlobalDir").onchange=e=>{ const fs=[...e.target.files]; e.target.value=""; if(fs.length && CUR) addFiles(fs); };
+$("#addTopF").onclick=()=>{ $("#addTop").open=false; if(INTAKE) return alert("Termină întâi verificarea la intrare deschisă."); $("#inGlobal").click(); };
+$("#addTopD").onclick=()=>{ $("#addTop").open=false; if(INTAKE) return alert("Termină întâi verificarea la intrare deschisă."); $("#inGlobalDir").click(); };
+document.addEventListener("click", e=>{ const d=$("#addTop"); if(d && d.open && !d.contains(e.target)) d.open=false; });
 $(".brand").onclick=()=>{ if(CUR) closeLucrare(); VIEW="acasa"; render(); };
 
 
