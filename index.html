@@ -2130,6 +2130,9 @@ function ctBuild(p, specs){
   if(extra.length) dos.push({id: b5.length ? "B6" : "B5", ch:"B", items:[{group:"Documente suplimentare cerute de beneficiar"}, ...extra.map(x=>({den:x, cap:"Execuție", dela:"Executant"}))]});
   dos.push({id:"C1", ch:"C", later:"la recepție", items:merge("C1", CT_COMMON.C1())});
   dos.push({id:"D1", ch:"D", later:"în exploatare", items:merge("D1", CT_COMMON.D1())});
+  // „dacă e cazul”: doar când toate tipurile lucrării îl socotesc așa (o clădire din aceeași lucrare îl cere)
+  const opts = specs.map(s=>new Set(((CT_TPL[s.t]||{}).opt||[]).map(norm)));
+  if(opts.length && opts[0].size) dos.forEach(d=>d.items.forEach(i=>{ if(!i.group && opts.every(o=>o.has(norm(i.den)))) i.opt = true; }));
   return dos;
 }
 function ctState(){
@@ -2179,6 +2182,9 @@ const SEC_NORME = "Legea 333/2003; HG 301/2012 (Normele metodologice): art. 68�
 const CT_TPL = {
   "lea-fo": {
     name: "LEA – fibră optică (OPGW / ADSS)", short:"LEA cu fibră optică (OPGW / ADSS)",
+    // pe o linie existentă, înlocuirea conductorului de protecție se face de obicei fără autorizație de construire
+    opt: ["Certificatul de urbanism", "Avizele și acordurile cerute prin certificatul de urbanism", "Autorizația de construire", "Comunicarea privind începerea lucrărilor", "Fișa de date sintetice a construcției"],
+    cfKws: {ascunse: ["pv montare", "proces verbal montare", "proces verbal de montare", "pv demontare", "proces verbal demontare"]},
     norme: "NTE 003/04/00 (LEA peste 1 kV); HG 343/2017, Anexa 6",
     params: [{k:"cond", label:"Conductor", type:"select", opts:["OPGW","ADSS"]},
       {k:"tronsoane", label:"Tronsoane — câte unul pe rând, în ordinea PV-urilor", type:"area", ph:"1-8\n8-15\n15-24"},
@@ -2205,7 +2211,7 @@ const CT_TPL = {
         B1: [
           {den:"Acord-cadru de execuție lucrări", kw:"acord cadru", cap:"Contracte", dela:"Beneficiar"},
           {den:"Contract subsecvent pentru execuția de lucrări", kw:"contract subsecvent", cap:"Contracte", dela:"Beneficiar"},
-          {den:"Ordin de începere execuție lucrări", kw:"ordin incepere", cap:"Execuție", dela:"Beneficiar"},
+          {den:"Ordin de începere execuție lucrări", kw:"ordin incepere", share:"ordin", cap:"Execuție", dela:"Beneficiar"},
           {den:"Convenție de lucrări", kw:"conventie", cap:"Contracte", dela:"Beneficiar"},
           {den:"Programe de lucrări", kw:"program lucrari", cap:"Execuție", dela:"Executant"},
           {den:"Referat RTE", kw:"referat rte", cap:"Execuție", dela:"RTE"},
@@ -2214,7 +2220,7 @@ const CT_TPL = {
         ],
         B2: [
           {den:"Planul de control calitate, verificări și încercări (PCCVI)", kw:"pccvi", cap:"Calitate", dela:"Executant"},
-          {den:"Ordin de începere lucrări", kw:"ordin incepere", cap:"Execuție", dela:"Beneficiar"},
+          {den:"Ordin de începere lucrări", kw:"ordin incepere", share:"ordin", cap:"Execuție", dela:"Beneficiar"},
           {group:"Procese-verbale de execuție a lucrărilor"},
           ...pv
         ],
@@ -2756,10 +2762,14 @@ function ctMatch(){
   // 5. documentele scoase din obligatoriu: rămân doar dacă lucrarea are deja fișierul
   for(const x of every){ const r = normRet(x.i.den); if(!r) continue; if(x.doc){ x.i.retras = r; } else { x.gone = true; x.d.items = x.d.items.filter(i=>i!==x.i); } }
   for(let k=every.length-1;k>=0;k--) if(every[k].gone) every.splice(k,1);
+  // 5b. același document cerut în două dosare (ex. ordinul de începere în B1 și în B2): o copie ajunge în ambele
+  for(const x of every){ if(!x.i.share || x.doc || x.na) continue; const y = every.find(y=>y!==x && y.i.share===x.i.share && y.doc); if(y){ x.doc = y.doc; x.byText = y.byText; } }
+  // 6. „dacă e cazul”: fără document găsit, nu se socotește lipsă până nu spui că se aplică
+  for(const x of every){ if(x.i.opt && !x.doc && !x.na && man[x.key]!=="need"){ x.na = true; x.optNa = true; } }
   for(const d of dos){
     const xs = every.filter(x=>x.d===d), on = xs.filter(x=>!x.na && !x.i.retras);
     d.total = on.length; d.got = on.filter(x=>x.doc).length; d.na = xs.length - on.length;
-    d.items.forEach(i=>{ const x = xs.find(x=>x.i===i); if(x){ i.doc = x.doc; i.na = !!x.na; i.manual = !!x.manual; i.key = x.key; i.byText = !!x.byText; } });
+    d.items.forEach(i=>{ const x = xs.find(x=>x.i===i); if(x){ i.doc = x.doc; i.na = !!x.na; i.manual = !!x.manual; i.key = x.key; i.byText = !!x.byText; i.optNa = !!x.optNa; } });
   }
   return dos;
 }
@@ -3889,16 +3899,16 @@ function viewCarte(){
   return tabs + `
   <div class="crumb"><button class="btn g" id="dosBack">← Înapoi la dosare</button>
     <h2>Dosar ${d.id} · ${esc(dosTitle(d))}</h2>
-    <span class="muted">${d.got} din ${d.total} găsite${d.na?` · ${d.na} nu se aplică`:""}</span>
+    <span class="muted">${d.got} din ${d.total} găsite${(()=>{ const o = d.items.filter(i=>i.optNa).length, n = d.na - o; return (n?` · ${n} nu se aplică`:"") + (o?` · ${o} dacă e cazul`:""); })()}</span>
     <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${MODEL_INFO.opis?`<button class="btn o sm" id="dosOpisW">Opisul ${d.id} în modelul firmei (Word)</button>`:""}<button class="btn ${MODEL_INFO.opis?"g":"o"} sm" id="dosOpis">Opisul dosarului ${d.id}${MODEL_INFO.opis?" (forma aplicației)":""}</button></span></div>
   <div class="tw" style="max-height:none"><table>
     <thead><tr><th style="width:120px">Cod</th><th>Document necesar</th><th style="width:120px">Stare</th><th style="width:34%">Fișier din inventar</th><th style="width:150px"></th></tr></thead>
     <tbody>${d.items.map(i=> i.group ? `<tr class="grp-row${i.spec?" spec":""}"><td colspan="5">${esc(i.group)}</td></tr>` : `<tr class="${i.na?"off":""}">
       <td class="num">${esc(i.cod||"")}</td>
       <td>${esc(i.den)}${i.dela?`<span class="path">de la: ${esc(i.dela)}${ctTemei(i)?` · temei: ${esc(ctTemei(i))}`:""}</span>`:""}${ctNormTag(i)}</td>
-      <td>${i.na ? `<span class="tag t-none">${i.att?"scos din dosar":"nu se aplică"}</span>` : i.doc ? `<span class="tag t-viz">găsit${i.manual?" · ales":""}</span>${["pdf","jpg","jpeg","png"].includes(extOf(i.doc.name)) ? "" : `<span class="tag t-conv" title="Ca să intre în cartea tehnică PDF, salvează-l ca PDF și adaugă PDF-ul în inventar.">${esc(extOf(i.doc.name).toUpperCase()||"fișier")} — de salvat ca PDF</span>`}` : d.later ? `<span class="tag t-none">de completat</span>` : inLips.has(norm(lden(i))) ? `<span class="tag t-dup">în Lipsuri</span>` : `<span class="tag t-late">lipsă</span>`}</td>
+      <td>${i.na ? `<span class="tag t-none">${i.att?"scos din dosar":i.optNa?"dacă e cazul":"nu se aplică"}</span>` : i.doc ? `<span class="tag t-viz">găsit${i.manual?" · ales":""}</span>${["pdf","jpg","jpeg","png"].includes(extOf(i.doc.name)) ? "" : `<span class="tag t-conv" title="Ca să intre în cartea tehnică PDF, salvează-l ca PDF și adaugă PDF-ul în inventar.">${esc(extOf(i.doc.name).toUpperCase()||"fișier")} — de salvat ca PDF</span>`}` : d.later ? `<span class="tag t-none">de completat</span>` : inLips.has(norm(lden(i))) ? `<span class="tag t-dup">în Lipsuri</span>` : `<span class="tag t-late">lipsă</span>`}</td>
       <td>${i.na ? "" : i.att ? `<span class="muted">atașat: ${esc(i.doc ? i.doc.name : "")}</span>` : `<select data-ctman="${esc(i.key)}"><option value="">${i.doc && !i.manual ? "automat: "+esc(i.doc.name) : "automat — negăsit"}</option>${docs.map(x=>`<option value="${x.id}" ${i.manual && i.doc && i.doc.id===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select>`}</td>
-      <td style="white-space:nowrap">${i.att ? `<button class="btn g sm" data-ctna="${esc(i.key)}">${i.na ? "Pune înapoi" : "Scoate din dosar"}</button>` : i.na ? `<button class="btn g sm" data-ctna="${esc(i.key)}">Se aplică</button>` : `${!i.doc && !d.later && !inLips.has(norm(lden(i))) ? `<button class="btn g sm" data-ctask="${esc(i.key)}">Cere</button> ` : ""}<button class="btn g sm" data-ctna="${esc(i.key)}">Nu se aplică</button>`}</td>
+      <td style="white-space:nowrap">${i.att ? `<button class="btn g sm" data-ctna="${esc(i.key)}">${i.na ? "Pune înapoi" : "Scoate din dosar"}</button>` : i.na ? (i.optNa ? `<button class="btn g sm" data-ctneed="${esc(i.key)}" title="Lucrarea are autorizație de construire: documentul devine obligatoriu">Se aplică</button>` : `<button class="btn g sm" data-ctna="${esc(i.key)}">Se aplică</button>`) : `${!i.doc && !d.later && !inLips.has(norm(lden(i))) ? `<button class="btn g sm" data-ctask="${esc(i.key)}">Cere</button> ` : ""}<button class="btn g sm" data-ctna="${esc(i.key)}">Nu se aplică</button>`}</td>
     </tr>`).join("")}</tbody>
   </table></div>
   ${dMiss.length && !d.later ? `<div style="margin-top:12px"><button class="btn" id="dosToLips">Cere toate cele ${dMiss.length} lipsă din dosarul ${d.id}</button></div>` : ""}`;
@@ -5063,6 +5073,8 @@ const CF_RULES = [
 function cfState(){
   if(!S.conf) S.conf = {faza:"executie", ac:"da", isc:"da", cladire:"nu", marks:{}};
   if(!S.conf.marks) S.conf.marks = {};
+  // până nu răspunzi tu: la lucrările fără autorizație de obicei (ex. LEA cu fibră optică) răspunsul pornește „Nu”
+  if(!S.conf.acUser){ const ts = activeTpls(); S.conf.ac = ts.length && ts.every(t=>((CT_TPL[t]||{}).opt||[]).includes("Autorizația de construire")) ? "nu" : "da"; }
   return S.conf;
 }
 function cfDetect(r){
@@ -5097,10 +5109,11 @@ function cfDetect(r){
     return miss ? {state:"nu", info:`${miss} documente lipsă în capitolele A și B`} : {state:"da", info:"capitolele A și B complete"};
   }
   const liveD = S.docs.filter(d=>!d.dup);
+  const kwsR = (r.kws||[]).concat(...activeTpls().map(t=>((CT_TPL[t]||{}).cfKws||{})[r.id]||[]));
   for(const d of liveD){
     const h = new Set(words(d.name+" "+d.path));
     if((r.notKws||[]).some(k=>words(k).every(w=>h.has(w)))) continue;   // ex.: avizele de însoțire nu sunt avize de proiectare
-    if((r.kws||[]).some(k=>words(k).every(w=>h.has(w))) || (r.rx && r.rx.test(norm(d.name)))) return {state:"da", doc:d};
+    if(kwsR.some(k=>words(k).every(w=>h.has(w))) || (r.rx && r.rx.test(norm(d.name)))) return {state:"da", doc:d};
   }
   // apoi în textul citit din PDF-uri, doar după frazele de 2+ cuvinte
   for(const d of liveD){
@@ -5597,6 +5610,7 @@ function bind(){
   const ctMan = () => { const ct = ctState(); return ct.man = ct.man || {}; };
   v.querySelectorAll("[data-ctman]").forEach(el=>el.onchange=()=>{ const m = ctMan(); if(el.value) m[el.dataset.ctman]=el.value; else delete m[el.dataset.ctman]; render(); });
   v.querySelectorAll("[data-ctna]").forEach(b=>b.onclick=()=>{ const m = ctMan(), k = b.dataset.ctna; if(m[k]==="na") delete m[k]; else m[k]="na"; render(); });
+  v.querySelectorAll("[data-ctneed]").forEach(b=>b.onclick=()=>{ ctMan()[b.dataset.ctneed]="need"; if(/autorizatia de construire/.test(b.dataset.ctneed)){ const c = cfState(); c.ac = "da"; c.acUser = true; } render(); });
   const askItems = items => { const have = new Set(S.lipsuri.map(l=>norm(lden(l)))); let n = 0; for(const i of items){ if(have.has(norm(lden(i)))) continue; S.lipsuri.push({id:newId("l"), cod:i.cod||"", den:i.den, cap:i.cap, dela:i.dela||""}); n++; } return n; };
   v.querySelectorAll("[data-ctask]").forEach(b=>b.onclick=()=>{ const i = (ctMatch()||[]).flatMap(d=>d.items).find(i=>i.key===b.dataset.ctask); if(i){ askItems([i]); render(); } });
   const dtl=$("#dosToLips"); if(dtl) dtl.onclick=()=>{ const d = (ctMatch()||[]).find(d=>d.id===CTSEL); if(!d) return; const n = askItems(d.items.filter(i=>!i.group && !i.doc && !i.na)); render(); alert(`${pl(n,"document adăugat","documente adăugate")} la Lipsuri; le ceri de la Cereri, grupate pe cine trebuie să le trimită.`); };
@@ -5656,7 +5670,7 @@ function bind(){
   v.querySelectorAll("[data-unrez]").forEach(b=>b.onclick=()=>{ delete S.lipsuri[+b.dataset.unrez].rez; render(); });
 
   // conformitate
-  v.querySelectorAll("[data-cf]").forEach(el=>el.onchange=()=>{ cfState()[el.dataset.cf] = el.value; render(); });
+  v.querySelectorAll("[data-cf]").forEach(el=>el.onchange=()=>{ const c = cfState(); c[el.dataset.cf] = el.value; if(el.dataset.cf==="ac") c.acUser = true; render(); });
   v.querySelectorAll("[data-cfm]").forEach(b=>b.onclick=()=>{
     const [id, val] = b.dataset.cfm.split(":"); const c = cfState();
     if(val) c.marks[id] = val; else delete c.marks[id];
