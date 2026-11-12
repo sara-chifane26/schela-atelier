@@ -2053,7 +2053,7 @@ const CT_COMMON = {
   ],
   B1: () => [
     {den:"Comunicarea privind începerea lucrărilor", kws:["comunicare incepere","anunt incepere"], rx:/\bf\s?-?14\b/, cap:"Corespondență", dela:"Beneficiar"},
-    {den:"Deciziile de numire a dirigintelui de șantier și a RTE", kws:["decizie numire","numire diriginte","numire rte","contract diriginte"], cap:"Contracte", dela:"Beneficiar / executant"},
+    {den:"Deciziile de numire a dirigintelui de șantier și a RTE", kws:["decizie numire","decizia de numire","numire diriginte","numire rte","contract de servicii dirigentie","contract servicii dirigentie"], cap:"Contracte", dela:"Beneficiar / executant"},
     {den:"PV de predare-primire a amplasamentului și a reperului de nivelment", kws:["predare amplasament","predare primire amplasament","predare primire teren"], cap:"Execuție", dela:"Beneficiar"}
   ],
   B2: () => [
@@ -2065,13 +2065,13 @@ const CT_COMMON = {
     {den:"Caietele de atașamente și situațiile de lucrări", kws:["atasament","atasamente","situatie lucrari","situatii lucrari"], cap:"Execuție", dela:"Executant"}
   ],
   B3: () => [
-    {den:"Certificate de verificare metrologică ale aparatelor de măsură", kw:"metrolog", cap:"Calitate", dela:"Executant"}
+    {den:"Certificate de verificare metrologică ale aparatelor de măsură", kws:["metrolog","certificat de etalonare","etalonare aparat","buletin de etalonare"], cap:"Calitate", dela:"Executant"}
   ],
   B4: () => [
     {den:"Declarația executantului", kw:"declaratia executantului", cap:"Calitate", dela:"Executant"},
     {den:"Certificat de garanție din partea executantului", kw:"certificat garantie", cap:"Calitate", dela:"Executant"},
     {den:"Declarație de conformitate din partea executantului", kw:"declaratie conformitate executant", cap:"Calitate", dela:"Executant"},
-    {den:"Certificate de calitate și garanție pentru materialele principale", kw:"certificat calitate", cap:"Calitate", dela:"Furnizori"},
+    {den:"Certificate de calitate și garanție pentru materialele principale", kws:["certificat calitate","certificat de calitate","quality certificate","certificate of compliance","certificado de conformidad","certificado de calidad","qualitatszertifikat","certificat de conformite"], cap:"Calitate", dela:"Furnizori"},
     {den:"Declarații de performanță / conformitate pentru materialele principale", kws:["declaratie conformitate material","declaratii conformitate material","declaratie performanta","declaratii performanta"], cap:"Calitate", dela:"Furnizori"}
   ],
   C1: () => [
@@ -2985,8 +2985,10 @@ function viewFaze(){
     <div style="margin-top:12px"><button class="btn g sm" id="fAdd">Adaugă fază</button></div>
   </div>`;
 }
+// începutul textului, fără antetul firmei (sare direct la „proces-verbal …”)
+const txtPeek = t => { const i = t.search(/proces[\s-]*verbal|\bpv\b/); return (i > 0 ? t.slice(i) : t).slice(0,70); };
 function viewSemnaturi(){
-  const pvs = live().filter(isPVdoc).sort((a,b)=>a.name.localeCompare(b.name));
+  const pvs = live().filter(isPVdoc).sort((a,b)=>a.name.localeCompare(b.name, "ro", {numeric:true}));
   const nes = pvs.filter(d=>pvState(d).miss.length);
   return `
   <div class="note"><b>Semnăturile pe procesele-verbale.</b> Aplicația ia toate PV-urile din inventar. Bifezi cine a semnat; coloanele cerute sunt marcate. RTE și dirigintele semnează orice PV de execuție; la fazele determinante și la natura terenului semnează și proiectantul și ISC. <span class="muted">Temei: HG 343/2017, Anexa 6, pct. 8; Ordinul MDRAP 1370/2014.</span></div>
@@ -2999,7 +3001,7 @@ function viewSemnaturi(){
   ${pvs.length ? `<div class="tw" style="max-height:none"><table>
     <thead><tr><th>Proces-verbal</th><th style="width:80px">Nr.</th><th style="width:96px">Data</th>${SIGN.map(([k,t])=>`<th style="width:92px">${t}</th>`).join("")}<th style="width:160px">Stare</th></tr></thead>
     <tbody>${pvs.map(d=>{ const st = pvState(d); return `<tr>
-      <td class="fn">${esc(d.name)}${d.txt?`<span class="path">${esc(d.txt.slice(0,70))}…</span>`:""}${d.sig?`<span class="path" style="color:var(--green)">semnat electronic${d.sig.names.length?": "+esc(d.sig.names.join(", ")):""}</span>`:""}</td><td class="num">${esc(d.nr||"")}</td><td class="num">${d.dataSrc==="estimat"?"":esc(roDate(d.data))}</td>
+      <td class="fn">${esc(d.name)}${d.txt?`<span class="path">${esc(txtPeek(d.txt))}…</span>`:""}${d.sig?`<span class="path" style="color:var(--green)">semnat electronic${d.sig.names.length?": "+esc(d.sig.names.join(", ")):""}</span>`:""}</td><td class="num">${esc(d.nr||"")}</td><td class="num">${d.dataSrc==="estimat"?"":esc(roDate(d.data))}</td>
       ${SIGN.map(([k])=>`<td>${st.need.includes(k) ? `<label class="ck" ${st.auto[k]?`title="Semnătură electronică: ${esc(st.auto[k])}"`:""}><input type="checkbox" class="chk" data-sg="${d.id}:${k}" ${st.s[k]?"checked":""}> ${st.auto[k] && st.s[k] ? "electronic" : "semnat"}</label>` : `<span class="muted">—</span>`}</td>`).join("")}
       <td>${st.miss.length ? `<span class="tag t-late">lipsă ${st.miss.length}</span> <button class="btn g sm" data-sgall="${d.id}" title="Bifează toate semnăturile cerute">toate</button>` : `<span class="tag t-viz">complet</span>`}</td>
     </tr>`; }).join("")}</tbody></table></div>` : `<div class="card"><div class="empty"><h3>Niciun proces-verbal în inventar</h3><p>PV-urile apar aici după ce le adaugi la Inventar.</p></div></div>`}`;
@@ -3253,6 +3255,9 @@ Object.assign(LUNI_X, {jan:1,feb:2,mar:3,apr:4,jun:6,jul:7,aug:8,sep:9,sept:9,se
 const LUNI_RX = Object.keys(LUNI_X).sort((a,b)=>b.length-a.length).join("|");
 function findNr(s){
   const t = norm(String(s||"").replace(/\.(pdf|docx?|xlsx?|jpe?g|png|tiff?|dwg|zip)$/i,""));
+  // cod de lucrare urmat de numărul actului: „26L07.4-5.3”, „Nr. 24L18.3 – 19.1.1”
+  const k = t.match(/(?:^|\bnr\.?\s*[:.]?\s*)([0-9]{1,3}[a-z]{1,2}[0-9]{1,3}(?:\.[0-9]{1,3})?\s*[-–]\s*[0-9]{1,3}(?:\.[0-9]{1,3}){0,2})(?![0-9])/);
+  if(k) return k[1].replace(/\s+/g,"").toUpperCase().replace("–","-");
   // nr. / no. / n° / nº / number / nummer / numero / sayi
   const m = t.match(/(?:\bnr\.?|\bno\.?|\bn[°º]|\bnumber|\bnummer|\bnumero|\bsayi)\s*(?:de\s+inregistrare\s*)?[:.]?\s*([0-9]{1,6}(?:[./-][0-9a-z]{1,6})?)\b/) || t.match(/\b(?:pv|ds|dop)\s*[-_]?\s*([0-9]{1,5})\b/);
   return m ? m[1].replace(/[./-]$/,"") : "";
@@ -3286,10 +3291,17 @@ function enrichDoc(d){
 // ce material și ce producător scrie pe un certificat / o declarație
 function certInfo(d){
   const t = d.txt || ""; if(!t) return null;
-  const stop = "(?=\\s(?:producator|producatorul|fabricant|fabricantul|fabricat|furnizor|furnizorul|utilizare|cod|lot|lotul|cantitate|nr|no|data|seria|standard|marca|tip|manufacturer|manufactured|producer|hersteller|fabricante|uretici|imalatci|intended|verwendungszweck|usage|uso|kullanim|date|datum|fecha|tarih|batch|charge|lote|parti|order|quantity|menge|quantite|cantidad|miktar|norm|norma|valabil|valabila|valabilitate|gultig|gueltig|valid|validity|valable|valido|gecerli|gecerlilik|expira|expiry)\\b|\\s\\d{1,2}\\.\\s|[;]\\s|,\\s(?=[a-z]+:)|$)";
-  const m = t.match(new RegExp("(?:cod(?:ul)?\\s+unic\\s+de\\s+identificare\\s+(?:a|al)\\s+produsului[\\s\\-]*tip|unique\\s+identification\\s+code\\s+of\\s+the\\s+product[\\s\\-]*type|eindeutiger\\s+kenncode\\s+des\\s+produkttyps|code\\s+d\\W?identification\\s+unique\\s+du\\s+produit[\\s\\-]*type|codigo\\s+de\\s+identificacion\\s+unica\\s+del\\s+producto[\\s\\-]*tipo|urun\\s+tipinin\\s+kendine\\s+has\\s+tanitim\\s+kodu|trade\\s+name|product\\s+name|product\\s+type|product\\s+description|handelsname|produktbezeichnung|nom\\s+commercial|designation(?:\\s+du\\s+produit)?|nombre\\s+comercial|denominacion(?:\\s+del\\s+producto)?|ticari\\s+adi|urun\\s+adi|product|produkt|produit|producto|urun|denumire(?:a)?\\s+comerciala|denumire(?:a)?\\s+produs(?:ului)?|descriere(?:a)?\\s+produs(?:ului)?|tip(?:ul)?\\s+produs(?:ului)?|produs(?:ul)?|denumire\\s+material|material(?:ul)?|articol(?:ul)?|pentru\\s+produsul)\\s*[:\\-]?\\s*(.{3,70}?)" + stop));
+  const stop = "(?=\\s(?:producator|producatorul|fabricant|fabricantul|fabricat|furnizor|furnizorul|utilizare|cod|lot|lotul|cantitate|nr|no|data|seria|serial|serie|standard|marca|tip|manufacturer|manufactured|producer|hersteller|fabricante|uretici|imalatci|intended|verwendungszweck|usage|uso|kullanim|date|datum|fecha|tarih|batch|charge|lote|parti|order|quantity|menge|quantite|cantidad|miktar|norm|norma|valabil|valabila|valabilitate|gultig|gueltig|valid|validity|valable|valido|gecerli|gecerlilik|expira|expiry)\\b|\\s\\d{1,2}\\.\\s|[;]\\s|,\\s(?=[a-z]+:)|$)";
+  let lab = t.match(new RegExp("(?:^|\\s)(?:product|produkt|produit|producto|produs(?:ul)?|accesorios|accessories|denumire\\s+produs|denumire\\s+material|material(?:ul)?|articol(?:ul)?)\\s*:\\s*(.{3,110}?)" + stop));
+  const LABS = "(?:^|\\s)(?:product|produkt|produit|producto|produs(?:ul)?|accesorios|accessories|denumire\\s+produs|denumire\\s+material|material(?:ul)?|articol(?:ul)?)\\s*:\\s*";
+  // fără un cuvânt de oprire după: se taie la începutul frazei următoare („SC … declară”, „certifica que”, „This is to certify”)
+  let lab2 = lab ? null : t.match(new RegExp(LABS + "(.{3,90})"));
+  if(lab2){ const c = lab2[1].search(/\s(?:sc|s\.c\.|certific\w*|declar\w*|garant\w*|this|we|hereby|que|los|las|la\s+care)\s|\.\s/); lab2 = [lab2[0], c > 2 ? lab2[1].slice(0, c) : lab2[1]]; }
+  if(!lab && lab2) lab = lab2;
+  if(lab && lab[1].length > 75){ const c = lab[1].lastIndexOf(", ", 75); lab[1] = c > 20 ? lab[1].slice(0, c) : lab[1].slice(0, 75); }
+  const m = lab || t.match(new RegExp("(?:cod(?:ul)?\\s+unic\\s+de\\s+identificare\\s+(?:a|al)\\s+produsului[\\s\\-]*tip|unique\\s+identification\\s+code\\s+of\\s+the\\s+product[\\s\\-]*type|eindeutiger\\s+kenncode\\s+des\\s+produkttyps|code\\s+d\\W?identification\\s+unique\\s+du\\s+produit[\\s\\-]*type|codigo\\s+de\\s+identificacion\\s+unica\\s+del\\s+producto[\\s\\-]*tipo|urun\\s+tipinin\\s+kendine\\s+has\\s+tanitim\\s+kodu|trade\\s+name|product\\s+name|product\\s+type|product\\s+description|handelsname|produktbezeichnung|nom\\s+commercial|designation(?:\\s+du\\s+produit)?|nombre\\s+comercial|denominacion(?:\\s+del\\s+producto)?|ticari\\s+adi|urun\\s+adi|product|produkt|produit|producto|urun|denumire(?:a)?\\s+comerciala|denumire(?:a)?\\s+produs(?:ului)?|descriere(?:a)?\\s+produs(?:ului)?|tip(?:ul)?\\s+produs(?:ului)?|produs(?:ul)?|denumire\\s+material|material(?:ul)?|articol(?:ul)?|pentru\\s+produsul)\\s*[:\\-]?\\s*(.{3,70}?)" + stop));
   if(!m) return null;
-  const f = t.match(/(?:producator(?:ul)?|fabricante|fabricant(?:ul)?|fabricat de|furnizor(?:ul)?|numele si adresa (?:producatorului|fabricantului)|manufactured by|manufacturer|producer|hersteller|uretici(?: firma)?|imalatci)\s*[:\-]?\s*(.{3,50}?)(?=\s(?:adresa|address|adresse|anschrift|direccion|adres|cui|cod|str|produs|nr|no|tel|phone|telefon|fax|www|email|e-mail|date|datum|fecha|tarih|data)\b|[;,]\s|$)/);
+  const f = t.match(/(?:producator(?:ul)?|fabricante|fabricant(?:ul)?|fabricat de|furnizor(?:ul)?|numele si adresa (?:producatorului|fabricantului)|manufactured by|manufacturer|producer|hersteller|uretici(?: firma)?|imalatci)\s*[:\-]?\s*(.{3,50}?)(?=\s(?:adresa|address|adresse|anschrift|direccion|adres|cui|cod|str|produs|product|producto|produit|produkt|nr|no|tel|phone|telefon|fax|www|email|e-mail|date|datum|fecha|tarih|data)\b|[;,]\s|$)/);
   const cap1 = s => s.trim().replace(/\S*\d\S*/g, w=>w.toUpperCase().replace(/(\d)X(\d)/g,"$1x$2")).replace(/^./, c=>c.toUpperCase());
   const FORM = {srl:"SRL", sa:"SA", sc:"SC", gmbh:"GmbH", kg:"KG", ag:"AG", ltd:"Ltd", llc:"LLC", sas:"SAS", spa:"SpA", sl:"S.L.", as:"A.Ș."};
   const firma = x => x.trim().replace(/[a-z0-9]+/g, w => FORM[w] || (w.length>2 ? w[0].toUpperCase()+w.slice(1) : w));
@@ -3349,12 +3361,14 @@ function metaKind(d, raw){
   if(/^\W*(contract|acord)/.test(F) || /\bcontract(ul)?\s+(de\s+)?(prestari|executie|lucrari|achizitie|servicii|subsecvent)|acord\W*cadru/.test(F.slice(0,400)) || /(^|[^a-z])(ctr|contract\w*)([^a-z]|$)/.test(n)){
     const serv = /servicii|prestari|dirigent|proiectare|asistenta tehnica|consultanta/.test(F.slice(0,700));
     const exec = /executie|executare|lucrari de constructii|contract de lucrari|antreprenor|executant/.test(F.slice(0,700));
+    const H = F.slice(0, 450);
+    if(/acord\W*cadru/.test(H) && !/contract(?:ul)?\s+(?:\w+\s+){0,2}subsecvent/.test(H) && !/(^|[^a-z])subsecvent/.test(n)) return "acord";
     return exec && !serv ? "contract" : serv ? "contract-serv" : "contract";
   }
   return null;
 }
-const META_PRI = {ordin:5, contract:5, ac:4, comunicare:3, cu:2, "contract-serv":1};
-const META_KIND_T = {ordin:"ordin de începere", contract:"contract", ac:"autorizație de construire", comunicare:"comunicare de începere", cu:"certificat de urbanism", "contract-serv":"contract de servicii"};
+const META_PRI = {ordin:5, contract:5, ac:4, acord:3, comunicare:3, cu:2, "contract-serv":1};
+const META_KIND_T = {ordin:"ordin de începere", contract:"contract", acord:"acord-cadru", ac:"autorizație de construire", comunicare:"comunicare de începere", cu:"certificat de urbanism", "contract-serv":"contract de servicii"};
 const cleanVal = s => String(s||"").replace(/(^|\n)\s*\|\s*/g,"$1").replace(/\s+/g," ").replace(/^[\s"“”„'`»«″:;,.\-–—|]+|[\s"“”„'`»«″:;,\-–—|]+$/g,"").replace(/\s*\.$/,"").trim();
 // caută în textul fără diacritice, decupează din textul original
 function rxCut(raw, F, rx, g){ const m = rx.exec(F); if(!m) return ""; const i = m.index + m[0].indexOf(m[g||1]); return raw.slice(i, i + m[g||1].length); }
@@ -3393,11 +3407,11 @@ function metaExtract(d, raw){
   out.beneficiar = ben; out.firma = exe;
   // contractul
   let nr = "";
-  if(/^contract/.test(kind)){
+  if(/^contract|^acord/.test(kind)){
     nr = cleanVal(rxCut(R, F, /^[\s\S]{0,350}?\bnr\.?\s*([0-9][0-9 \/.\-]{0,28}[0-9])/)).replace(/\s+/g,"");
     if(!(nr.includes("/") || nr.length >= 3)) nr = "";
     if(!nr){ const fn = norm(d.name).match(/(?:ctr|contract)[\W_]*(?:nr[\W_]*)?(\d[\d\-\/.]*\d|\d)/); if(fn) nr = fn[1].replace(/-/g,"/"); }
-    if(nr) out.contract = "nr. " + nr + (kind==="contract-serv" ? (/dirigen|dirigint/.test(F.slice(0,900)) ? " (dirigenție de șantier)" : " (servicii)") : "");
+    if(nr) out.contract = (kind==="acord" ? "acord-cadru nr. " : "nr. ") + nr + (kind==="contract-serv" ? (/dirigen|dirigint/.test(F.slice(0,900)) ? " (dirigenție de șantier)" : " (servicii)") : "");
   } else {
     const c = rxCut(R, F, /contract(?:ul|ului)?\s+(?:de\s+\w+\s+)?nr\.?\s*([0-9][0-9\/.\-]{0,28}[0-9])/);
     if(c) out.contract = "nr. " + c.replace(/\s+/g,"");
@@ -3697,14 +3711,14 @@ const RUBRICI = [
   {id:"aprov",   name:"Aprovizionare",              cap:"Aprovizionare", icon:IC("M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a2 2 0 1 0 0-.1M17 19a2 2 0 1 0 0-.1"), k:["aviz de insotire","aviz insotire","avize de insotire","aviz marfa","nir","bon de consum","bon consum","fisa de magazie","dispozitie de livrare"]},
   {id:"receptie",name:"Recepție",                   cap:"Execuție", icon:IC("M5 12l4 4 10-10M4 20h16"), k:["receptie la terminare","receptie terminare","receptia la terminarea","receptie finala","receptia finala","comisie de receptie","comisie receptie","pvrtl","pvrf","receptie tehnica"]},
   {id:"pvfaze",  name:"PV faze determinante",       cap:"Execuție", icon:IC("M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4"), k:["faza determinanta","faze determinante proces verbal","pv faza determinanta","natura terenului","teren de fundare"], need:["proce","verba"]},
-  {id:"probe",   name:"Probe și buletine",          cap:"Calitate", icon:IC("M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3M7 15h10"), k:["buletin","buletine","proba","probe","raport de incercare","rapoarte de incercare","incercari","masuratori","masurare","pram","priza de pamant buletin","inspectie video","cctv","analiza apei","potabilitate"]},
+  {id:"program", name:"Programe de control",        cap:"Calitate", icon:IC("M8 4h11v16H8zM5 8h3M5 12h3M5 16h3M11 9h5M11 13h5"), k:["program de control","program control","program faze determinante","pccvi","plan calitate","planul calitatii","plan de control","plan control calitate"]},
+  {id:"probe",   name:"Probe și buletine",          cap:"Calitate", icon:IC("M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3M7 15h10"), k:["buletin","buletine","proba","probe","raport de incercare","rapoarte de incercare","incercari","masuratori","masurare","pram","priza de pamant buletin","inspectie video","cctv","analiza apei","potabilitate","otdr","reflectometr","etalonare","certificat de etalonare","metrologic","verificare metrologica"]},
   {id:"disp",    name:"Dispoziții de șantier",      cap:"Corespondență", icon:IC("M4 20l4-1 11-11-3-3L5 16zM14 6l3 3"), k:["dispozitie de santier","dispozitie santier","dispozitii de santier","registru dispozitii"]},
-  {id:"program", name:"Programe de control",        cap:"Calitate", icon:IC("M8 4h11v16H8zM5 8h3M5 12h3M5 16h3M11 9h5M11 13h5"), k:["program de control","program control","program faze determinante","pccvi","plan calitate","planul calitatii","plan de control"]},
   {id:"pv",      name:"PV-uri de execuție",         cap:"Execuție", icon:IC("M6 3h9l4 4v14H6zM9 12h7M9 16h5"), k:["proces verbal","procese verbale","lucrari ascunse","pvla","pv"]},
-  {id:"calitate",name:"Documente de calitate",      cap:"Calitate", icon:IC("M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"), k:["certificat de calitate","certificat calitate","certificat de conformitate","declaratie de conformitate","declaratie de performanta","declaratie performanta","dop","agrement","agrement tehnic","certificat de garantie","fisa tehnica"], q:true},
+  {id:"calitate",name:"Documente de calitate",      cap:"Calitate", icon:IC("M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"), k:["certificat de calitate","certificat calitate","certificat de conformitate","declaratie de conformitate","declaratie de performanta","declaratie performanta","dop","agrement","agrement tehnic","certificat de garantie","fisa tehnica","declaratia executantului","declaratie executant","quality certificate","certificate of compliance","certificado","certificat de conformite","test report"], q:true},
   {id:"avize",   name:"Avize și autorizații",       cap:"Proiectare", icon:IC("M4 4h16v12H8l-4 4zM9 9h6M9 12h4"), k:["certificat de urbanism","certificat urbanism","autorizatie de construire","autorizatie construire","aviz","avize","acord de mediu","acord unic","atr","aviz tehnic de racordare","autorizatie de infiintare"]},
-  {id:"proiect", name:"Proiect și verificări",      cap:"Proiectare", icon:IC("M3 21h18M5 21V8l7-5 7 5v13M9 13h6M9 17h6"), k:["proiect tehnic","proiect","pt","pth","pte","dde","detalii de executie","memoriu","caiet de sarcini","caiete de sarcini","breviar","plansa","planse","referat","verificator","studiu geotehnic","expertiza","audit energetic","releveu"]},
-  {id:"contracte",name:"Contracte și numiri",       cap:"Contracte", icon:IC("M7 3h10v18H7zM10 8h4M10 12h4M10 16h2"), k:["contract","act aditional","acte aditionale","acord cadru","comanda","oferta","deviz","factura","garantie de buna executie","decizie de numire","decizie numire","numire","ordin de incepere","ordin incepere","atestat anre","atestate anre","autorizatie anre","autorizatii anre","legitimatie anre","legitimatii","licenta","autorizatie igsu","autorizatie iscir"]},
+  {id:"proiect", name:"Proiect și verificări",      cap:"Proiectare", icon:IC("M3 21h18M5 21V8l7-5 7 5v13M9 13h6M9 17h6"), k:["proiect tehnic","proiect","pt","pth","pte","dde","detalii de executie","memoriu","caiet de sarcini","caiete de sarcini","breviar","plansa","planse","referat","verificator","studiu geotehnic","expertiza","audit energetic","releveu","foaie de pichetaj","foaia de pichetaj","pichetaj","foaia de asezare","tabel de tractiuni","tractiuni si sageti","profil longitudinal","plan de situatie"]},
+  {id:"contracte",name:"Contracte și numiri",       cap:"Contracte", icon:IC("M7 3h10v18H7zM10 8h4M10 12h4M10 16h2"), k:["program de lucrari","programe de lucrari","conventie de lucrari","conventie lucrari","contract","act aditional","acte aditionale","acord cadru","comanda","oferta","deviz","factura","garantie de buna executie","decizie de numire","decizie numire","numire","ordin de incepere","ordin incepere","atestat anre","atestate anre","autorizatie anre","autorizatii anre","legitimatie anre","legitimatii","licenta","autorizatie igsu","autorizatie iscir"]},
   {id:"coresp",  name:"Corespondență",              cap:"Corespondență", icon:IC("M3 6h18v12H3zM3 6l9 7 9-7"), k:["adresa","adrese","notificare","solicitare","raspuns","minuta","convocare","comunicare","email","mail","corespondenta","instiintare","cerere"]},
   {id:"ssm",     name:"SSM și situații de urgență",  cap:"SSM și SU", icon:IC("M12 3a6 6 0 0 0-6 6v2H4v3h16v-3h-2V9a6 6 0 0 0-6-6zM8 18h8"), k:["ssm","instruire","instructaj","plan propriu","securitate si sanatate","psi","situatii de urgenta","evaluare riscuri","evaluarea riscurilor","fisa individuala","echipament de protectie"]},
   {id:"asbuilt", name:"As built și carte tehnică",  cap:"As-built", icon:IC("M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 1 2-2h13"), k:["as built","asbuilt","carte tehnica","cartea tehnica","plan final","documentatie finala","fisa sintetica","jurnal de santier","jurnal santier","jurnalul evenimentelor"]},
