@@ -567,6 +567,14 @@ details.more>div{background:var(--surface);border-color:var(--line);border-radiu
 .cf-why{font-size:16.5px!important}
 .view p .tag,.view p .fmt,.droph .fmt,.view p input,.view p select,.view p button.btn{font-family:var(--fd);font-weight:500;font-size:12.5px;letter-spacing:0}
 .droph .fmt{font-size:13px}
+/* sub titlul paginii: numele lucrării și domeniul */
+#vsub{display:flex;flex-direction:column;align-items:flex-start;gap:1px;margin-top:4px;flex-wrap:nowrap;overflow:visible;white-space:normal}
+#specDone{font-family:var(--fd);font-size:13px;letter-spacing:0}
+#vsub .lname{font-family:var(--fh);font-weight:700;font-size:19px;color:var(--gold-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:min(760px,60vw)}
+#vsub .lmeta{font-size:13px;color:var(--muted)}
+#vsub .lmeta .linkbtn{font-size:13px;font-weight:600}
+.top .ttl{flex-direction:column}
+@media (max-width:760px){ #vsub{overflow:visible!important;white-space:normal!important} #vsub .lname{max-width:calc(100vw - 28px);font-size:17px} #vsub .lmeta{white-space:normal} }
 /* lista lucrărilor dintr-un domeniu: două file și un singur panou */
 .lpanel{background:var(--surface);border-radius:12px;box-shadow:0 0 0 1px var(--line-soft)}
 .lpanel .lrow{display:flex;align-items:center;gap:18px;padding:14px 18px;border-bottom:1px solid #EFE8DB;cursor:pointer;flex-wrap:nowrap}
@@ -986,10 +994,10 @@ function newLucrare(domId){
   S = blank(); S.normVer = S.normBase = NORME.ver; if(domId) S.dom = [domId];
   if(FIRMA.nume) S.meta.emitent = FIRMA.nume;
   if(FIRMA.semnatar) S.meta.semnatar = FIRMA.semnatar;
-  CUR = S.id; LAST_JS = ""; VIEW = "proiect"; MORE_DOM = false; render();
+  CUR = S.id; LAST_JS = ""; VIEW = "proiect"; MORE_DOM = false; SPEC_OPEN = false; render();
   if(domId==="electrice" && typeof openTipChooser==="function") openTipChooser(true);
 }
-function closeLucrare(){ autosave(); CUR = null; S = blank(); VIEW = "acasa"; }
+function closeLucrare(){ autosave(); CUR = null; S = blank(); VIEW = "acasa"; SPEC_OPEN = false; }
 // lucrarea ștearsă stă 30 de zile în coș (datele rămân în browser până la golire)
 function deleteLucrare(id){
   if(CUR===id) closeLucrare();
@@ -1074,11 +1082,14 @@ function crumbList(){
   return c;
 }
 function renderCrumbs(){
-  const c = crumbList(), el = $("#vsub");
-  el.innerHTML = c.length < 2 ? "" : c.map((x,i)=> i===c.length-1 ? `<b>${esc(x.t)}</b>` : `<button data-cr="${i}" title="Mergi la ${esc(x.t)}">${esc(x.t)}</button><span class="sep">›</span>`).join("");
-  el.querySelectorAll("[data-cr]").forEach(b=>b.onclick=()=>{ c[+b.dataset.cr].go(); render(); $("#view").scrollTop = 0; });
-  const up = $("#btnUp"); up.style.display = c.length < 2 ? "none" : "";
-  up.onclick = () => { const k = c.length-2; if(k>=0){ c[k].go(); render(); $("#view").scrollTop = 0; } };
+  // sub titlu: numele lucrării și domeniul / tipul ei; navigarea înapoi o face săgeata browserului
+  const el = $("#vsub"), up = $("#btnUp"); up.style.display = "none";
+  if(!CUR){ el.innerHTML = ""; return; }
+  const ele = domById("electrice"), tips = S.sub.filter(t=>ele.tpls.includes(t)).map(t=>CT_TPL[t].short||CT_TPL[t].name);
+  const meta = [...domNames(S.dom), ...tips].join(" · ");
+  el.innerHTML = `<span class="lname" title="${esc(S.meta.proiect||"")}">${esc(S.meta.proiect || "Lucrare fără nume")}</span>
+    <span class="lmeta">${meta ? esc(meta) : `<span style="color:var(--ochre)">domeniul nu e ales</span>`} · <button class="linkbtn" id="domHdr">schimbă</button></span>`;
+  $("#domHdr").onclick = () => { VIEW = "proiect"; SPEC_OPEN = true; render(); $("#view").scrollTop = 0; };
 }
 function subTitle(){
   if(!CUR) return "";
@@ -1331,6 +1342,7 @@ const AUT_DIR = [
 ];
 const autByC = c => AUT_DIR.find(a=>a.c===c);
 let MORE_DOM = false;   // „Lucrarea are și alte specialități?” deschis
+let SPEC_OPEN = false;  // secțiunea „Domeniul lucrării” deschisă din „schimbă” (sus, sub numele lucrării)
 
 // tipul lucrării (la instalații electrice): fereastră cu chenare, la „Lucrare nouă” și la „Schimbă”
 function openTipChooser(isNew){
@@ -1368,7 +1380,7 @@ function viewSpecialitati(){
   const el = domById("electrice"), tips = S.sub.filter(t=>el.tpls.includes(t));
   const main = S.dom.map(id=>domById(id)).filter(Boolean);
   return `<div class="card">
-    <h3>Domeniul lucrării</h3>
+    <h3 style="display:flex;align-items:center;gap:12px">Domeniul lucrării ${S.dom.length ? `<button class="btn sm" id="specDone" style="margin-left:auto">Gata</button>` : ""}</h3>
     ${main.length ? `<div class="dominfo">${main.map(d=>`<span class="domchip">${d.icon}<b>${esc(d.name)}</b></span>`).join("")}</div>` : `<p class="muted" style="margin:0;color:var(--ochre)">Lucrarea nu are încă un domeniu. Alege-l mai jos.</p>`}
     ${S.dom.includes("electrice") ? `<p style="margin:12px 0 0;font-size:14.5px"><span class="lbl" style="display:inline;margin-right:6px">Tip:</span> ${tips.length ? `<b>${esc(tips.map(t=>CT_TPL[t].short||CT_TPL[t].name).join(" · "))}</b>` : `<span style="color:var(--ochre)">neales</span>`} <button class="btn g sm" id="tipChange" style="margin-left:8px">${tips.length?"Schimbă":"Alege tipul"}</button></p>` : ""}
     <p style="margin:12px 0 0"><button class="linkbtn" id="moreDom">${MORE_DOM || !main.length ? "Ascunde celelalte specialități" : "Lucrarea are și alte specialități?"}</button></p>
@@ -1438,9 +1450,8 @@ function viewProiect(){
     <div class="sd-act"><button class="btn pri" data-startf>＋ Alege fișierele</button><button class="btn g" data-startd>Alege un folder întreg</button><button class="linkbtn" data-startskip>Completez datele de mână</button></div>
     <div class="sd-f">sau trage fișierele oriunde în pagină · ${fmtTag("oricare")}</div>
   </section>` : ""}
-  <div class="note"><b>Unealtă de lucru pentru dosarele de proiect.</b> Toate datele stau în această pagină, pe calculatorul tău. Nimic nu se încarcă pe internet. Salvează proiectul într-un fișier la finalul fiecărei sesiuni.</div>
 
-  ${viewSpecialitati()}
+  ${SPEC_OPEN || !S.dom.length || (S.dom.includes("electrice") && !S.sub.length) ? viewSpecialitati() : ""}
   ${viewStadiu()}
 
   <div class="card">
@@ -5500,6 +5511,7 @@ function bind(){
   // domeniile și tipurile de lucrări
   const tc=$("#tipChange"); if(tc) tc.onclick=()=>openTipChooser(false);
   const md=$("#moreDom"); if(md) md.onclick=()=>{ MORE_DOM=!MORE_DOM; render(); };
+  const sd=$("#specDone"); if(sd) sd.onclick=()=>{ SPEC_OPEN=false; MORE_DOM=false; render(); };
   v.querySelectorAll("[data-dom]").forEach(el=>el.onchange=()=>{
     const id = el.dataset.dom;
     if(!el.checked){ const ts = domById(id).tpls.filter(t=>activeTpls().includes(t)); if(ts.length && tplHasWork(ts) && !confirm(`Scoți „${domById(id).name}” din lucrare? Lista lui din cartea tehnică dispare; documentele rămân în inventar.`)){ el.checked = true; return; } }
