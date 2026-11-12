@@ -63,3 +63,9 @@ Bibliotecile pdf.js și Tesseract se încarcă de pe cdnjs / jsDelivr la prima f
 ## Normele și actualizările
 
 Listele cărții tehnice urmează normele în vigoare (Legea 169/2026, Legea 10/1995, Regulamentul de recepție HG 273/1994 cu HG 343/2017, Ordinul 1370/2014, normele ANRE și normativele fiecărei specialități). Legislația se verifică lunar; schimbările aprobate intră în jurnalul `NORME` din aplicație. La deschiderea unei lucrări începute înainte de o schimbare apare un mesaj cu ce s-a schimbat și ce înseamnă pentru lucrare; documentele noi au eticheta „cerut din …”, iar cele care nu mai sunt obligatorii rămân, marcate „nu mai e obligatoriu”. Aplicația nu modifică și nu șterge nimic din ce a atașat clientul. Copiile salvate pe calculator verifică `norme.json` și anunță când există o versiune mai nouă. Aplicația e un instrument de lucru și nu înlocuiește verificarea juridică.
+
+## Datele proiectului din documente
+
+Când adaugi contractul, ordinul de începere, autorizația de construire sau comunicarea de începere (și scanate — se citesc prin OCR), aplicația completează singură titlul lucrării, beneficiarul, firma executantă, contractul, amplasamentul și data începerii. Fiecare câmp completat așa e marcat „propus”, cu documentul-sursă și butonul „✓ Corect”. Ce ai scris tu nu se suprascrie; variantele diferite din alte documente apar la „variante găsite în documente”. Ordinul de începere și contractul de execuție au întâietate față de contractele de servicii.
+
+Butonul „＋ Adaugă documente” din bara de sus (fișiere sau un folder întreg) și tragerea fișierelor oriunde în pagină duc documentele prin verificarea la intrare, apoi la locul lor.

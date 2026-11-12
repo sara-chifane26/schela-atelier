@@ -386,6 +386,10 @@ table.cards tr.cap td,table.cards tr.grp td{background:transparent;border:none;p
 .note.clp .nmore{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:var(--blue-soft);padding-left:10px}
 .note.clp br{display:none}
 /* meniul „⋯” pentru acțiunile rare */
+.msrc{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:5px;font-size:12.5px;color:var(--muted)}
+.msrc.alt{color:var(--ink)}
+details.malt{margin-top:4px;font-size:12.5px;color:var(--muted)}
+details.malt>summary{cursor:pointer;color:var(--blue)}
 details.more{position:relative;display:inline-block}
 details.more>summary{list-style:none;cursor:pointer}
 details.more>summary::-webkit-details-marker{display:none}
@@ -501,6 +505,7 @@ function blank(){
     id: newId("w"),
     dom:[], sub:[], pers:[], mat:[], faze:[], disp:[], sem:{},
     meta:{firma:"",proiect:"",beneficiar:"",contract:"",amplasament:"",perioada:"",inceput:new Date().toISOString().slice(0,10),semnatar:"",emitent:""},
+    metaInit: new Date().toISOString().slice(0,10), metaSrc:{}, metaAlt:{}, metaEdited:{},
     docs:[],
     lipsuri:[],
     cereri:[],
@@ -1153,8 +1158,8 @@ function viewProiect(){
   const m = S.meta;
   // câmpurile de text cresc pe mai multe rânduri, ca numele lungi să se vadă complet
   const f = (k,l,t,wide) => t==="date"
-    ? `<div><span class="lbl">${l}</span><input type="date" data-meta="${k}" value="${esc(m[k])}"></div>`
-    : `<div${wide?' class="wide"':""}><span class="lbl">${l}</span><textarea rows="1" class="grow" data-meta="${k}">${esc(m[k])}</textarea></div>`;
+    ? `<div><span class="lbl">${l}</span><input type="date" data-meta="${k}" value="${esc(m[k])}">${metaNote(k)}</div>`
+    : `<div${wide?' class="wide"':""}><span class="lbl">${l}</span><textarea rows="1" class="grow" data-meta="${k}">${esc(m[k])}</textarea>${metaNote(k)}</div>`;
   return `
   <div class="note"><b>Unealtă de lucru pentru dosarele de proiect.</b> Toate datele stau în această pagină, pe calculatorul tău. Nimic nu se încarcă pe internet. Salvează proiectul într-un fișier la finalul fiecărei sesiuni.</div>
 
@@ -1163,6 +1168,7 @@ function viewProiect(){
 
   <div class="card">
     <h3>Datele proiectului</h3>
+    <p class="muted" style="margin:0 0 12px">Se completează singure din documente: contractul, ordinul de începere, autorizația de construire sau comunicarea de începere. <button class="btn sm" data-addfiles>＋ Adaugă documente</button></p>
     <div class="grid2">
       ${f("proiect","Proiectul",null,true)}
       ${f("firma","Firma-client")}
@@ -1307,7 +1313,7 @@ async function addFiles(list){
       dataSrc: fromName ? "nume" : (mtime ? "estimat" : ""),
       sursa:"", dela:"", viz:false, dup:false, grp:false, sel:false, obs:""
     });
-    const cd = cands[cands.length-1];
+    const cd = cands[cands.length-1]; DOC_FILE.set(cd.id, f);
     if(cd.ext==="pdf"){ cd.sig = (await pdfSigInfo(f)) || undefined; cd.sigChecked = true; }
     enrichDoc(cd);
   }
@@ -1422,6 +1428,8 @@ function commitIntake(){
   }
   closeIntake();
   markDups(); render();
+  const added = it.items.filter(x=>x.act!=="skip").map(x=>x.doc);
+  setTimeout(()=>metaFromDocs(added).catch(()=>{}), 50);
   let msg = `${pl(n,"document adăugat","documente adăugate")}. Total: ${S.docs.length}.`;
   if(rez) msg += `\n${pl(rez,"lipsă rezolvată","lipsuri rezolvate")}.`;
   const doneNow = S.cereri.filter(c=>openBefore.has(c.id) && cerStatus(c).done);
@@ -2874,6 +2882,7 @@ async function pdfText(file){
         if(t.length > 900) break;
       }
       doc.destroy && doc.destroy();
+      if(t.trim().length > 40) RAWF.set(file, t.slice(0,6000));
       return norm(t).replace(/\s+/g," ").trim().slice(0,800);
     })();
     return await Promise.race([job, new Promise(r=>setTimeout(()=>r(null), 15000))]);
@@ -2925,6 +2934,7 @@ async function docxText(file){
         else return null;
         const t = xml.replace(/<\/w:p>/g," ").replace(/<w:tab\/>/g," ").replace(/<[^>]+>/g,"")
           .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+        RAWF.set(file, xml.replace(/<\/w:p>/g,"\n").replace(/<w:tab\/>/g," ").replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").slice(0,6000));
         return norm(t).replace(/\s+/g," ").trim().slice(0,800);
       }
       p += 46 + fl + xl + cl;
@@ -3034,6 +3044,124 @@ window.addEventListener("drop", async e=>{
   busy(false);
   if(files.length) addFiles(files);
 });
+
+/* ---- DATELE PROIECTULUI DIN DOCUMENTE ----
+   Din contract, ordinul de începere, autorizația de construire și comunicarea de începere
+   aplicația scoate titlul lucrării, beneficiarul, executantul, contractul, amplasamentul și data începerii.
+   Valorile intră ca „propuse”, cu documentul-sursă; ce a scris clientul nu se suprascrie. */
+const RAWF = new WeakMap();      // fișier → textul lui, cu literele originale (doar în memorie)
+const DOC_FILE = new Map();      // id document → fișier, cât e deschisă pagina
+// păstrează lungimea: fiecare literă devine o literă (fără diacritice, mică), ca pozițiile să corespundă
+const foldKeep = s => [...String(s)].map(c => { const b = c.normalize("NFD")[0] || c; return ({"ș":"s","ş":"s","ț":"t","ţ":"t","Ș":"s","Ş":"s","Ț":"t","Ţ":"t"})[c] || b.toLowerCase(); }).join("");
+const META_NAME = /(^|[^a-z])(ctr|contract\w*|acord[\s_-]*cadru|ordin\w*|o\.?\s?i\.?|ac|autoriza\w*|comunicare\w*|incepere\w*|certificat\w*[\s_-]*(de[\s_-]*)?urbanism|aviz\w*[\s_-]*incepere)([^a-z]|$)/;
+function metaKind(d, raw){
+  const F = foldKeep((raw||"").slice(0,700)).replace(/\s+/g," ");
+  const n = norm(d.name);
+  if(/comunicare\s*(?:\S+\s*){0,3}privind\s+inceperea|comunicare\s+incepere/.test(F) || (/comunicare/.test(n) && /incepere/.test(n))) return "comunicare";
+  if(/ordin(?:ul)?\s+de\s+incepere/.test(F) || /ordin\w*[\s_-]*(de[\s_-]*)?incepere|(^|[^a-z])o\.?\s?i\.?([^a-z]|$)/.test(n)) return "ordin";
+  if(/se\s+autorizeaza|autorizatie\s+de\s+construire\s*\/?\s*desfiintare/.test(F) || /(^|[^a-z])ac([^a-z]|$)|autorizatie[\s_-]*(de[\s_-]*)?construire/.test(n)) return "ac";
+  if(/certificat\s+de\s+urbanism/.test(F.slice(0,250)) || /certificat\w*[\s_-]*(de[\s_-]*)?urbanism/.test(n)) return "cu";
+  if(/^\W*(contract|acord)/.test(F) || /\bcontract(ul)?\s+(de\s+)?(prestari|executie|lucrari|achizitie|servicii|subsecvent)|acord\W*cadru/.test(F.slice(0,400)) || /(^|[^a-z])(ctr|contract\w*)([^a-z]|$)/.test(n)){
+    const serv = /servicii|prestari|dirigent|proiectare|asistenta tehnica|consultanta/.test(F.slice(0,700));
+    const exec = /executie|executare|lucrari de constructii|contract de lucrari|antreprenor|executant/.test(F.slice(0,700));
+    return exec && !serv ? "contract" : serv ? "contract-serv" : "contract";
+  }
+  return null;
+}
+const META_PRI = {ordin:5, contract:5, ac:4, comunicare:3, cu:2, "contract-serv":1};
+const META_KIND_T = {ordin:"ordin de începere", contract:"contract", ac:"autorizație de construire", comunicare:"comunicare de începere", cu:"certificat de urbanism", "contract-serv":"contract de servicii"};
+const cleanVal = s => String(s||"").replace(/(^|\n)\s*\|\s*/g,"$1").replace(/\s+/g," ").replace(/^[\s"“”„'`»«″:;,.\-–—|]+|[\s"“”„'`»«″:;,\-–—|]+$/g,"").replace(/\s*\.$/,"").trim();
+// caută în textul fără diacritice, decupează din textul original
+function rxCut(raw, F, rx, g){ const m = rx.exec(F); if(!m) return ""; const i = m.index + m[0].indexOf(m[g||1]); return raw.slice(i, i + m[g||1].length); }
+const okText = (s, min, max) => { s = cleanVal(s).replace(/(?:\s+(?:[^A-Za-zĂÂÎȘȚăâîșțŞşŢţ\s]+|Il|ll|I|l))+$/, "").trim(); if(s.length < (min||3) || s.length > (max||320)) return ""; const L = (s.match(/[A-Za-zĂÂÎȘȚăâîșțŞşŢţ]/g)||[]).length; return L / s.length > .55 ? s : ""; };
+const firmaCase = s => s;   // denumirile rămân cum sunt scrise în document
+function metaExtract(d, raw){
+  if(!raw || String(raw).trim().length < 40) return null;
+  const kind = metaKind(d, raw); if(!kind) return null;
+  const R = String(raw).replace(/[ \t\r\f\v]+/g," ").replace(/ ?\n ?/g,"\n").slice(0,6000);
+  const F = foldKeep(R);
+  const out = {kind};
+  const Q = `["“”„'\`»«″]`;
+  // titlul lucrării
+  let t = "";
+  if(kind==="ac") t = rxCut(R, F, /in\s+vederea\s+realizarii\s+obiectivului\s*\/?\s*(?:obiectului\s+)?de\s+investitii\W*\s*([\s\S]{10,700}?)\s*(?:\n\s*in\s+urmatoarele\s+conditii|in\s+urmatoarele\s+conditii)/);
+  if(!t && kind==="comunicare") t = rxCut(R, F, /(?:constructiilor\s+si\s+amenajarilor|privind\s+construirea\s*\/?\s*desfiintarea[^\n]*)\W*\s*([\s\S]{10,300}?)\s*(?:[ij]n|în)\s+valoare\s+de/);
+  if(!t) t = rxCut(R, F, new RegExp(`(?:obiectivul(?:ui)?\\s+de\\s+investit(?:ii|ie)|obiectivul(?:ui)?|investitia|investitiei|lucrarea|lucrarii)\\s*:?\\s*${Q}+\\s*([^"“”„»«″]{10,300}?)\\s*${Q}`));
+  if(!t) t = rxCut(R, F, /(?:obiectivul(?:ui)?\s+de\s+investit(?:ii|ie)|aferente\s+obiectivului|obiectivului)\s*:\s*\n?([^\n][\s\S]{8,300}?)(?:\n\s*\n|["“”„]|,\s*conform\b|\s+conform\s+autoriza|\.\s*\n|$)/);
+  if(!t) t = rxCut(R, F, /(?:avand\s+ca\s+obiect|obiectul\s+contractului)\s*:?\s*["“”„]+\s*([^"“”„]{10,300}?)\s*["“”„]/);
+  out.proiect = okText(t, 10, 600);
+  // părțile
+  const party = roleRx => {
+    const m = roleRx.exec(F); if(!m) return "";
+    const before = F.slice(0, m.index), j = before.lastIndexOf("cu sediul"); if(j < 0) return "";
+    const ls = Math.max(before.lastIndexOf("\n", j), before.lastIndexOf("intre:", j) >= 0 ? before.lastIndexOf("intre:", j) + 6 : -1, before.lastIndexOf(" si ", j) > j - 90 ? before.lastIndexOf(" si ", j) + 3 : -1);
+    let s = R.slice(ls + 1, j).replace(/^\s*(?:art\.?\s*\d+\.?)?[\d.,\s]*/i, "");
+    return okText(s.replace(/,\s*$/,""), 3, 90);
+  };
+  let ben = party(/in\s+calitate\s+de\s+(?:achizitor|beneficiar|investitor|autoritate\s+contractanta|client)/);
+  let exe = party(/in\s+calitate\s+de\s+(?:prestator|executant|antreprenor|furnizor|contractant)/);
+  if(!ben || !exe){ const m = /incheiat\s+intre\s+([\s\S]{3,70}?)\s+si\s+([\s\S]{3,70}?)\s*(?:,|\s+si\s+in\s+baza|\.|\n)/.exec(F);
+    if(m){ const a = m.index + m[0].indexOf(m[1]), b = m.index + m[0].indexOf(m[2], m[0].indexOf(m[1]) + m[1].length);
+      ben = ben || okText(R.slice(a, a+m[1].length), 3, 90); exe = exe || okText(R.slice(b, b+m[2].length), 3, 90); } }
+  if(!ben && kind==="ac") ben = okText(rxCut(R, F, /solicitantul[^\n]*\n[^\n]*nume\s+si\s+prenume[^\n]*\n[\s|]*([^|\n]{3,80})/), 3, 90);
+  if(!ben && kind==="comunicare") ben = okText(rxCut(R, F, /subsemnatul\W*\s*([^,\n]{3,90}?)(?=\s+reprezentat|\s*,|\s*\n)/), 3, 90);
+  out.beneficiar = ben; out.firma = exe;
+  // contractul
+  let nr = "";
+  if(/^contract/.test(kind)){
+    nr = cleanVal(rxCut(R, F, /^[\s\S]{0,350}?\bnr\.?\s*([0-9][0-9 \/.\-]{0,28}[0-9])/)).replace(/\s+/g,"");
+    if(!(nr.includes("/") || nr.length >= 3)) nr = "";
+    if(!nr){ const fn = norm(d.name).match(/(?:ctr|contract)[\W_]*(?:nr[\W_]*)?(\d[\d\-\/.]*\d|\d)/); if(fn) nr = fn[1].replace(/-/g,"/"); }
+    if(nr) out.contract = "nr. " + nr + (kind==="contract-serv" ? (/dirigen|dirigint/.test(F.slice(0,900)) ? " (dirigenție de șantier)" : " (servicii)") : "");
+  } else {
+    const c = rxCut(R, F, /contract(?:ul|ului)?\s+(?:de\s+\w+\s+)?nr\.?\s*([0-9][0-9\/.\-]{0,28}[0-9])/);
+    if(c) out.contract = "nr. " + c.replace(/\s+/g,"");
+  }
+  // amplasamentul
+  let a = rxCut(R, F, /situat[aă]?\s+(?:in|în)\s+([\s\S]{5,160}?)(?<!\b(?:nr|str|bd|bdul|b-dul|jud|com|ap|bl|sc|et|mun|loc))\.(?:\s|$)/);
+  if(a && (/sectorul|cod\s+postal|satul\s*,|_{2,}|\n\s*\n/i.test(foldKeep(a)) || /\s,\s|[a-z]{18,}/i.test(foldKeep(a)))) a = "";
+  if(!a) a = rxCut(R, F, /,\s*(?:in|în)\s+((?:comuna|orasul|municipiul|satul)\s+[^\n,]{2,40},\s*jud(?:etul)?\.?\s*[A-Za-zÀ-ɏ\-]{3,25})/);
+  out.amplasament = /^jud\w*\.?\s+\S+$/i.test(foldKeep(cleanVal(a))) ? "" : okText(a, 5, 160);
+  // data începerii
+  const ds = rxCut(R, F, /(?:in\s+data\s+de|la\s+data\s+de)\W{0,3}\s*(\d{1,2}[.\/]\d{1,2}[.\/]\d{4})[\s\S]{0,60}?(?:sa\s+incepeti|vor\s+incepe|incep|incepe)/);
+  if(ds){ const p = ds.split(/[.\/]/); out.inceput = `${p[2]}-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`; }
+  return out;
+}
+
+const META_F = ["proiect","beneficiar","firma","contract","amplasament","inceput"];
+const META_L = {proiect:"titlul lucrării", beneficiar:"beneficiarul", firma:"firma executantă", contract:"contractul", amplasament:"amplasamentul", inceput:"data începerii"};
+// după ce intră documente noi: citește contractele / ordinele / autorizațiile (cu OCR la scanuri) și propune datele proiectului
+async function metaFromDocs(docs){
+  const list = docs.map(d=>({d, f:DOC_FILE.get(d.id)})).filter(x=>x.f && (META_NAME.test(norm(x.d.name)) || metaKind(x.d, RAWF.get(x.f))));
+  if(!list.length) return;
+  const scans = list.filter(x=>needsOcr(x.d));
+  if(scans.length){ busy(true, "Citesc contractele și ordinele scanate (OCR)…"); try{ await runOcr(scans, true); }catch(e){} busy(false); }
+  const filled = [];
+  for(const {d, f} of list){ const ex = metaExtract(d, RAWF.get(f)); if(ex) metaApply(ex, d, filled); }
+  if(filled.length){ autosave(); render(); toast(`Am completat din documente: ${[...new Set(filled)].map(k=>META_L[k]).join(", ")}. Verifică la Proiect → Datele proiectului.`); }
+  else if(list.some(x=>Object.keys(S.metaAlt||{}).length)) render();
+}
+function metaApply(ex, d, filled){
+  S.metaSrc = S.metaSrc || {}; S.metaAlt = S.metaAlt || {};
+  const pri = META_PRI[ex.kind] || 1;
+  for(const k of META_F){
+    const v = ex[k]; if(!v) continue;
+    const cur = S.meta[k] || "", src = S.metaSrc[k];
+    const free = !cur || (src && !src.ok && pri > src.pri && cur===src.val) || (k==="inceput" && !src && !(S.metaEdited||{}).inceput && S.metaInit && cur===S.metaInit);
+    if(free){ if(src && cur && norm(cur)!==norm(v)) metaAlt(k, {val:cur, doc:src.doc, kind:src.kind});
+      S.meta[k] = v; S.metaSrc[k] = {val:v, doc:d.name, docId:d.id, kind:ex.kind, pri, ok:false}; filled.push(k); S.metaAlt[k] = (S.metaAlt[k]||[]).filter(a=>norm(a.val)!==norm(v)); }
+    else if(norm(cur)!==norm(v)) metaAlt(k, {val:v, doc:d.name, kind:ex.kind});
+  }
+}
+function metaAlt(k, a){ const L = S.metaAlt[k] = S.metaAlt[k] || []; if(!L.some(x=>norm(x.val)===norm(a.val))) L.push(a); }
+const metaShow = (k, v) => k==="inceput" ? roDate(v) : v;
+function metaNote(k){
+  const src = (S.metaSrc||{})[k], alts = ((S.metaAlt||{})[k]||[]).filter(a=>norm(a.val)!==norm(S.meta[k]||""));
+  let h = "";
+  if(src && src.val===S.meta[k]) h += src.ok ? `<span class="msrc">din: ${esc(src.doc)}</span>` : `<span class="msrc"><span class="tag t-dup">propus</span> din: ${esc(src.doc)} <button class="btn sm" data-metaok="${k}">✓ Corect</button></span>`;
+  if(alts.length) h += `<details class="malt"><summary>${alts.length===1 ? "încă o variantă găsită în documente" : `încă ${alts.length} variante găsite în documente`}</summary>${alts.map((a,i)=>`<span class="msrc alt">${esc(META_KIND_T[a.kind]||"scris de tine")} (${esc(a.doc)}): „${esc(metaShow(k,a.val))}” <button class="btn g sm" data-malt="${k}|${i}">Folosește</button></span>`).join("")}</details>`;
+  return h;
+}
 
 /* ---- SEMNĂTURI ELECTRONICE ÎN PDF ----
    Un PDF semnat digital conține un dicționar /Type /Sig, cu certificatul semnatarului în /Contents.
@@ -3207,6 +3335,7 @@ async function runOcr(files, quiet){
       let r = await worker.recognize(src);
       const lg = ocrGuessLang(r.data.text||"");
       if(lg){ busy(true, `OCR… ${n} din ${files.length} — documentul pare în ${({deu:"germană",fra:"franceză",spa:"spaniolă",tur:"turcă"})[lg]}, îl citesc din nou`); try{ r = await (await getW(lg+"+eng")).recognize(src); }catch(e){} }
+      if(f && r.data.text) RAWF.set(f, r.data.text.slice(0,6000));
       const t = norm(r.data.text||"").replace(/\s+/g," ").trim().slice(0,800);
       if(t.length > 20){ d.txt = t; d.ocr = true; enrichDoc(d); ok++; } else d.ocr = true;
     }catch(e){ d.ocr = true; }
@@ -4785,6 +4914,7 @@ const BB_KB = [
   {k:["idsai","detectie incendiu","semnalizare incendiu","registru de control"], a:()=>`La <b>IDSAI</b>, firma trebuie autorizată de IGSU pentru instalarea și întreținerea sistemelor de semnalizare la incendiu. După montaj urmează o perioadă de funcționare preliminară, apoi o comisie verifică documentația și face probe funcționale. Executantul predă <b>registrul de control</b>, instrucțiunile și documentul de configurare, iar mentenanța începe imediat după recepție. <span class="bb-law">P 118/3-2015, cap. 5</span>`},
   {k:["supraveghere video","camere","antiefractie","control acces","licenta igpr","sisteme securitate"], a:()=>`Sistemele de <b>supraveghere video, antiefracție și control acces</b> se proiectează și se instalează doar de societăți cu <b>licență IGPR</b>. La obiectivele din HG 301/2012, art. 68 (bănci, benzinării, instituții publice, depozite cu valori peste 10.000 euro etc.) proiectul se avizează de poliție înainte de execuție. La predare, beneficiarul primește codurile, programele și documentația pe bază de proces-verbal. <span class="bb-law">Legea 333/2003; HG 301/2012, art. 68–69, 76, 86</span>`},
   {k:["paratrasnet","ipt","trasnet","priza paratrasnet"], a:()=>`Pentru <b>paratrăsnet</b> păstrezi proiectul cu nivelul de protecție, PV-ul de lucrări ascunse pentru fiecare priză de pământ, PV-ul de montaj (captare, coborâri) și buletinele de măsurare a rezistenței de dispersie și a continuității. <span class="bb-law">I 7-2011 (modificat în 2023); SR EN 62305</span>`},
+  {k:["date proiect","titlul lucrarii","beneficiar","completare automata","se completeaza singur","contract","ordin de incepere","propus"], a:()=>`<b>Datele proiectului se completează singure</b> din documentele pe care le adaugi: contractul, ordinul de începere, autorizația de construire sau comunicarea de începere (și scanate — aplicația le citește prin OCR). Ia titlul lucrării, beneficiarul, firma executantă, numărul contractului, amplasamentul și data începerii. Fiecare câmp completat așa arată <b>„propus · din: <documentul>”</b>: apeși <b>✓ Corect</b> sau scrii peste. Ce ai scris tu nu e înlocuit niciodată; dacă alt document spune altceva, apare la „variante găsite în documente”, cu <b>Folosește</b>. Ordinul de începere și contractul de execuție au întâietate față de contractele de servicii (dirigenție, proiectare). ${CUR?go("proiect","Deschide Proiect"):""}`},
   {k:["norme","legislatie","lege noua","actualizare norme","conform","in vigoare","temei","nu mai e obligatoriu","cerut din"], a:()=>`Listele cărții tehnice urmează normele în vigoare, verificate lunar; data ultimei verificări e jos, în bara din stânga (<b>Normele: verificate la …</b>), unde vezi și actele urmărite. Când se schimbă ceva, la deschiderea lucrării apare un mesaj cu ce s-a schimbat și ce înseamnă pentru lucrarea ta. În dosare, documentele noi au eticheta <b>„cerut din …”</b>, iar cele care nu mai sunt obligatorii rămân, cu eticheta <b>„nu mai e obligatoriu”</b>. Aplicația nu modifică și nu șterge nimic din ce ai atașat: tu decizi. Lângă „de la” vezi și temeiul fiecărui document, unde e trecut.`},
   {k:["cerinte beneficiar","documente suplimentare","operator retea cere","beneficiarul cere","lista beneficiar","lista de la beneficiar","excel beneficiar"], a:()=>`Lista primită de la beneficiar o încarci la <b>Carte tehnică → Date comune și lista beneficiarului → Încarcă lista</b>: PDF, Word, <b>Excel</b> sau poză. Aplicația scoate documentele (rânduri numerotate, cu liniuță sau coloana cu denumiri din tabel), ți le arată să le confirmi și le pune într-un dosar separat; originalul rămâne la lucrare. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
   {k:["borderou","borderouri","tiparesc borderou"], a:()=>`Borderourile se tipăresc de la <b>Carte tehnică → Tipărește borderourile</b>: câte unul pe dosar, cu numerotarea calculată; documentele lipsă apar marcate LIPSĂ. Ca să obții PDF, alege „Salvare ca PDF” în fereastra de tipărire. ${go("carte","Deschide Cartea tehnică")}`},
@@ -5048,10 +5178,16 @@ function bind(){
   const v = $("#view");
 
   const fit = el => { el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; };
+  v.querySelectorAll("[data-metaok]").forEach(b=>b.onclick=()=>{ const s = S.metaSrc[b.dataset.metaok]; if(s) s.ok = true; autosave(); render(); });
+  v.querySelectorAll("[data-malt]").forEach(b=>b.onclick=()=>{ const [k,i] = b.dataset.malt.split("|"), alts = (S.metaAlt[k]||[]).filter(a=>norm(a.val)!==norm(S.meta[k]||"")), a = alts[+i]; if(!a) return;
+    const src = S.metaSrc[k]; if(S.meta[k]) metaAlt(k, {val:S.meta[k], doc: src ? src.doc : "scris de tine", kind: src ? src.kind : "manual"});
+    S.meta[k] = a.val; S.metaSrc[k] = {val:a.val, doc:a.doc, kind:a.kind, pri:9, ok:true}; autosave(); render(); });
   v.querySelectorAll("[data-meta]").forEach(el=>{
     el.oninput = () => {
       if(el.classList.contains("grow")){ el.value = el.value.replace(/\n/g," "); fit(el); }
-      S.meta[el.dataset.meta] = el.value; autosave(); renderCrumbs();
+      S.meta[el.dataset.meta] = el.value; S.metaEdited = S.metaEdited||{}; S.metaEdited[el.dataset.meta] = true;
+      if(S.metaSrc && S.metaSrc[el.dataset.meta]){ delete S.metaSrc[el.dataset.meta]; const n = el.parentNode.querySelector(".msrc:not(.alt)"); if(n) n.remove(); }
+      autosave(); renderCrumbs();
     };
     if(el.classList.contains("grow")){
       el.onkeydown = e => { if(e.key==="Enter") e.preventDefault(); };   // un singur paragraf, fără rânduri noi
