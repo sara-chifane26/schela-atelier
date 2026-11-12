@@ -411,6 +411,7 @@ details.more>div .btn{justify-content:flex-start;width:100%;border-color:transpa
     <div class="sidefoot">
       <p>Totul rămâne pe calculatorul tău. Nimic nu se trimite nicăieri.</p>
       <p style="margin-top:8px">Salvează des: <b style="color:#A9BAC6">Proiect → Salvează</b></p>
+      <p style="margin-top:8px"><a href="#" id="sideNorme" style="color:#A9BAC6">Normele: verificate la <span id="normData"></span></a></p>
     </div>
   </aside>
 
@@ -603,6 +604,8 @@ function isScan(n){ return ["jpg","jpeg","png","tif","tiff","heic","bmp","webp"]
 
 // completează câmpurile noi la proiectele salvate cu versiunea veche
 function migrate(){
+  if(!S.normVer) S.normVer = NORME_START;
+  if(!S.normBase) S.normBase = S.normVer;
   for(const d of S.docs){
     if(d.hash===undefined) d.hash = "";
     if(d.dataSrc===undefined){
@@ -702,7 +705,7 @@ function openLucrare(id, view){
   render();
 }
 function newLucrare(domId){
-  S = blank(); if(domId) S.dom = [domId];
+  S = blank(); S.normVer = S.normBase = NORME.ver; if(domId) S.dom = [domId];
   if(FIRMA.nume) S.meta.emitent = FIRMA.nume;
   if(FIRMA.semnatar) S.meta.semnatar = FIRMA.semnatar;
   CUR = S.id; LAST_JS = ""; VIEW = "proiect"; MORE_DOM = false; render();
@@ -1708,6 +1711,29 @@ const parseLines = s => String(s||"").split(/\n+/).map(x=>x.trim()).filter(Boole
 const NOT_INSOTIRE = ["aviz insotire","aviz marfa","insotire","livrare","nir"];
 
 /* Piesele comune, după HG 343/2017, Anexa 6 (Normele de întocmire a cărții tehnice). */
+/* ---- NORMELE ----
+   Jurnalul schimbărilor din listele-tip. La fiecare actualizare aprobată se adaugă o intrare și se mută „ver”.
+   adaug: documente cerute de acum (den exact din listă); retras: documente care nu mai sunt obligatorii
+   (rămân în listă și se arată doar dacă lucrarea are deja fișierul, marcate „nu mai e obligatoriu”). */
+const NORME = {
+  ver: "2026-11-12",
+  acte: [
+    "Legea nr. 169/2026 — Codul amenajării teritoriului, urbanismului și construcțiilor (în vigoare din 25.08.2026)",
+    "Legea nr. 10/1995 privind calitatea în construcții (părțile rămase în vigoare)",
+    "Regulamentul de recepție — anexa la HG nr. 273/1994, modificat prin HG nr. 343/2017 (menținut de Legea 169/2026, art. 577)",
+    "Ordinul MDRAP nr. 1370/2014 — controlul în fazele determinante",
+    "Normele ANRE privind autorizarea electricienilor și atestarea operatorilor economici",
+    "Normativele tehnice ale fiecărei specialități (afișate la fiecare listă-tip)"
+  ],
+  sch: [
+    {data:"2026-11-12", act:"HG 343/2017 (Regulamentul de recepție)", ce:"La recepție se cer referatele proiectantului și ale dirigintelui de șantier, pe specialități (art. 15), iar la recepția finală referatul privind comportarea în perioada de garanție (art. 27).",
+      adaug:["Referatele proiectantului, pe specialități, privind modul de execuție a lucrărilor","Referatele dirigintelui de șantier, pe specialități, privind modul de execuție a lucrărilor","Referatul proprietarului / utilizatorului privind urmărirea comportării în exploatare în perioada de garanție"], retras:[]}
+  ]
+};
+const NORME_START = "2026-11-11";   // lucrările fără dată de norme au fost începute înainte de jurnal
+const normAdd = den => { for(const c of NORME.sch) if((c.adaug||[]).includes(den)) return c; return null; };
+const normRet = den => { for(const c of NORME.sch) if((c.retras||[]).includes(den)) return c; return null; };
+const normNoi = () => NORME.sch.filter(c=>c.data > (S.normVer||NORME_START));
 const CT_COMMON = {
   A1: () => [
     {den:"Fișa de date sintetice a construcției", kw:"fisa date sintetice", cap:"As-built", dela:"Diriginte de șantier"},
@@ -1746,12 +1772,12 @@ const CT_COMMON = {
   ],
   C1: () => [
     {den:"Dispoziția de numire a comisiei de recepție", kw:"comisie receptie", cap:"Execuție", dela:"Beneficiar"},
-    {den:"Referatele proiectantului, pe specialități, privind modul de execuție a lucrărilor (HG 343/2017, art. 15 alin. 3 lit. i)", kws:["referat proiectant","referatul proiectantului","referate proiectant"], cap:"Execuție", dela:"Proiectant"},
-    {den:"Referatele dirigintelui de șantier, pe specialități, privind modul de execuție a lucrărilor (HG 343/2017, art. 15 alin. 3 lit. i)", kws:["referat diriginte","referatul dirigintelui","raport diriginte","punct de vedere diriginte"], cap:"Execuție", dela:"Diriginte de șantier"},
+    {den:"Referatele proiectantului, pe specialități, privind modul de execuție a lucrărilor", temei:"HG 343/2017, art. 15 alin. (3) lit. i)", kws:["referat proiectant","referatul proiectantului","referate proiectant"], cap:"Execuție", dela:"Proiectant"},
+    {den:"Referatele dirigintelui de șantier, pe specialități, privind modul de execuție a lucrărilor", temei:"HG 343/2017, art. 15 alin. (3) lit. i)", kws:["referat diriginte","referatul dirigintelui","raport diriginte","punct de vedere diriginte"], cap:"Execuție", dela:"Diriginte de șantier"},
     {den:"PV de recepție la terminarea lucrărilor, cu anexe", kw:"receptie terminare", cap:"Execuție", dela:"Beneficiar"},
     {den:"Lista lucrărilor de remediat și PV de remediere", kw:"remedi", cap:"Execuție", dela:"Executant"},
     {den:"Acte privind verificări suplimentare cerute de comisie", kw:"verificari suplimentare", cap:"Execuție", dela:"Beneficiar"},
-    {den:"Referatul proprietarului / utilizatorului privind urmărirea comportării în exploatare în perioada de garanție (HG 343/2017, art. 27 alin. 1 lit. b)", kws:["referat comportare","comportarea in exploatare","comportare in perioada de garantie","urmarirea comportarii in exploatare"], cap:"Execuție", dela:"Beneficiar (proprietar / utilizator)"},
+    {den:"Referatul proprietarului / utilizatorului privind urmărirea comportării în exploatare în perioada de garanție", temei:"HG 343/2017, art. 27 alin. (1) lit. b)", kws:["referat comportare","comportarea in exploatare","comportare in perioada de garantie","urmarirea comportarii in exploatare"], cap:"Execuție", dela:"Beneficiar (proprietar / utilizator)"},
     {den:"PV de recepție finală", kw:"receptie finala", cap:"Execuție", dela:"Beneficiar"}
   ],
   D1: () => [
@@ -2423,8 +2449,11 @@ function ctMatch(){
       used.add(doc.id); dd.items.push(i); every.push(x);
     }
   }
+  // 5. documentele scoase din obligatoriu: rămân doar dacă lucrarea are deja fișierul
+  for(const x of every){ const r = normRet(x.i.den); if(!r) continue; if(x.doc){ x.i.retras = r; } else { x.gone = true; x.d.items = x.d.items.filter(i=>i!==x.i); } }
+  for(let k=every.length-1;k>=0;k--) if(every[k].gone) every.splice(k,1);
   for(const d of dos){
-    const xs = every.filter(x=>x.d===d), on = xs.filter(x=>!x.na);
+    const xs = every.filter(x=>x.d===d), on = xs.filter(x=>!x.na && !x.i.retras);
     d.total = on.length; d.got = on.filter(x=>x.doc).length; d.na = xs.length - on.length;
     d.items.forEach(i=>{ const x = xs.find(x=>x.i===i); if(x){ i.doc = x.doc; i.na = !!x.na; i.manual = !!x.manual; i.key = x.key; i.byText = !!x.byText; } });
   }
@@ -3347,6 +3376,12 @@ function viewInventar(){
 let CTSEL = null;      // dosarul deschis
 let CTTAB = "dosare";  // „dosare” sau „parametri”
 const DOS_T = {A1:"Avize, autorizații, fișa sintetică", A2:"Proiectul, verificările și as built", B1:"Începerea lucrărilor și numirile", B2:"Controlul calității și PV-urile de execuție", B3:"Încercări, probe și măsurători", B4:"Documentele de calitate ale materialelor", C1:"Recepția", D1:"Exploatarea și urmărirea în timp"};
+const ctTemei = i => i.temei || (normAdd(i.den)||{}).act || "";
+function ctNormTag(i){
+  if(i.retras) return ` <span class="tag t-none" title="${esc(i.retras.ce)}">nu mai e obligatoriu din ${esc(roDate(i.retras.data))}</span>`;
+  const a = normAdd(i.den);
+  return a && a.data > (S.normBase||NORME_START) ? ` <span class="tag t-dup" title="${esc(a.ce)}">cerut din ${esc(roDate(a.data))} · ${esc(a.act)}</span>` : "";
+}
 const dosTitle = d => DOS_T[d.id] || (d.items.some(i=>i.group==="Documente suplimentare cerute de beneficiar") ? "Documente cerute de beneficiar" : (d.items.find(i=>i.group)||{}).group || "Documente suplimentare");
 function ctParamsHtml(){
   const ts = activeTpls(), ct = ctState(), p = ct.p;
@@ -3419,7 +3454,7 @@ function viewCarte(){
     <thead><tr><th style="width:120px">Cod</th><th>Document necesar</th><th style="width:120px">Stare</th><th style="width:34%">Fișier din inventar</th><th style="width:150px"></th></tr></thead>
     <tbody>${d.items.map(i=> i.group ? `<tr class="grp-row${i.spec?" spec":""}"><td colspan="5">${esc(i.group)}</td></tr>` : `<tr class="${i.na?"off":""}">
       <td class="num">${esc(i.cod||"")}</td>
-      <td>${esc(i.den)}${i.dela?`<span class="path">de la: ${esc(i.dela)}</span>`:""}</td>
+      <td>${esc(i.den)}${i.dela?`<span class="path">de la: ${esc(i.dela)}${ctTemei(i)?` · temei: ${esc(ctTemei(i))}`:""}</span>`:""}${ctNormTag(i)}</td>
       <td>${i.na ? `<span class="tag t-none">${i.att?"scos din dosar":"nu se aplică"}</span>` : i.doc ? `<span class="tag t-viz">găsit${i.manual?" · ales":""}</span>${["pdf","jpg","jpeg","png"].includes(extOf(i.doc.name)) ? "" : `<span class="tag t-conv" title="Ca să intre în cartea tehnică PDF, salvează-l ca PDF și adaugă PDF-ul în inventar.">${esc(extOf(i.doc.name).toUpperCase()||"fișier")} — de salvat ca PDF</span>`}` : d.later ? `<span class="tag t-none">de completat</span>` : inLips.has(norm(lden(i))) ? `<span class="tag t-dup">în Lipsuri</span>` : `<span class="tag t-late">lipsă</span>`}</td>
       <td>${i.na ? "" : i.att ? `<span class="muted">atașat: ${esc(i.doc ? i.doc.name : "")}</span>` : `<select data-ctman="${esc(i.key)}"><option value="">${i.doc && !i.manual ? "automat: "+esc(i.doc.name) : "automat — negăsit"}</option>${docs.map(x=>`<option value="${x.id}" ${i.manual && i.doc && i.doc.id===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select>`}</td>
       <td style="white-space:nowrap">${i.att ? `<button class="btn g sm" data-ctna="${esc(i.key)}">${i.na ? "Pune înapoi" : "Scoate din dosar"}</button>` : i.na ? `<button class="btn g sm" data-ctna="${esc(i.key)}">Se aplică</button>` : `${!i.doc && !d.later && !inLips.has(norm(lden(i))) ? `<button class="btn g sm" data-ctask="${esc(i.key)}">Cere</button> ` : ""}<button class="btn g sm" data-ctna="${esc(i.key)}">Nu se aplică</button>`}</td>
@@ -4081,7 +4116,46 @@ document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState=
 function bannerHtml(){
   const va = valAlerts().length;
   const vb = va ? `<div class="note warn bnr"><b>${pl(va,"termen de valabilitate expirat sau aproape de expirare","termene de valabilitate expirate sau aproape de expirare")}</b> (autorizații, avize, certificate). <button class="btn sm" id="bnVal">Vezi valabilitățile</button></div>` : "";
-  return vb + bannerSave();
+  return normBanner() + vb + bannerSave() + verBanner();
+}
+function normBanner(){
+  if(!CUR) return "";
+  const noi = normNoi(); if(!noi.length) return "";
+  const dos = ctMatch() || [], items = dos.flatMap(d=>d.items.filter(i=>!i.group).map(i=>({i, d})));
+  const rows = noi.map(c=>{
+    const af = items.filter(x=>(c.adaug||[]).includes(x.i.den) || (c.retras||[]).includes(x.i.den));
+    return `<li><b>${esc(roDate(c.data))} · ${esc(c.act)}.</b> ${esc(c.ce)}${af.length ? `<br>La lucrarea asta: ${af.map(x=>`${esc(x.i.den)} (dosarul ${esc(x.d.id)}) — ${x.i.retras ? "nu mai e obligatoriu" : x.i.doc ? "îl ai" : x.i.na ? "marcat „nu se aplică”" : "<b>de adus</b>"}`).join("; ")}.` : ""}</li>`;
+  }).join("");
+  return `<div class="note warn bnr" style="display:block"><b>Normele s-au schimbat de la ultima deschidere a lucrării.</b> Aplicația nu modifică nimic din ce ai atașat; tu decizi ce faci la fiecare document.
+    <ul style="margin:6px 0 8px 18px;padding:0">${rows}</ul>
+    <button class="btn sm" id="bnNorm">Deschide Cartea tehnică</button> <button class="btn g sm" id="bnNormOk">Am înțeles</button> <button class="btn g sm" id="bnNormAll">Ce norme urmează aplicația</button></div>`;
+}
+let VER_NOU = null;
+function verBanner(){
+  if(!VER_NOU) return "";
+  return `<div class="note warn bnr"><b>Există o versiune mai nouă a aplicației</b>, cu normele verificate la ${esc(roDate(VER_NOU.ver))}. Copia de pe calculatorul tău nu se actualizează singură. <a class="btn sm" href="${esc(VER_NOU.url)}" target="_blank" rel="noopener">Deschide versiunea nouă</a></div>`;
+}
+async function checkVersiune(){
+  if(/github\.io$/.test(location.hostname) || /^localhost|^127\./.test(location.hostname)) return;   // de la link e mereu ultima versiune
+  try{
+    const r = await fetch("https://sara-chifane26.github.io/schela-atelier/norme.json", {cache:"no-store"});
+    if(!r.ok) return; const j = await r.json();
+    if(j && j.ver && j.ver > NORME.ver){ VER_NOU = {ver:j.ver, url:j.url || "https://sara-chifane26.github.io/schela-atelier/"}; renderBanner(); }
+  }catch(e){}
+}
+function openNorme(){
+  $("#intake").innerHTML = `<div class="mbox" style="width:min(820px,100%)">
+    <div class="mh"><h2>Normele după care lucrează aplicația</h2><span class="muted">verificate la ${esc(roDate(NORME.ver))}</span></div>
+    <div style="padding:0 18px 8px;overflow:auto">
+      <ul style="margin:6px 0 14px 18px;padding:0;line-height:1.6">${NORME.acte.map(a=>`<li>${esc(a)}</li>`).join("")}</ul>
+      <h3 style="margin:8px 0">Schimbări în listele-tip</h3>
+      <div class="tw" style="max-height:40vh"><table><tbody>${NORME.sch.slice().reverse().map(c=>`<tr><td class="num" style="width:110px">${esc(roDate(c.data))}</td><td><b>${esc(c.act)}</b><br>${esc(c.ce)}${(c.adaug||[]).length?`<br><span class="muted">Cerute: ${c.adaug.map(esc).join("; ")}</span>`:""}${(c.retras||[]).length?`<br><span class="muted">Nu mai sunt obligatorii: ${c.retras.map(esc).join("; ")}</span>`:""}</td></tr>`).join("")}</tbody></table></div>
+      <p class="muted" style="margin:12px 0 0">Legislația e verificată lunar, iar listele se actualizează după aprobare. Aplicația e un instrument de lucru: nu înlocuiește verificarea juridică și nici răspunderea celor care semnează documentele.</p>
+    </div>
+    <div class="mf"><span></span><button class="btn" id="nmClose">Închide</button></div>
+  </div>`;
+  $("#intake").classList.add("on");
+  $("#nmClose").onclick = () => { $("#intake").classList.remove("on"); $("#intake").innerHTML=""; render(); };
 }
 function bannerSave(){
   if(!CUR || !S.docs.length || /^demo/.test(S.id)) return "";
@@ -4095,6 +4169,9 @@ function bannerSave(){
 function renderBanner(){ const b = $("#banner"); if(b){ b.innerHTML = bannerHtml(); bindBanner(); } }
 function bindBanner(){
   const s1 = $("#bnSave"); if(s1) s1.onclick = () => $("#btnSave").click();
+  const n1 = $("#bnNorm"); if(n1) n1.onclick = () => { VIEW = "carte"; CTSEL = null; CTTAB = "dosare"; render(); };
+  const n2 = $("#bnNormOk"); if(n2) n2.onclick = () => { S.normVer = NORME.ver; autosave(); render(); };
+  const n3 = $("#bnNormAll"); if(n3) n3.onclick = openNorme;
   const s4 = $("#bnVal"); if(s4) s4.onclick = () => { VIEW = "executie"; EXTAB = "val"; render(); };
   const s2 = $("#bnAuto"); if(s2) s2.onclick = enableAutoBackup;
   const s3 = $("#bkResume"); if(s3) s3.onclick = async () => { const ok = await doBackup(true); if(!ok) alert("Nu am primit permisiunea de scriere în folder. Leagă din nou folderul lucrării."); render(); };
@@ -4699,6 +4776,7 @@ const BB_KB = [
   {k:["idsai","detectie incendiu","semnalizare incendiu","registru de control"], a:()=>`La <b>IDSAI</b>, firma trebuie autorizată de IGSU pentru instalarea și întreținerea sistemelor de semnalizare la incendiu. După montaj urmează o perioadă de funcționare preliminară, apoi o comisie verifică documentația și face probe funcționale. Executantul predă <b>registrul de control</b>, instrucțiunile și documentul de configurare, iar mentenanța începe imediat după recepție. <span class="bb-law">P 118/3-2015, cap. 5</span>`},
   {k:["supraveghere video","camere","antiefractie","control acces","licenta igpr","sisteme securitate"], a:()=>`Sistemele de <b>supraveghere video, antiefracție și control acces</b> se proiectează și se instalează doar de societăți cu <b>licență IGPR</b>. La obiectivele din HG 301/2012, art. 68 (bănci, benzinării, instituții publice, depozite cu valori peste 10.000 euro etc.) proiectul se avizează de poliție înainte de execuție. La predare, beneficiarul primește codurile, programele și documentația pe bază de proces-verbal. <span class="bb-law">Legea 333/2003; HG 301/2012, art. 68–69, 76, 86</span>`},
   {k:["paratrasnet","ipt","trasnet","priza paratrasnet"], a:()=>`Pentru <b>paratrăsnet</b> păstrezi proiectul cu nivelul de protecție, PV-ul de lucrări ascunse pentru fiecare priză de pământ, PV-ul de montaj (captare, coborâri) și buletinele de măsurare a rezistenței de dispersie și a continuității. <span class="bb-law">I 7-2011 (modificat în 2023); SR EN 62305</span>`},
+  {k:["norme","legislatie","lege noua","actualizare norme","conform","in vigoare","temei","nu mai e obligatoriu","cerut din"], a:()=>`Listele cărții tehnice urmează normele în vigoare, verificate lunar; data ultimei verificări e jos, în bara din stânga (<b>Normele: verificate la …</b>), unde vezi și actele urmărite. Când se schimbă ceva, la deschiderea lucrării apare un mesaj cu ce s-a schimbat și ce înseamnă pentru lucrarea ta. În dosare, documentele noi au eticheta <b>„cerut din …”</b>, iar cele care nu mai sunt obligatorii rămân, cu eticheta <b>„nu mai e obligatoriu”</b>. Aplicația nu modifică și nu șterge nimic din ce ai atașat: tu decizi. Lângă „de la” vezi și temeiul fiecărui document, unde e trecut.`},
   {k:["cerinte beneficiar","documente suplimentare","operator retea cere","beneficiarul cere","lista beneficiar","lista de la beneficiar","excel beneficiar"], a:()=>`Lista primită de la beneficiar o încarci la <b>Carte tehnică → Date comune și lista beneficiarului → Încarcă lista</b>: PDF, Word, <b>Excel</b> sau poză. Aplicația scoate documentele (rânduri numerotate, cu liniuță sau coloana cu denumiri din tabel), ți le arată să le confirmi și le pune într-un dosar separat; originalul rămâne la lucrare. ${CUR?go("carte","Deschide Cartea tehnică"):""}`},
   {k:["borderou","borderouri","tiparesc borderou"], a:()=>`Borderourile se tipăresc de la <b>Carte tehnică → Tipărește borderourile</b>: câte unul pe dosar, cu numerotarea calculată; documentele lipsă apar marcate LIPSĂ. Ca să obții PDF, alege „Salvare ca PDF” în fereastra de tipărire. ${go("carte","Deschide Cartea tehnică")}`},
   {k:["opis","pdf opis","tiparesc opis","opis dosar","opisul dosarului"], a:()=>`Fiecare dosar al cărții tehnice are opisul lui: în pagina dosarului apeși <b>Opisul dosarului</b> (poziția, documentul, numărul și data, cu lipsurile marcate), iar pe pagina cu dosarele <b>Tipărește opisurile dosarelor</b> le scoate pe toate, fiecare pe pagina lui. Opisul general al lucrării se generează de la <b>Rezultate → Generează opisul</b>. Conține documentele în vigoare, grupate pe capitole, plus lipsurile marcate LIPSĂ. Pentru PDF, alege „Salvare ca PDF” la tipărire. ${go("rezultate","Deschide Rezultate")}`},
@@ -5340,6 +5418,9 @@ render();
 splash(CUR ? (S.meta.proiect||"") : "", 900);
 $("#btnWin").onclick = () => openWindow();
 refreshModele().catch(()=>{});
+$("#normData").textContent = roDate(NORME.ver);
+$("#sideNorme").onclick = e => { e.preventDefault(); openNorme(); };
+checkVersiune();
 </script>
 </body>
 </html>
