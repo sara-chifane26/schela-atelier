@@ -567,6 +567,20 @@ details.more>div{background:var(--surface);border-color:var(--line);border-radiu
 .cf-why{font-size:16.5px!important}
 .view p .tag,.view p .fmt,.droph .fmt,.view p input,.view p select,.view p button.btn{font-family:var(--fd);font-weight:500;font-size:12.5px;letter-spacing:0}
 .droph .fmt{font-size:13px}
+/* lista lucrărilor dintr-un domeniu: două file și un singur panou */
+.lpanel{background:var(--surface);border-radius:12px;box-shadow:0 0 0 1px var(--line-soft)}
+.lpanel .lrow{display:flex;align-items:center;gap:18px;padding:14px 18px;border-bottom:1px solid #EFE8DB;cursor:pointer;flex-wrap:nowrap}
+.lpanel .lrow:last-child{border-bottom:0}
+.lpanel .lrow:hover{background:#FAF6EE}
+.lpanel .lrow .ln{flex:1 1 auto;min-width:0}
+.lpanel .lrow .ln b{font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lpanel .lrow .ln .muted{display:block;font-size:15px!important;margin-top:2px}
+.lprog{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);white-space:nowrap}
+.lprog .bar{width:90px}
+.ldate{white-space:nowrap;font-family:var(--fd)!important;font-size:13px!important}
+.ldel{width:30px;padding:0;justify-content:center;opacity:.55}
+.lrow:hover .ldel{opacity:1}
+@media (max-width:760px){ .lpanel .lrow{flex-wrap:wrap;gap:6px 12px} .lpanel .lrow .ln{flex-basis:100%} .lpanel .lrow .ln b{white-space:normal} .ldel{margin-left:auto} }
 /* primul pas al unei lucrări noi */
 .startdocs{position:relative;background:var(--surface);border-radius:14px;box-shadow:0 0 0 1px var(--line-soft),0 8px 24px rgba(14,26,46,.06);padding:26px 30px 22px 34px;margin:0 0 22px;overflow:hidden}
 .startdocs::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--gold)}
@@ -1224,21 +1238,23 @@ new MutationObserver(() => {
 }).observe($("#intake"), {attributes:true, attributeFilter:["class"]});
 
 /* ---- ACASĂ: chenarele domeniilor și lista lucrărilor ---- */
+let DOMTAB = "run";   // fila deschisă în lista lucrărilor: „run” = în derulare, „fin” = finalizate
 function lucrariHtml(list, emptyText){
   if(!list.length) return `<p class="muted" style="margin:0">${emptyText}</p>`;
   const fmt = t => t ? new Date(t).toLocaleDateString("ro-RO") : "";
-  const row = l => `<div class="lrow">
-    <div class="ln"><b>${esc(l.proiect||"Lucrare fără nume")}</b>
-      ${l.benef?`<span class="muted">${esc(l.benef)}</span> `:""}<span class="chips">${domNames(l.dom||[]).map(n=>`<span class="chip">${esc(n)}</span>`).join("") || `<span class="muted">fără domeniu ales</span>`}</span></div>
-    ${l.prog && l.prog.tot ? `<span class="muted" title="Capitolele A și B ale cărții tehnice">carte tehnică ${l.prog.got}/${l.prog.tot}</span>` : ""}
-    <span class="muted">${l.stare==="finalizata" && l.receptie ? "recepție "+esc(roDate(l.receptie)) : pl(l.n||0,"document","documente")+" · "+fmt(l.upd)}</span>
-    <button class="btn sm" data-lopen="${esc(l.id)}">Deschide</button>
-    <button class="btn g sm" data-ldel="${esc(l.id)}">Șterge</button>
-  </div>`;
   const sorted = [...list].sort((a,b)=>(b.upd||0)-(a.upd||0));
   const run = sorted.filter(l=>l.stare!=="finalizata"), fin = sorted.filter(l=>l.stare==="finalizata");
-  return `<div class="lsec">În derulare · ${run.length}</div>${run.length ? run.map(row).join("") : `<p class="muted" style="margin:4px 0 8px">Nicio lucrare în derulare.</p>`}
-    <div class="lsec">Finalizate (recepționate) · ${fin.length}</div>${fin.length ? fin.map(row).join("") : `<p class="muted" style="margin:4px 0 0">Nicio lucrare finalizată încă.</p>`}`;
+  const tab = DOMTAB==="fin" && fin.length ? "fin" : (run.length ? "run" : "fin");
+  const show = tab==="fin" ? fin : run;
+  const row = l => `<div class="lrow" data-lopen="${esc(l.id)}" role="button" tabindex="0" title="Deschide lucrarea">
+    <div class="ln"><b>${esc(l.proiect||"Lucrare fără nume")}</b>
+      <span class="muted">${l.benef?esc(l.benef):"fără beneficiar trecut"}</span></div>
+    ${l.prog && l.prog.tot ? `<span class="lprog" title="Capitolele A și B ale cărții tehnice"><span class="bar"><i style="width:${Math.round(100*l.prog.got/l.prog.tot)}%"></i></span>${l.prog.got}/${l.prog.tot}</span>` : ""}
+    <span class="muted ldate">${l.stare==="finalizata" && l.receptie ? "recepție "+esc(roDate(l.receptie)) : fmt(l.upd)}</span>
+    <button class="btn g sm ldel" data-ldel="${esc(l.id)}" title="Mută lucrarea în coș" aria-label="Șterge lucrarea">×</button>
+  </div>`;
+  return `<div class="ftabs"><button class="${tab==="run"?"on":""}" data-domtab="run"><b>${run.length}</b>În derulare</button><button class="${tab==="fin"?"on":""}" data-domtab="fin"><b>${fin.length}</b>Finalizate</button></div>
+    ${show.length ? `<div class="lpanel">${show.map(row).join("")}</div>` : `<p class="muted" style="margin:0">${tab==="fin" ? "Nicio lucrare finalizată încă." : "Nicio lucrare în derulare."}</p>`}`;
 }
 function viewAcasa(){
   return `
@@ -1279,8 +1295,8 @@ function viewDomeniu(){
     </div>
   </div>
   <div class="card">
-    <h3>Lucrări în ${esc(d.name.toLowerCase())}</h3>
-    ${lucrariHtml(list, "Nicio lucrare încă în acest domeniu.")}
+    <h3>Lucrările tale</h3>
+    ${lucrariHtml(list, "Nicio lucrare încă în acest domeniu. Apasă „Lucrare nouă” ca să începi.")}
   </div>`;
 }
 
@@ -5473,7 +5489,8 @@ function bind(){
 
   // pagina de intrare și pagina domeniului
   v.querySelectorAll("[data-dom-open]").forEach(b=>b.onclick=()=>{ DSEL=b.dataset.domOpen; VIEW="domeniu"; render(); v.scrollTop=0; });
-  v.querySelectorAll("[data-lopen]").forEach(b=>b.onclick=()=>openLucrare(b.dataset.lopen));
+  v.querySelectorAll("[data-lopen]").forEach(b=>{ b.onclick=e=>{ if(e.target.closest("[data-ldel]")) return; openLucrare(b.dataset.lopen); }; b.onkeydown=e=>{ if(e.key==="Enter") openLucrare(b.dataset.lopen); }; });
+  v.querySelectorAll("[data-domtab]").forEach(b=>b.onclick=()=>{ DOMTAB=b.dataset.domtab; render(); });
   v.querySelectorAll("[data-ldel]").forEach(b=>b.onclick=()=>{
     const l = IDX.find(x=>x.id===b.dataset.ldel); if(!l) return;
     if(confirm(`Ștergi lucrarea „${l.proiect||"fără nume"}”? Rămâne 30 de zile în coșul de gunoi de pe pagina de intrare.`)){ deleteLucrare(l.id); render(); }
