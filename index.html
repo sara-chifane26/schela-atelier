@@ -562,10 +562,21 @@ details.more>div{background:var(--surface);border-color:var(--line);border-radiu
 .view .note b,.view p b,.empty p b,.bb-msg b{font-weight:700;color:var(--ink)}
 .view .note .nmore,.view p .linkbtn,.droph .linkbtn,.view p a{font-family:var(--fh);font-weight:700;font-size:17px}
 .sidefoot p{font-size:15px!important;color:#9AA4B5}
+.toast>span:first-child{color:#EEF0F4;font-size:17px!important}
 .view .droph{font-size:16.5px!important}
 .cf-why{font-size:16.5px!important}
 .view p .tag,.view p .fmt,.droph .fmt,.view p input,.view p select,.view p button.btn{font-family:var(--fd);font-weight:500;font-size:12.5px;letter-spacing:0}
 .droph .fmt{font-size:13px}
+/* primul pas al unei lucrări noi */
+.startdocs{position:relative;background:var(--surface);border-radius:14px;box-shadow:0 0 0 1px var(--line-soft),0 8px 24px rgba(14,26,46,.06);padding:26px 30px 22px 34px;margin:0 0 22px;overflow:hidden}
+.startdocs::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--gold)}
+.startdocs .k{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-ink)}
+.startdocs h3{font-family:var(--fh);font-size:32px;font-weight:700;margin:6px 0 8px;line-height:1.1}
+.view .startdocs p{margin:0 0 16px;max-width:760px}
+.sd-act{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.sd-act .btn{height:40px;padding:0 18px;font-size:15px}
+.sd-act .linkbtn{margin-left:8px;font-family:var(--fh);font-size:17px;font-weight:700}
+.sd-f{margin-top:12px;font-size:13px;color:var(--faint)}
 /* bannerul de pe pagina de start */
 .hero{position:relative;overflow:hidden;border-radius:12px;background:radial-gradient(ellipse at 75% 110%,#2A3F66 0,#12203A 45%,#0B1526 80%);color:#F4EFE5;padding:34px 40px;margin:0 0 26px;min-height:190px}
 .hero .rule{position:absolute;left:22px;top:34px;bottom:34px;width:2px;background:var(--gold)}
@@ -1404,7 +1415,13 @@ function viewProiect(){
   const f = (k,l,t,wide) => t==="date"
     ? `<div><span class="lbl">${l}</span><input type="date" data-meta="${k}" value="${esc(m[k])}">${metaNote(k)}</div>`
     : `<div${wide?' class="wide"':""}><span class="lbl">${l}</span><textarea rows="1" class="grow" data-meta="${k}">${esc(m[k])}</textarea>${metaNote(k)}</div>`;
-  return `
+  return `${!S.docs.length && !S.startSkip ? `<section class="startdocs">
+    <div class="k">Primul pas</div>
+    <h3>Începe cu documentele</h3>
+    <p>Atașează contractul, ordinul de începere, autorizația de construire sau comunicarea de începere, ori direct tot folderul lucrării. Aplicația completează singură datele proiectului și împarte documentele pe rubrici.</p>
+    <div class="sd-act"><button class="btn pri" data-startf>＋ Alege fișierele</button><button class="btn g" data-startd>Alege un folder întreg</button><button class="linkbtn" data-startskip>Completez datele de mână</button></div>
+    <div class="sd-f">sau trage fișierele oriunde în pagină · ${fmtTag("oricare")}</div>
+  </section>` : ""}
   <div class="note"><b>Unealtă de lucru pentru dosarele de proiect.</b> Toate datele stau în această pagină, pe calculatorul tău. Nimic nu se încarcă pe internet. Salvează proiectul într-un fișier la finalul fiecărei sesiuni.</div>
 
   ${viewSpecialitati()}
@@ -3314,7 +3331,7 @@ const META_KIND_T = {ordin:"ordin de începere", contract:"contract", ac:"autori
 const cleanVal = s => String(s||"").replace(/(^|\n)\s*\|\s*/g,"$1").replace(/\s+/g," ").replace(/^[\s"“”„'`»«″:;,.\-–—|]+|[\s"“”„'`»«″:;,\-–—|]+$/g,"").replace(/\s*\.$/,"").trim();
 // caută în textul fără diacritice, decupează din textul original
 function rxCut(raw, F, rx, g){ const m = rx.exec(F); if(!m) return ""; const i = m.index + m[0].indexOf(m[g||1]); return raw.slice(i, i + m[g||1].length); }
-const okText = (s, min, max) => { s = cleanVal(s).replace(/(?:\s+(?:[^A-Za-zĂÂÎȘȚăâîșțŞşŢţ\s]+|Il|ll|I|l))+$/, "").trim(); if(s.length < (min||3) || s.length > (max||320)) return ""; const L = (s.match(/[A-Za-zĂÂÎȘȚăâîșțŞşŢţ]/g)||[]).length; return L / s.length > .55 ? s : ""; };
+const okText = (s, min, max) => { s = cleanVal(s).replace(/(?:\s+(?:[^A-Za-zĂÂÎȘȚăâîșțŞşŢţ\s\d]+|Il|ll|I|l))+$/, "").trim(); if(s.length < (min||3) || s.length > (max||320)) return ""; const L = (s.match(/[A-Za-zĂÂÎȘȚăâîșțŞşŢţ]/g)||[]).length; return L / s.length > .55 ? s : ""; };
 const firmaCase = s => s;   // denumirile rămân cum sunt scrise în document
 function metaExtract(d, raw){
   if(!raw || String(raw).trim().length < 40) return null;
@@ -5730,6 +5747,9 @@ function bind(){
   v.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{ toTrash("disp", S.disp.splice(+b.dataset.ddel,1)); render(); });
 
   v.querySelectorAll("[data-addfiles]").forEach(b=>b.onclick=()=>$("#inGlobal").click());
+  v.querySelectorAll("[data-startf]").forEach(b=>b.onclick=()=>$("#inGlobal").click());
+  v.querySelectorAll("[data-startd]").forEach(b=>b.onclick=()=>$("#inGlobalDir").click());
+  v.querySelectorAll("[data-startskip]").forEach(b=>b.onclick=()=>{ S.startSkip=true; render(); });
   const csa=$("#csugAdd"); if(csa) csa.onclick=()=>{
     const sg = certSugestii(); let n = 0;
     v.querySelectorAll("[data-csug]").forEach(el=>{ if(!el.checked) return; const x = sg[+el.dataset.csug]; if(!x) return; S.mat.push({id:newId("m"), den:x.i.den, furn:x.i.furn, kw:"", docId:x.d.id, ok:false}); n++; });
