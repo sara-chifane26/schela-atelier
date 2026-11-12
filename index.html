@@ -589,6 +589,24 @@ details.more>div{background:var(--surface);border-color:var(--line);border-radiu
 .ldel{width:30px;padding:0;justify-content:center;opacity:.55}
 .lrow:hover .ldel{opacity:1}
 @media (max-width:760px){ .lpanel .lrow{flex-wrap:wrap;gap:6px 12px} .lpanel .lrow .ln{flex-basis:100%} .lpanel .lrow .ln b{white-space:normal} .ldel{margin-left:auto} }
+/* fereastra în care se deschide un document */
+.docl{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer;text-decoration:underline;text-decoration-color:#D8C49A;text-underline-offset:3px}
+.docl:hover{color:var(--gold-ink);text-decoration-color:var(--gold)}
+.viewer{position:fixed;inset:0;z-index:80;background:rgba(14,26,46,.6);display:none;align-items:center;justify-content:center;padding:18px}
+.viewer.on{display:flex}
+.vw-box{background:var(--surface);border-radius:14px;width:min(1100px,100%);height:min(92vh,1000px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.vw-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line-soft)}
+.vw-t{flex:1;min-width:0}
+.vw-t b{display:block;font-family:var(--fh);font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vw-t span{font-size:12.5px;color:var(--muted)}
+.vw-frame{flex:1;width:100%;border:0;background:#525659}
+.vw-img{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;background:#2B2F36;padding:12px}
+.vw-img img{max-width:100%;height:auto;box-shadow:0 4px 18px rgba(0,0,0,.4)}
+.vw-pdf{flex-direction:column;align-items:center;justify-content:flex-start;gap:12px}
+.vw-pdf canvas{background:#fff;box-shadow:0 4px 18px rgba(0,0,0,.4);max-width:100%}
+.vw-load{color:#C9CED6;font-size:14px;margin:20px}
+.vw-miss{padding:40px 30px;max-width:720px}
+.vw-miss h3{font-family:var(--fh);font-size:24px;margin:0 0 8px}
 /* primul pas al unei lucrări noi */
 .startdocs{position:relative;background:var(--surface);border-radius:14px;box-shadow:0 0 0 1px var(--line-soft),0 8px 24px rgba(14,26,46,.06);padding:26px 30px 22px 34px;margin:0 0 22px;overflow:hidden}
 .startdocs::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--gold)}
@@ -720,6 +738,7 @@ details.more>div{background:var(--surface);border-color:var(--line);border-radiu
 <div class="drop-ov" id="dropOv" aria-hidden="true"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M7 10l5 5 5-5M4 17v3h16v-3"/></svg><b>Lasă fișierele aici</b><span>Orice tip de fișier sau foldere întregi (PDF, Word, Excel, poze, DWG…) — trec prin verificarea la intrare</span></div></div>
 <input type="file" id="inGlobal" multiple hidden>
 <input type="file" id="inGlobalDir" webkitdirectory directory multiple hidden>
+<div class="viewer" id="viewer"></div>
 <div class="modal" id="intake" role="dialog" aria-modal="true" aria-label="Verificare la intrare"></div>
 <div class="busy" id="busy" role="status" aria-live="polite"><div id="busyT">Se citesc fișierele…</div></div>
 
@@ -1495,7 +1514,7 @@ function rowDoc(d){
     : "";
   return `<tr class="${d.sel?"sel":""}" data-id="${d.id}">
     <td><input type="checkbox" class="chk" data-sel="${d.id}" ${d.sel?"checked":""}></td>
-    <td class="fn"><span class="dn">${esc(d.name)}</span>${(()=>{ const q = qualType(d); return q ? `<span class="path" style="color:var(--blue)">${esc(q.tip)}${q.l!=="ro"?` · în ${esc(q.limba)}`:""}</span>` : ""; })()}${d.nr?`<span class="path">Nr. ${esc(d.nr)}</span>`:""}<span class="path">${d.path?esc(d.path)+" · ":""}${fmtSize(d.size)}</span></td>
+    <td class="fn"><span class="dn">${docLink(d)}</span>${(()=>{ const q = qualType(d); return q ? `<span class="path" style="color:var(--blue)">${esc(q.tip)}${q.l!=="ro"?` · în ${esc(q.limba)}`:""}</span>` : ""; })()}${d.nr?`<span class="path">Nr. ${esc(d.nr)}</span>`:""}<span class="path">${d.path?esc(d.path)+" · ":""}${fmtSize(d.size)}</span></td>
     <td><select data-rubset="${d.id}">${RUBRICI.map(r=>`<option value="${r.id}" ${rubOf(d)===r.id?"selected":""}>${esc(r.name)}</option>`).join("")}</select></td>
     <td><input type="date" data-f="data" data-id="${d.id}" value="${esc(d.data)}" class="${d.dataSrc==="estimat"?"isest":""}">${d.dataSrc==="estimat"?`<span class="est" title="Nu am găsit data în denumire; e data ultimei modificări a fișierului, de obicei data copierii. Corecteaz-o din document.">estimată · de verificat</span>`:d.dataSrc==="text"?`<span class="path" title="Data a fost luată din textul documentului.">din text</span>`:""}</td>
     <td><select data-f="sursa" data-id="${d.id}"><option value="">—</option><option value="propriu" ${d.sursa==="propriu"?"selected":""}>Propriu</option><option value="primit" ${d.sursa==="primit"?"selected":""}>Primit</option></select></td>
@@ -1717,6 +1736,7 @@ function commitIntake(){
   markDups(); render();
   const added = it.items.filter(x=>x.act!=="skip").map(x=>x.doc);
   setTimeout(()=>metaFromDocs(added).catch(()=>{}), 50);
+  setTimeout(()=>keepFiles(added), 120);
   let msg = `${pl(n,"document adăugat","documente adăugate")}. Total: ${S.docs.length}.`;
   if(rez) msg += `\n${pl(rez,"lipsă rezolvată","lipsuri rezolvate")}.`;
   const doneNow = S.cereri.filter(c=>openBefore.has(c.id) && cerStatus(c).done);
@@ -1779,7 +1799,7 @@ function viewDuplicate(){
       <table><tbody>
         ${g.docs.map(d=>`<tr>
           <td style="width:110px"><button class="btn ${d.viz?"":"g"} sm" data-viz="${d.id}">${d.viz?"✓ în vigoare":"marchează"}</button></td>
-          <td class="fn">${esc(d.name)}${!g.exact&&g.twins.has(d.id)?` <span class="tag t-viz">conținut identic</span>`:""}${d.path?`<span class="path">${esc(d.path)}</span>`:""}</td>
+          <td class="fn">${docLink(d)}${!g.exact&&g.twins.has(d.id)?` <span class="tag t-viz">conținut identic</span>`:""}${d.path?`<span class="path">${esc(d.path)}</span>`:""}</td>
           <td class="num" style="width:90px">${esc(d.data||d.mtime||"")}</td>
           <td class="num" style="width:70px">${fmtSize(d.size)}</td>
         </tr>`).join("")}
@@ -1813,7 +1833,7 @@ function viewLipsuri(){
       return `<tr class="${d?"done":""}">
       <td class="num">${String(i+1).padStart(2,"0")}</td>
       <td>${esc(lden(l))}</td><td>${esc(l.cap)}</td><td>${esc(l.dela)}</td>
-      <td>${d ? `<span class="tag t-viz">rezolvat</span> <span class="fn" style="font-size:12.5px">${esc(d.name)}</span> <button class="btn g sm" data-unrez="${i}" title="Lipsa redevine deschisă; documentul rămâne în inventar.">anulează</button>` : lipsaTag(l)}</td>
+      <td>${d ? `<span class="tag t-viz">rezolvat</span> <span class="fn" style="font-size:12.5px">${docLink(d)}</span> <button class="btn g sm" data-unrez="${i}" title="Lipsa redevine deschisă; documentul rămâne în inventar.">anulează</button>` : lipsaTag(l)}</td>
       <td><button class="btn g sm" data-dell="${i}">×</button></td></tr>`;}).join("")}</tbody>
   </table></div>` : `<div class="card"><div class="empty"><h3>Nimic în listă încă</h3><p>Pe măsură ce verifici completitudinea dosarului, adaugă aici fiecare document care ar trebui să existe și nu există.</p></div></div>`}`;
 }
@@ -2904,7 +2924,7 @@ function viewMateriale(){
     <tbody>${show.map(r=>{ const d = r.s.f && r.s.f.d, q = d && qualType(d); return `<tr>
       <td><b>${esc(r.m.den)}</b>${r.m.auto && d && !certInfo(d) ? `<span class="path">din numele fișierului${needsOcr(d)?" — scan necitit; Inventar → OCR îl citește":""}</span>` : ""}</td>
       <td>${esc(r.m.furn||"") || `<span class="muted">—</span>`}</td>
-      <td class="fn">${d ? esc(d.name) : `<span class="muted">—</span>`}${q ? `<span class="path">${esc(q.tip)}${q.l!=="ro"?" · "+esc(q.limba):""}</span>` : ""}</td>
+      <td class="fn">${d ? docLink(d) : `<span class="muted">—</span>`}${q ? `<span class="path">${esc(q.tip)}${q.l!=="ro"?" · "+esc(q.limba):""}</span>` : ""}</td>
       <td>${tag(r)}</td>
       <td>${d ? `<label class="ck"><input type="checkbox" class="chk" data-mok="${r.i}" ${r.m.ok?"checked":""}> da</label>` : ""}</td>
       <td><button class="btn g sm" data-mdel="${r.i}" aria-label="Scoate din listă" title="Scoate din listă (documentul rămâne în inventar)">×</button></td>
@@ -3011,7 +3031,7 @@ function viewSemnaturi(){
   ${pvs.length ? `<div class="tw" style="max-height:none"><table>
     <thead><tr><th>Proces-verbal</th><th style="width:80px">Nr.</th><th style="width:96px">Data</th>${SIGN.map(([k,t])=>`<th style="width:92px">${t}</th>`).join("")}<th style="width:160px">Stare</th></tr></thead>
     <tbody>${pvs.map(d=>{ const st = pvState(d); return `<tr>
-      <td class="fn">${esc(d.name)}${d.txt?`<span class="path">${esc(txtPeek(d.txt))}…</span>`:""}${d.sig?`<span class="path" style="color:var(--green)">semnat electronic${d.sig.names.length?": "+esc(d.sig.names.join(", ")):""}</span>`:""}</td><td class="num">${esc(d.nr||"")}</td><td class="num">${d.dataSrc==="estimat"?"":esc(roDate(d.data))}</td>
+      <td class="fn">${docLink(d)}${d.txt?`<span class="path">${esc(txtPeek(d.txt))}…</span>`:""}${d.sig?`<span class="path" style="color:var(--green)">semnat electronic${d.sig.names.length?": "+esc(d.sig.names.join(", ")):""}</span>`:""}</td><td class="num">${esc(d.nr||"")}</td><td class="num">${d.dataSrc==="estimat"?"":esc(roDate(d.data))}</td>
       ${SIGN.map(([k])=>`<td>${st.need.includes(k) ? `<label class="ck" ${st.auto[k]?`title="Semnătură electronică: ${esc(st.auto[k])}"`:""}><input type="checkbox" class="chk" data-sg="${d.id}:${k}" ${st.s[k]?"checked":""}> ${st.auto[k] && st.s[k] ? "electronic" : "semnat"}</label>` : `<span class="muted">—</span>`}</td>`).join("")}
       <td>${st.miss.length ? `<span class="tag t-late">lipsă ${st.miss.length}</span> <button class="btn g sm" data-sgall="${d.id}" title="Bifează toate semnăturile cerute">toate</button>` : `<span class="tag t-viz">complet</span>`}</td>
     </tr>`; }).join("")}</tbody></table></div>` : `<div class="card"><div class="empty"><h3>Niciun proces-verbal în inventar</h3><p>PV-urile apar aici după ce le adaugi la Inventar.</p></div></div>`}`;
@@ -3034,7 +3054,7 @@ function viewDispozitii(){
         <td><input type="text" data-df="${i}:desc" value="${esc(x.desc||"")}" placeholder="ex. traseu cablu modificat la etajul 1"><input type="text" data-df="${i}:plans" value="${esc(x.plans||"")}" placeholder="planșe / părți afectate, ex. E-03, E-05" style="margin-top:4px"></td>
         <td style="font-size:13px">${MOD_APR.map(([k,l])=>`<label class="ck" style="display:block"><input type="checkbox" class="chk" data-dck="${i}:${k}" ${x[k]?"checked":""}> ${l}</label>`).join("")}</td>
         <td style="font-size:13px">${modDesen(x)?`<label class="ck" style="display:block"><input type="checkbox" class="chk" data-dck="${i}:desen" ${x.desen?"checked":""}> are desen</label>`:""}<label class="ck" style="display:block"><input type="checkbox" class="chk" data-dck="${i}:asbuilt" ${x.asbuilt?"checked":""}> în as built</label></td>
-        <td class="fn">${d ? esc(d.name) : `<span class="muted">—</span>`}</td>
+        <td class="fn">${d ? docLink(d) : `<span class="muted">—</span>`}</td>
         <td><button class="btn g sm" data-ddel="${i}" aria-label="Șterge">×</button></td>
       </tr>`; }).join("")}</tbody></table></div>
       <div class="cov">
@@ -3264,7 +3284,7 @@ const LUNI_X = {};
 Object.assign(LUNI_X, {jan:1,feb:2,mar:3,apr:4,jun:6,jul:7,aug:8,sep:9,sept:9,setiembre:9,oct:10,nov:11,dec:12,jänner:1,janner:1});
 const LUNI_RX = Object.keys(LUNI_X).sort((a,b)=>b.length-a.length).join("|");
 function findNr(s){
-  const t = norm(String(s||"").replace(/\.(pdf|docx?|xlsx?|jpe?g|png|tiff?|dwg|zip)$/i,""));
+  const t = norm(String(s||"").replace(/\.(pdf|docx?|xlsx?|jpe?g|png|tiff?|dwg|zip)$/i,"")).replace(/\b(?:str|strada|bd|bdul|b-dul|bulevardul|calea|sos|soseaua|aleea)\.?\s+[^,;]{1,40}?\s+nr\.?\s*[0-9]+[a-z]?/g, " ");
   // cod de lucrare urmat de numărul actului: „26L07.4-5.3”, „Nr. 24L18.3 – 19.1.1”
   const k = t.match(/(?:^|\bnr\.?\s*[:.]?\s*)([0-9]{1,3}[a-z]{1,2}[0-9]{1,3}(?:\.[0-9]{1,3})?\s*[-–]\s*[0-9]{1,3}(?:\.[0-9]{1,3}){0,2})(?![0-9])/);
   if(k) return k[1].replace(/\s+/g,"").toUpperCase().replace("–","-");
@@ -3321,6 +3341,79 @@ function certSugestii(){
   const have = new Set(S.mat.map(m=>m.docId).filter(Boolean)), names = new Set(S.mat.map(m=>norm(m.den)));
   return live().filter(isQualDoc).filter(d=>!have.has(d.id)).map(d=>({d, i:certInfo(d)})).filter(x=>x.i && !names.has(norm(x.i.den)));
 }
+
+
+/* ---- DESCHIDEREA DOCUMENTELOR ----
+   Orice document din inventar se deschide cu un clic pe numele lui, oriunde apare în aplicație,
+   ca să vezi singur ce e în el, nu doar ce a înțeles aplicația. Fișierul se păstrează în browser,
+   pe calculatorul tău (nu se trimite nicăieri); dacă nu mai e acolo, îl ia din folderul lucrării. */
+const KEEP_MAX = 150*1048576;
+async function keepFiles(docs){
+  try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+  for(const d of docs||[]){ const f = DOC_FILE.get(d.id); if(f && f.size <= KEEP_MAX){ try{ await IDB.set("f:"+d.id, f); }catch(e){} } }
+}
+const docLink = (d, label) => d ? `<button type="button" class="docl" data-open="${esc(d.id)}" title="Deschide documentul">${esc(label || d.name)}</button>` : "";
+async function docFile(d){
+  let f = DOC_FILE.get(d.id); if(f) return f;
+  try{ f = await IDB.get("f:"+d.id); }catch(e){}
+  if(f){ DOC_FILE.set(d.id, f); return f; }
+  if(await folderHandle(false)){
+    const m = await sourceFilesMap();
+    f = m && (m.get(d.path+"|"+d.name+"|"+d.size) || m.get("|"+d.name+"|"+d.size));
+    if(f){ DOC_FILE.set(d.id, f); keepFiles([d]); return f; }
+  }
+  return null;
+}
+let VIEW_URL = null;
+function closeViewer(){ const v = $("#viewer"); v.classList.remove("on"); v.innerHTML = ""; if(VIEW_URL){ URL.revokeObjectURL(VIEW_URL); VIEW_URL = null; } }
+async function openDoc(id){
+  const d = S.docs.find(x=>x.id===id) || (S.trash||[]).map(t=>t.item).find(x=>x && x.id===id);
+  if(!d) return;
+  const f = await docFile(d);
+  const v = $("#viewer"), ext = extOf(d.name);
+  const meta = [d.path, rubById(rubOf(d)) ? rubById(rubOf(d)).name : "", d.nr ? "nr. "+d.nr : "", d.data && d.dataSrc!=="estimat" ? roDate(d.data) : ""].filter(Boolean).map(esc).join(" · ");
+  let body;
+  if(!f){
+    body = `<div class="vw-miss"><h3>Fișierul nu mai e în acest browser</h3><p>A fost adăugat înainte ca aplicația să păstreze fișierele, sau pe alt calculator. Leagă folderul lucrării (Inventar → „Leagă folderul lucrării”) sau adaugă din nou documentul, și se va deschide de aici înainte.</p>${d.txt ? `<p class="muted" style="margin-top:14px"><b>Ce a citit aplicația din el:</b> ${esc(d.txt.slice(0,600))}…</p>` : ""}</div>`;
+  } else {
+    if(VIEW_URL) URL.revokeObjectURL(VIEW_URL);
+    VIEW_URL = URL.createObjectURL(f);
+    if(ext==="pdf") body = `<div class="vw-img vw-pdf" id="vwPdf"><p class="vw-load">Se deschide…</p></div>`;
+    else if(["jpg","jpeg","png","gif","webp","bmp"].includes(ext)) body = `<div class="vw-img"><img src="${VIEW_URL}" alt="${esc(d.name)}"></div>`;
+    else if(["txt","csv"].includes(ext)) body = `<iframe class="vw-frame" src="${VIEW_URL}" title="${esc(d.name)}"></iframe>`;
+    else body = `<div class="vw-miss"><h3>${esc(ext.toUpperCase()||"Fișierul")} nu se poate afișa direct în browser</h3><p>Apasă „Deschide cu programul tău” — se deschide în Word, Excel sau programul potrivit.</p>${d.txt ? `<p class="muted" style="margin-top:14px"><b>Începutul textului:</b> ${esc(d.txt.slice(0,900))}…</p>` : ""}</div>`;
+  }
+  v.innerHTML = `<div class="vw-box" role="dialog" aria-modal="true" aria-label="${esc(d.name)}">
+    <div class="vw-h"><div class="vw-t"><b>${esc(d.name)}</b><span>${meta}</span></div>
+      ${f ? `<a class="btn g sm" href="${VIEW_URL}" target="_blank" rel="noopener">Fereastră nouă</a><a class="btn g sm" href="${VIEW_URL}" download="${esc(d.name)}">Deschide cu programul tău</a>` : ""}
+      <button class="btn sm" id="vwClose" aria-label="Închide">Închide ✕</button></div>
+    ${body}</div>`;
+  v.classList.add("on");
+  $("#vwClose").onclick = closeViewer;
+  if(f && ext==="pdf") pdfInto(f, $("#vwPdf"), VIEW_URL, d.name);
+}
+// paginile PDF-ului desenate în fereastră (merge și pe telefon); fără pdf.js, vizualizatorul browserului
+async function pdfInto(f, el, url, name){
+  const lib = await loadPdfJs();
+  if(!lib){ el.outerHTML = `<iframe class="vw-frame" src="${url}" title="${esc(name)}"></iframe>`; return; }
+  try{
+    const pdf = await lib.getDocument({data: new Uint8Array(await f.arrayBuffer())}).promise;
+    if(!el.isConnected) return;
+    el.innerHTML = ""; const MAXP = 40, n = Math.min(pdf.numPages, MAXP);
+    for(let p=1; p<=n; p++){
+      if(!el.isConnected || VIEW_URL!==url) return;
+      const page = await pdf.getPage(p), w = Math.min(el.clientWidth - 28, 1000), vp0 = page.getViewport({scale:1});
+      const dpr = Math.min(window.devicePixelRatio||1, 2), vp = page.getViewport({scale: w / vp0.width * dpr});
+      const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height; c.style.width = w + "px";
+      el.appendChild(c);
+      await page.render({canvasContext:c.getContext("2d"), viewport:vp}).promise;
+    }
+    if(pdf.numPages > MAXP) el.insertAdjacentHTML("beforeend", `<p class="vw-load">Am arătat primele ${MAXP} pagini din ${pdf.numPages}. Restul: „Fereastră nouă”.</p>`);
+  }catch(e){ if(el.isConnected) el.outerHTML = `<iframe class="vw-frame" src="${url}" title="${esc(name)}"></iframe>`; }
+}
+document.addEventListener("click", e=>{ const b = e.target.closest && e.target.closest("[data-open]"); if(!b) return; e.preventDefault(); e.stopPropagation(); openDoc(b.dataset.open); }, true);
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && $("#viewer").classList.contains("on")) closeViewer(); });
+$("#viewer").addEventListener("click", e=>{ if(e.target.id==="viewer") closeViewer(); });
 
 /* ---- ADĂUGARE PRIN TRAGERE (drag and drop) ---- */
 async function dropToFiles(dt){
@@ -3467,7 +3560,7 @@ const metaShow = (k, v) => k==="inceput" ? roDate(v) : v;
 function metaNote(k){
   const src = (S.metaSrc||{})[k], alts = ((S.metaAlt||{})[k]||[]).filter(a=>norm(a.val)!==norm(S.meta[k]||""));
   let h = "";
-  if(src && src.val===S.meta[k]) h += src.ok ? `<span class="msrc">din: ${esc(src.doc)}</span>` : `<span class="msrc"><span class="tag t-dup">propus</span> din: ${esc(src.doc)} <button class="btn sm" data-metaok="${k}">✓ Corect</button></span>`;
+  if(src && src.val===S.meta[k]) h += src.ok ? `<span class="msrc">din: ${src.docId && S.docs.some(x=>x.id===src.docId) ? docLink({id:src.docId, name:src.doc}) : esc(src.doc)}</span>` : `<span class="msrc"><span class="tag t-dup">propus</span> din: ${src.docId && S.docs.some(x=>x.id===src.docId) ? docLink({id:src.docId, name:src.doc}) : esc(src.doc)} <button class="btn sm" data-metaok="${k}">✓ Corect</button></span>`;
   if(alts.length) h += `<details class="malt"><summary>${alts.length===1 ? "încă o variantă găsită în documente" : `încă ${alts.length} variante găsite în documente`}</summary>${alts.map((a,i)=>`<span class="msrc alt">${esc(META_KIND_T[a.kind]||"scris de tine")} (${esc(a.doc)}): „${esc(metaShow(k,a.val))}” <button class="btn g sm" data-malt="${k}|${i}">Folosește</button></span>`).join("")}</details>`;
   return h;
 }
@@ -3907,7 +4000,7 @@ function viewCarte(){
       <td class="num">${esc(i.cod||"")}</td>
       <td>${esc(i.den)}${i.dela?`<span class="path">de la: ${esc(i.dela)}${ctTemei(i)?` · temei: ${esc(ctTemei(i))}`:""}</span>`:""}${ctNormTag(i)}</td>
       <td>${i.na ? `<span class="tag t-none">${i.att?"scos din dosar":i.optNa?"dacă e cazul":"nu se aplică"}</span>` : i.doc ? `<span class="tag t-viz">găsit${i.manual?" · ales":""}</span>${["pdf","jpg","jpeg","png"].includes(extOf(i.doc.name)) ? "" : `<span class="tag t-conv" title="Ca să intre în cartea tehnică PDF, salvează-l ca PDF și adaugă PDF-ul în inventar.">${esc(extOf(i.doc.name).toUpperCase()||"fișier")} — de salvat ca PDF</span>`}` : d.later ? `<span class="tag t-none">de completat</span>` : inLips.has(norm(lden(i))) ? `<span class="tag t-dup">în Lipsuri</span>` : `<span class="tag t-late">lipsă</span>`}</td>
-      <td>${i.na ? "" : i.att ? `<span class="muted">atașat: ${esc(i.doc ? i.doc.name : "")}</span>` : `<select data-ctman="${esc(i.key)}"><option value="">${i.doc && !i.manual ? "automat: "+esc(i.doc.name) : "automat — negăsit"}</option>${docs.map(x=>`<option value="${x.id}" ${i.manual && i.doc && i.doc.id===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select>`}</td>
+      <td>${i.na ? "" : i.att ? `<span class="muted">atașat: ${i.doc ? docLink(i.doc) : ""}</span>` : `<select data-ctman="${esc(i.key)}"><option value="">${i.doc && !i.manual ? "automat: "+esc(i.doc.name) : "automat — negăsit"}</option>${docs.map(x=>`<option value="${x.id}" ${i.manual && i.doc && i.doc.id===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select>${i.doc ? ` <button type="button" class="btn g sm" data-open="${esc(i.doc.id)}" title="Deschide fișierul ca să verifici că e documentul potrivit">Deschide</button>` : ""}`}</td>
       <td style="white-space:nowrap">${i.att ? `<button class="btn g sm" data-ctna="${esc(i.key)}">${i.na ? "Pune înapoi" : "Scoate din dosar"}</button>` : i.na ? (i.optNa ? `<button class="btn g sm" data-ctneed="${esc(i.key)}" title="Lucrarea are autorizație de construire: documentul devine obligatoriu">Se aplică</button>` : `<button class="btn g sm" data-ctna="${esc(i.key)}">Se aplică</button>`) : `${!i.doc && !d.later && !inLips.has(norm(lden(i))) ? `<button class="btn g sm" data-ctask="${esc(i.key)}">Cere</button> ` : ""}<button class="btn g sm" data-ctna="${esc(i.key)}">Nu se aplică</button>`}</td>
     </tr>`).join("")}</tbody>
   </table></div>
@@ -4492,6 +4585,7 @@ function restoreLucrare(id){
   saveCos(a.filter(y=>y.id!==id));
 }
 function deleteForever(id){
+  try{ const o = readLucrare(id); ((o && o.docs) || []).forEach(d=>IDB.del("f:"+d.id)); }catch(e){}
   try{ localStorage.removeItem(KEY_L(id)); IDB.del(id); IDB.del("ben:"+id); }catch(e){}
   saveCos(readCos().filter(y=>y.id!==id));
 }
@@ -4738,7 +4832,7 @@ function viewValabilitati(){
   <div class="card">
     <h3>Documente</h3>
     ${ds.length ? `<div class="tw" style="max-height:none"><table><thead><tr><th>Document</th><th style="width:190px">Rubrica</th><th style="width:320px" colspan="2">Valabil până la</th></tr></thead><tbody>
-      ${ds.map(d=>`<tr><td class="fn">${esc(d.name)}</td><td class="muted">${esc(rubById(rubOf(d)).name)}</td><td colspan="2">${expCell(d)}</td></tr>`).join("")}
+      ${ds.map(d=>`<tr><td class="fn">${docLink(d)}</td><td class="muted">${esc(rubById(rubOf(d)).name)}</td><td colspan="2">${expCell(d)}</td></tr>`).join("")}
     </tbody></table></div>` : `<p class="muted" style="margin:0">${all.length ? "Niciun document cu dată de valabilitate încă." : "Niciun aviz, certificat sau buletin în inventar."}</p>`}
     ${all.filter(needsOcr).length ? `<div class="note warn" style="margin:10px 0 0">${pl(all.filter(needsOcr).length,"scan sau poză necitită","scanuri sau poze necitite")}: data de valabilitate se poate afla doar citindu-le. <button class="btn g sm" id="valOcr" style="margin-left:8px">Citește-le acum (OCR)</button></div>` : ""}
     ${noDate ? `<p style="margin:10px 0 0"><button class="linkbtn" id="valAll">${VAL_ALL ? "Ascunde documentele fără dată" : `Arată și avizele, certificatele și buletinele în care nu scrie o dată de valabilitate (${noDate})`}</button></p>` : ""}
@@ -4860,7 +4954,7 @@ function persDocsHtml(p, i){
   return `<div class="pdocs">
     <span class="lbl" style="margin-top:10px">Documentele persoanei</span>
     ${ds.length ? `<div class="tw" style="max-height:none;margin-top:4px"><table><tbody>${ds.map(d=>{ return `<tr>
-      <td class="fn">${esc(d.name)}${d.nr?`<span class="muted" style="display:block;font-size:12px">nr. ${esc(d.nr)}</span>`:""}</td>
+      <td class="fn">${docLink(d)}${d.nr?`<span class="muted" style="display:block;font-size:12px">nr. ${esc(d.nr)}</span>`:""}</td>
       <td style="width:230px"><select data-ptip="${d.id}">${PDOC_TIP.map(t=>`<option ${d.ptip===t?"selected":""}>${esc(t)}</option>`).join("")}</select></td>
       <td style="width:260px">${expCell(d)}</td>
       <td style="width:70px"><button class="btn g sm" data-punlink="${d.id}" title="Documentul rămâne în inventar">Scoate</button></td></tr>`; }).join("")}</tbody></table></div>` : ""}
@@ -5183,7 +5277,7 @@ function viewConformitate(){
           <div class="cf-t">${esc(x.r.titlu)} ${x.r.dom||x.r.sub ? `<span class="chip">${esc(x.r.tag || (x.r.sub ? CT_TPL[x.r.sub[0]].short||CT_TPL[x.r.sub[0]].name : domById(x.r.dom).name))}</span>` : ""} ${stTag(x)} ${x.st==="miss" && inLips.has(norm(x.r.titlu)) ? `<span class="muted">· în Lipsuri</span>` : ""}</div>
           <div class="cf-why">${esc(x.r.deCe)}</div>
           <div class="cf-law">Temei: ${esc(x.r.temei)}</div>
-          ${x.det && x.det.doc ? `<div class="cf-doc">Găsit: <span class="fn">${esc(x.det.doc.name)}</span></div>` : x.det && x.det.info ? `<div class="cf-doc">${esc(x.det.info)}</div>` : ""}
+          ${x.det && x.det.doc ? `<div class="cf-doc">Găsit: <span class="fn">${docLink(x.det.doc)}</span></div>` : x.det && x.det.info ? `<div class="cf-doc">${esc(x.det.info)}</div>` : ""}
         </div>
         <div class="cf-act">
           ${x.r.auto ? `<button class="btn g sm" data-v-go="${({pers:"proiect",carte:"carte",sem:"executie:sem",disp:"executie:disp",faze:"executie:faze"})[x.r.auto]}">${({pers:"Vezi persoanele",carte:"Vezi cartea tehnică",sem:"Vezi semnăturile",disp:"Vezi dispozițiile",faze:"Vezi fazele"})[x.r.auto]}</button>` : x.r.id==="produse" && S.mat.length ? `<button class="btn g sm" data-v-go="materiale">Vezi materialele</button>` :
