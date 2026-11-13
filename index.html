@@ -4955,12 +4955,13 @@ async function attachPersDocs(pi, files){
       sursa:"", dela:p.nume||"", viz:false, dup:false, grp:false, sel:false, obs:"", persId:p.id};
     if(d.ext==="pdf"){ d.sig = (await pdfSigInfo(f)) || undefined; d.sigChecked = true; }
     enrichDoc(d); d.ptip = persDocTip(d); persFromDoc(p, d);
-    S.docs.push(d); byHash.set(hash, d); added++; fresh.push({d, f});
+    S.docs.push(d); byHash.set(hash, d); added++; fresh.push({d, f}); DOC_FILE.set(d.id, f);
   }
   // scanurile și pozele se citesc singure (OCR), ca data de valabilitate să nu fie trecută de mână
   const scans = fresh.filter(x=>needsOcr(x.d));
   if(scans.length){ await runOcr(scans, true); for(const {d} of scans){ if(!d.ptip || d.ptip===PDOC_TIP[6]) d.ptip = persDocTip(d); persFromDoc(p, d); } }
   markDups(); busy(false); render();
+  keepFiles(fresh.map(x=>x.d));
   toast(`${p.nume||"Persoana"}: ${[added?pl(added,"document atașat","documente atașate"):"", linked?pl(linked,"document din inventar legat","documente din inventar legate"):""].filter(Boolean).join(", ")||"nimic nou"}.`);
 }
 function persDocsHtml(p, i){
