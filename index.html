@@ -881,10 +881,10 @@ function validIso(y,m,d){
 }
 function guessDate(name){
   const t = String(name);
-  let m = t.match(/(?:^|\D)(20\d{2})[-_.]?(0[1-9]|1[0-2])[-_.]?(0[1-9]|[12]\d|3[01])(?!\d)/);
-  if(m && validIso(m[1],m[2],m[3])) return `${m[1]}-${m[2]}-${m[3]}`;
-  m = t.match(/(?:^|\D)(0?[1-9]|[12]\d|3[01])[-_. ](0?[1-9]|1[0-2])[-_. ](20\d{2})(?!\d)/);
-  if(m && validIso(m[3],m[2],m[1])) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  let m = t.match(/(?:^|\D)(0?[1-9]|[12]\d|3[01])([-_. ])(0?[1-9]|1[0-2])\2(20\d{2})(?!\d)/);
+  if(m && validIso(m[4],m[3],m[1])) return `${m[4]}-${m[3].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  m = t.match(/(?:^|\D)(20\d{2})([-_.]?)(0[1-9]|1[0-2])\2(0[1-9]|[12]\d|3[01])(?!\d)/);
+  if(m && validIso(m[1],m[3],m[4])) return `${m[1]}-${m[3]}-${m[4]}`;
   return "";
 }
 function baseKey(name){
@@ -2092,7 +2092,7 @@ const CT_COMMON = {
     {den:"Certificat de garanție din partea executantului", kw:"certificat garantie", cap:"Calitate", dela:"Executant"},
     {den:"Declarație de conformitate din partea executantului", kw:"declaratie conformitate executant", cap:"Calitate", dela:"Executant"},
     {den:"Certificate de calitate și garanție pentru materialele principale", kws:["certificat calitate","certificat de calitate","quality certificate","certificate of compliance","certificado de conformidad","certificado de calidad","qualitatszertifikat","certificat de conformite"], cap:"Calitate", dela:"Furnizori"},
-    {den:"Declarații de performanță / conformitate pentru materialele principale", kws:["declaratie conformitate material","declaratii conformitate material","declaratie performanta","declaratii performanta"], cap:"Calitate", dela:"Furnizori"}
+    {den:"Declarații de performanță / conformitate pentru materialele principale", kws:["declaratie conformitate material","declaratii conformitate material","declaratie performanta","declaratii performanta","declaratie de conformitate distribuitor","declaratie conformitate distribuitor","declaratie de conformitate furnizor","declaratie conformitate furnizor"], cap:"Calitate", dela:"Furnizori"}
   ],
   C1: () => [
     {den:"Dispoziția de numire a comisiei de recepție", kw:"comisie receptie", cap:"Execuție", dela:"Beneficiar"},
@@ -2903,6 +2903,8 @@ function syncMat(){
     S.mat.push({id:newId("m"), den: i ? i.den : matNameFromFile(d.name), furn: i ? i.furn : "", kw:"", docId:d.id, ok:false, auto:true});
     have.add(d.id);
   }
+  // după OCR: materialul numit încă după fișier primește denumirea citită din document (doar dacă nu l-ai redenumit tu)
+  for(const m of S.mat){ if(!m.auto || m.edited) continue; const d = S.docs.find(x=>x.id===m.docId); if(!d || m.den!==matNameFromFile(d.name)) continue; const i = certInfo(d); if(i){ m.den = i.den; if(!m.furn) m.furn = i.furn; } }
   // materialul al cărui document a fost scos din inventar dispare și el (cele scrise de mână, din versiunile vechi, rămân)
   S.mat = S.mat.filter(m=>!m.auto || S.docs.some(d=>d.id===m.docId && !d.dup));
 }
@@ -3309,12 +3311,22 @@ function findDateText(s){
   if(!cands.length) return "";
   // data de lângă „din” / „data” are prioritate; altfel prima din text
   const near = cands.find(c=>/(din|data|incheiat|astazi|date|dated|datum|vom|du|le|fecha|tarih|issued)\s*[:.,]?\s*$/.test(t.slice(Math.max(0,c.i-14), c.i+1)));
-  return (near || cands.sort((a,b)=>a.i-b.i)[0]).iso;
+  if(near) return near.iso;
+  const ref = c => /(contract\w*|acord\w*|cadru\w*|ordin\w*|conventi\w*|aviz\w*|autorizati\w*|factura)[^.;]{0,22}$/.test(t.slice(Math.max(0,c.i-40), c.i+1));
+  cands.sort((a,b)=>a.i-b.i);
+  return (cands.find(c=>!ref(c)) || cands[0]).iso;
 }
+const cleanHead = t => String(t||"")
+  .replace(/\bnr\.?\s*[0-9]{3,6}\s*\/\s*[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{4}\s*tip\s*[a-z][0-9]\b/g, " ")
+  .replace(/\batestat\w*\s+a\.?\s*n\.?\s*r\.?\s*e\.?\s*:?/g, " ")
+  .replace(/\bnr\.?\s*reg\.?\s*com\.?\s*:?\s*j\s*[0-9]{1,2}\s*\/\s*[0-9]+\s*\/\s*[0-9]{4}/g, " ")
+  .replace(/\bj\s?[0-9]{2}\s*\/\s*[0-9]+\s*\/\s*[0-9]{4}/g, " ")
+  .replace(/\b(?:cui|cif|cod fiscal)\s*:?\s*(?:ro)?\s*[0-9]{2,10}/g, " ").replace(/\biban\s*:?\s*ro[0-9a-z]{10,30}/g, " ");
 // completează numărul și data unui document din text, fără să suprascrie ce ai corectat de mână
 function enrichDoc(d){
-  if(!d.nr) d.nr = findNr(d.name) || (d.txt ? findNr(d.txt.slice(0,300)) : "");
-  if(d.txt && (d.dataSrc==="estimat" || !d.data)){ const dt = findDateText(d.txt.slice(0,400)); if(dt){ d.data = dt; d.dataSrc = "text"; } }
+  const tt = cleanHead(d.txt);
+  if(!d.nr) d.nr = findNr(d.name) || (d.txt ? findNr(tt.slice(0,400)) : "");
+  if(d.txt && (d.dataSrc==="estimat" || !d.data)){ const dt = findDateText(tt.slice(0,700)); if(dt){ d.data = dt; d.dataSrc = "text"; } }
   if(d.cap==="Neclasificat" && d.txt){ const c = matchCap(d.txt.slice(0,200)); if(c) d.cap = c; }
   if(d.txt && !d.exp){ const e = findExpiry(d.txt); if(e){ d.exp = e; d.expSrc = "text"; } }
 }
@@ -3325,13 +3337,15 @@ function certInfo(d){
   let lab = t.match(new RegExp("(?:^|\\s)(?:product|produkt|produit|producto|produs(?:ul)?|accesorios|accessories|denumire\\s+produs|denumire\\s+material|material(?:ul)?|articol(?:ul)?)\\s*:\\s*(.{3,110}?)" + stop));
   const LABS = "(?:^|\\s)(?:product|produkt|produit|producto|produs(?:ul)?|accesorios|accessories|denumire\\s+produs|denumire\\s+material|material(?:ul)?|articol(?:ul)?)\\s*:\\s*";
   // fără un cuvânt de oprire după: se taie la începutul frazei următoare („SC … declară”, „certifica que”, „This is to certify”)
-  let lab2 = lab ? null : t.match(new RegExp(LABS + "(.{3,90})"));
+  let lab2 = lab ? null : (t.match(new RegExp(LABS + "(.{3,90})")) || t.match(/(?:^|\s)(?:accesorios|producto|produit|produkt|product|produs)\s*\/\s*(?:accessories|product|produit|produs)(?:\s*\/\s*\w+)?\s*:?\s*(.{3,90})/));
   if(lab2){ const c = lab2[1].search(/\s(?:sc|s\.c\.|certific\w*|declar\w*|garant\w*|this|we|hereby|que|los|las|la\s+care)\s|\.\s/); lab2 = [lab2[0], c > 2 ? lab2[1].slice(0, c) : lab2[1]]; }
   if(!lab && lab2) lab = lab2;
+  if(!lab){ const tb = t.match(/denumire\s+(?:cantitate|cant\.?|um)\b[^0-9]{0,20}?(?:1\s+)?(?:[0-9]{5,10}\s+)?([a-z][^0-9]{2,50}?(?:[0-9]+x[0-9]+|[0-9]+[,.]?[0-9]*\s*m)?)\s+[0-9]+[,.]?[0-9]*\s*(?:kg|buc|m|ml|to|t)\b/); if(tb) lab = [tb[0], tb[1]]; }
+  if(lab){ lab = [lab[0], lab[1].replace(/\s(?:drum|tambur|bobina|lot|serial)\b.*$/, "")]; }
   if(lab && lab[1].length > 75){ const c = lab[1].lastIndexOf(", ", 75); lab[1] = c > 20 ? lab[1].slice(0, c) : lab[1].slice(0, 75); }
-  const m = lab || t.match(new RegExp("(?:cod(?:ul)?\\s+unic\\s+de\\s+identificare\\s+(?:a|al)\\s+produsului[\\s\\-]*tip|unique\\s+identification\\s+code\\s+of\\s+the\\s+product[\\s\\-]*type|eindeutiger\\s+kenncode\\s+des\\s+produkttyps|code\\s+d\\W?identification\\s+unique\\s+du\\s+produit[\\s\\-]*type|codigo\\s+de\\s+identificacion\\s+unica\\s+del\\s+producto[\\s\\-]*tipo|urun\\s+tipinin\\s+kendine\\s+has\\s+tanitim\\s+kodu|trade\\s+name|product\\s+name|product\\s+type|product\\s+description|handelsname|produktbezeichnung|nom\\s+commercial|designation(?:\\s+du\\s+produit)?|nombre\\s+comercial|denominacion(?:\\s+del\\s+producto)?|ticari\\s+adi|urun\\s+adi|product|produkt|produit|producto|urun|denumire(?:a)?\\s+comerciala|denumire(?:a)?\\s+produs(?:ului)?|descriere(?:a)?\\s+produs(?:ului)?|tip(?:ul)?\\s+produs(?:ului)?|produs(?:ul)?|denumire\\s+material|material(?:ul)?|articol(?:ul)?|pentru\\s+produsul)\\s*[:\\-]?\\s*(.{3,70}?)" + stop));
+  const m = lab || t.match(new RegExp("(?:cod(?:ul)?\\s+unic\\s+de\\s+identificare\\s+(?:a|al)\\s+produsului[\\s\\-]*tip|unique\\s+identification\\s+code\\s+of\\s+the\\s+product[\\s\\-]*type|eindeutiger\\s+kenncode\\s+des\\s+produkttyps|code\\s+d\\W?identification\\s+unique\\s+du\\s+produit[\\s\\-]*type|codigo\\s+de\\s+identificacion\\s+unica\\s+del\\s+producto[\\s\\-]*tipo|urun\\s+tipinin\\s+kendine\\s+has\\s+tanitim\\s+kodu|trade\\s+name|product\\s+name|product\\s+type|product\\s+description|handelsname|produktbezeichnung|nom\\s+commercial|designation(?:\\s+du\\s+produit)?|nombre\\s+comercial|denominacion(?:\\s+del\\s+producto)?|ticari\\s+adi|urun\\s+adi|product|produkt|produit|producto|urun|denumire(?:a)?\\s+comerciala|denumire(?:a)?\\s+produs(?:ului)?|descriere(?:a)?\\s+produs(?:ului)?|tip(?:ul)?\\s+produs(?:ului)?|produs(?:ul)?|denumire\\s+material|material(?:ul)?\\b|articol(?:ul)?\\b|pentru\\s+produsul)\\b\\s*[:\\-]?\\s*(.{3,70}?)" + stop));
   if(!m) return null;
-  const f = t.match(/(?:producator(?:ul)?|fabricante|fabricant(?:ul)?|fabricat de|furnizor(?:ul)?|numele si adresa (?:producatorului|fabricantului)|manufactured by|manufacturer|producer|hersteller|uretici(?: firma)?|imalatci)\s*[:\-]?\s*(.{3,50}?)(?=\s(?:adresa|address|adresse|anschrift|direccion|adres|cui|cod|str|produs|product|producto|produit|produkt|nr|no|tel|phone|telefon|fax|www|email|e-mail|date|datum|fecha|tarih|data)\b|[;,]\s|$)/);
+  const f = t.match(/(?:manufacturer|producator(?:ul)?|fabricant(?:ul)?)\s*:\s*(.{3,50}?)(?=\s(?:adresa|address|customer|client|product|produs|cui|str|tel|www|date|data)\b|[;,(]\s?|$)/) || t.match(/(?:producator(?:ul)?|fabricante|fabricant(?:ul)?|fabricat de|furnizor(?:ul)?|numele si adresa (?:producatorului|fabricantului)|manufactured by|manufacturer|producer|hersteller|uretici(?: firma)?|imalatci)\s*[:\-]?\s*(.{3,50}?)(?=\s(?:adresa|address|adresse|anschrift|direccion|adres|cui|cod|str|produs|product|producto|produit|produkt|nr|no|tel|phone|telefon|fax|www|email|e-mail|date|datum|fecha|tarih|data)\b|[;,]\s|$)/);
   const cap1 = s => s.trim().replace(/\S*\d\S*/g, w=>w.toUpperCase().replace(/(\d)X(\d)/g,"$1x$2")).replace(/^./, c=>c.toUpperCase());
   const FORM = {srl:"SRL", sa:"SA", sc:"SC", gmbh:"GmbH", kg:"KG", ag:"AG", ltd:"Ltd", llc:"LLC", sas:"SAS", spa:"SpA", sl:"S.L.", as:"A.Ș."};
   const firma = x => x.trim().replace(/[a-z0-9]+/g, w => FORM[w] || (w.length>2 ? w[0].toUpperCase()+w.slice(1) : w));
@@ -3472,7 +3486,7 @@ function metaKind(d, raw){
 }
 const META_PRI = {ordin:5, contract:5, ac:4, acord:3, comunicare:3, cu:2, "contract-serv":1};
 const META_KIND_T = {ordin:"ordin de începere", contract:"contract", acord:"acord-cadru", ac:"autorizație de construire", comunicare:"comunicare de începere", cu:"certificat de urbanism", "contract-serv":"contract de servicii"};
-const cleanVal = s => String(s||"").replace(/(^|\n)\s*\|\s*/g,"$1").replace(/\s+/g," ").replace(/^[\s"“”„'`»«″:;,.\-–—|]+|[\s"“”„'`»«″:;,\-–—|]+$/g,"").replace(/\s*\.$/,"").trim();
+const cleanVal = s => String(s||"").replace(/(^|\n)\s*\|\s*/g,"$1").replace(/\s+/g," ").replace(/^[\s"“”„'`»«″:;,.\-–—|]+|[\s"“”„'`»«″:;,\-–—|]+$/g,"").replace(/(?<!(?:^|[\s.])[A-Za-z])\s*\.$/,"").trim();
 // caută în textul fără diacritice, decupează din textul original
 function rxCut(raw, F, rx, g){ const m = rx.exec(F); if(!m) return ""; const i = m.index + m[0].indexOf(m[g||1]); return raw.slice(i, i + m[g||1].length); }
 const okText = (s, min, max) => { s = cleanVal(s).replace(/(?:\s+(?:[^A-Za-zĂÂÎȘȚăâîșțŞşŢţ\s\d]+|Il|ll|I|l))+$/, "").trim(); if(s.length < (min||3) || s.length > (max||320)) return ""; const L = (s.match(/[A-Za-zĂÂÎȘȚăâîșțŞşŢţ]/g)||[]).length; return L / s.length > .55 ? s : ""; };
@@ -3511,9 +3525,11 @@ function metaExtract(d, raw){
   // contractul
   let nr = "";
   if(/^contract|^acord/.test(kind)){
-    nr = cleanVal(rxCut(R, F, /^[\s\S]{0,350}?\bnr\.?\s*([0-9][0-9 \/.\-]{0,28}[0-9])/)).replace(/\s+/g,"");
+    // întâi numărul de lângă titlul contractului (antetul are și el „nr.” — adresa, registrul comerțului)
+    nr = cleanVal(rxCut(R, F, /(?:contract|acord)\w*(?:[\s-]+[a-z]+){0,7}?\s+nr\.?\s*(?:reg\.?\s*)?(?:de\s+inregistrare\s*)?([0-9][0-9 \/.\-]{0,28}[0-9])/)).replace(/\s+/g,"");
+    if(!(nr.includes("/") || nr.length >= 3)) nr = cleanVal(rxCut(R, F, /^[\s\S]{0,350}?\bnr\.?\s*(?:reg\.?\s*)?(?:de\s+inregistrare\s*)?([0-9][0-9 \/.\-]{0,28}[0-9])/)).replace(/\s+/g,"");
     if(!(nr.includes("/") || nr.length >= 3)) nr = "";
-    if(!nr){ const fn = norm(d.name).match(/(?:ctr|contract)[\W_]*(?:nr[\W_]*)?(\d[\d\-\/.]*\d|\d)/); if(fn) nr = fn[1].replace(/-/g,"/"); }
+    if(!nr){ const fn = norm(d.name).match(/(?:ctr|contract)\w*(?:[\W_]+[a-z]+){0,3}?[\W_]*(?:nr[\W_]*)?(\d[\d\-\/.]*\d|\d)(?:[\W_]+din[\W_]+(\d{1,2}[.\-_]\d{1,2}[.\-_]\d{4}))?/); if(fn) nr = fn[1].replace(/-/g,"/") + (fn[2] ? "/" + fn[2].replace(/[-_]/g,".") : ""); }
     if(nr) out.contract = (kind==="acord" ? "acord-cadru nr. " : "nr. ") + nr + (kind==="contract-serv" ? (/dirigen|dirigint/.test(F.slice(0,900)) ? " (dirigenție de șantier)" : " (servicii)") : "");
   } else {
     const c = rxCut(R, F, /contract(?:ul|ului)?\s+(?:de\s+\w+\s+)?nr\.?\s*([0-9][0-9\/.\-]{0,28}[0-9])/);
@@ -3824,7 +3840,7 @@ const RUBRICI = [
   {id:"contracte",name:"Contracte și numiri",       cap:"Contracte", icon:IC("M7 3h10v18H7zM10 8h4M10 12h4M10 16h2"), k:["program de lucrari","programe de lucrari","conventie de lucrari","conventie lucrari","contract","act aditional","acte aditionale","acord cadru","comanda","oferta","deviz","factura","garantie de buna executie","decizie de numire","decizie numire","numire","ordin de incepere","ordin incepere","atestat anre","atestate anre","autorizatie anre","autorizatii anre","legitimatie anre","legitimatii","licenta","autorizatie igsu","autorizatie iscir"]},
   {id:"coresp",  name:"Corespondență",              cap:"Corespondență", icon:IC("M3 6h18v12H3zM3 6l9 7 9-7"), k:["adresa","adrese","notificare","solicitare","raspuns","minuta","convocare","comunicare","email","mail","corespondenta","instiintare","cerere"]},
   {id:"ssm",     name:"SSM și situații de urgență",  cap:"SSM și SU", icon:IC("M12 3a6 6 0 0 0-6 6v2H4v3h16v-3h-2V9a6 6 0 0 0-6-6zM8 18h8"), k:["ssm","instruire","instructaj","plan propriu","securitate si sanatate","psi","situatii de urgenta","evaluare riscuri","evaluarea riscurilor","fisa individuala","echipament de protectie"]},
-  {id:"asbuilt", name:"As built și carte tehnică",  cap:"As-built", icon:IC("M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 1 2-2h13"), k:["as built","asbuilt","carte tehnica","cartea tehnica","plan final","documentatie finala","fisa sintetica","jurnal de santier","jurnal santier","jurnalul evenimentelor"]},
+  {id:"asbuilt", name:"As built și carte tehnică",  cap:"As-built", icon:IC("M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 1 2-2h13"), k:["borderou","borderou piese","opis","opisul","as built","asbuilt","carte tehnica","cartea tehnica","plan final","documentatie finala","fisa sintetica","jurnal de santier","jurnal santier","jurnalul evenimentelor"]},
   {id:"alte",    name:"Neclasificate",              cap:"Neclasificat", icon:IC("M12 8v5M12 16v.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"), k:[]}
 ];
 const RUB_N = RUBRICI.map(r=>({r, k:r.k.map(toks)}));
@@ -5914,6 +5930,9 @@ function bind(){
   // sursa fișierelor: folderul legat sau alegerea folderului acum
   const withSource = async cb => {
     const inp = $("#inSrc");
+    // fișierele păstrate în browser (sau încă deschise) — fără să mai alegi folderul
+    const kept = new Map(); for(const d of S.docs){ let f = DOC_FILE.get(d.id); if(!f){ try{ f = await IDB.get("f:"+d.id); }catch(e){} } if(f){ kept.set(d.path+"|"+d.name+"|"+d.size, f); kept.set("|"+d.name+"|"+d.size, f); } }
+    if(S.docs.every(d=>kept.has("|"+d.name+"|"+d.size) || (!needsOcr(d) && !needsText(d)))) return cb(kept);
     const pick = () => { if(!inp) return; inp.onchange = () => { const fs = [...inp.files]; inp.value = ""; if(fs.length) cb(filesMap(fs)); }; inp.click(); };
     if(!S.folder) return pick();          // fără folder legat: alegi folderul acum
     const m = await sourceFilesMap(); if(m) return cb(m);
